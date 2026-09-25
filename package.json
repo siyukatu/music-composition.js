@@ -42,7 +42,7 @@
     "type": "git",
     "url": "git+https://github.com/siyukatu/music-composition.js.git"
   },
-  "homepage": "https://github.com/siyukatu/music-composition.js#readme",
+  "homepage": "https://mcj.siyukatu.me/",
   "bugs": {
     "url": "https://github.com/siyukatu/music-composition.js/issues"
   }

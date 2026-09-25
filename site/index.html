@@ -3,7 +3,57 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>music-composition.js Studio</title>
+<title>music-composition.js — ブラウザで自動作曲して WAV を書き出す JavaScript ライブラリ</title>
+<meta name="description" content="シード値から曲を自動で作曲し、WAV ファイルとして書き出す JavaScript ライブラリ。Pop・Dance・Lo-fi・Chiptune・Ambient の5スタイルと、ゲーム向けのシームレスループに対応。サーバー不要・依存ライブラリなしで、ブラウザと Node.js で動作します。">
+<link rel="canonical" href="https://mcj.siyukatu.me/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="author" content="siyukatu">
+<meta name="theme-color" content="#E7E9ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111216" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="music-composition.js">
+<meta property="og:title" content="music-composition.js — ブラウザで自動作曲して WAV を書き出す">
+<meta property="og:description" content="シードから曲を作曲し、WAV として書き出す JavaScript ライブラリ。サーバー不要・依存なしで、ブラウザと Node.js で動きます。">
+<meta property="og:url" content="https://mcj.siyukatu.me/">
+<meta property="og:image" content="https://mcj.siyukatu.me/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="music-composition.js のロゴと、自動生成された曲のピアノロール">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://mcj.siyukatu.me/#website",
+      "url": "https://mcj.siyukatu.me/",
+      "name": "music-composition.js",
+      "inLanguage": "ja"
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://mcj.siyukatu.me/#software",
+      "name": "music-composition.js",
+      "description": "シード値から曲を自動で作曲し、WAV ファイルとして書き出す JavaScript ライブラリ。サーバー不要・依存ライブラリなしで、ブラウザと Node.js で動作します。",
+      "url": "https://mcj.siyukatu.me/",
+      "codeRepository": "https://github.com/siyukatu/music-composition.js",
+      "programmingLanguage": "JavaScript",
+      "runtimePlatform": ["Web browser", "Node.js"],
+      "license": "https://opensource.org/licenses/MIT",
+      "image": "https://mcj.siyukatu.me/og.png",
+      "author": { "@type": "Person", "name": "siyukatu", "url": "https://github.com/siyukatu" },
+      "sameAs": ["https://www.npmjs.com/package/music-composition.js", "https://github.com/siyukatu/music-composition.js"]
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
@@ -102,7 +152,7 @@
   .badge { font-family: var(--font-mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
 
   .app { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
-  @media (max-width: 880px) { .app { grid-template-columns: 1fr; } }
+  @media (max-width: 880px) { .app { grid-template-columns: minmax(0, 1fr); } }
 
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 
@@ -211,7 +261,7 @@
 
   /* API */
   .api { margin-top: 44px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 28px; align-items: start; }
-  @media (max-width: 880px) { .api { grid-template-columns: 1fr; } }
+  @media (max-width: 880px) { .api { grid-template-columns: minmax(0, 1fr); } }
   .api h2 { font-family: var(--font-display); font-size: 24px; margin: 0 0 8px; font-weight: 400; }
   .api p { margin: 0 0 12px; max-width: 62ch; color: var(--muted); }
   .api p code, td code { font-family: var(--font-mono); font-size: 0.9em; color: var(--ink); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
@@ -232,7 +282,10 @@
   td code { white-space: nowrap; }
   .sub { margin-top: 18px; }
 
-  footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 16px; }
+  footer p { margin: 0; max-width: 62ch; }
+  footer .links { display: flex; gap: 16px; }
+  footer a { color: var(--ink); text-underline-offset: 3px; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   @media (max-width: 480px) {
@@ -419,7 +472,14 @@
     </div>
   </section>
 
-  <footer>出力は 16-bit ステレオ PCM WAV。合成・エフェクト（リバーブ、ディレイ、サイドチェイン）はすべて JavaScript で計算しています。</footer>
+  <footer>
+    <p>出力は 16-bit ステレオ PCM WAV。合成・エフェクト（リバーブ、ディレイ、サイドチェイン）はすべて JavaScript で計算しています。</p>
+    <nav class="links" aria-label="関連リンク">
+      <a href="https://github.com/siyukatu/music-composition.js">GitHub</a>
+      <a href="https://www.npmjs.com/package/music-composition.js">npm</a>
+      <a href="https://github.com/siyukatu/music-composition.js/blob/main/LICENSE">MIT License</a>
+    </nav>
+  </footer>
 </div>
 
 <audio id="audio" preload="auto"></audio>
