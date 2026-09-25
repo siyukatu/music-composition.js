@@ -80,6 +80,35 @@ test('options are respected', () => {
   assert.strictEqual(song.bars, 16);
 });
 
+test('duration sets the length in seconds, whatever the tempo', () => {
+  for (const bpm of [70, 140]) {
+    const song = MusicComposition.compose({ seed: 'dur', style: 'pop', bpm, duration: 60 });
+    assert.strictEqual(song.bars % 4, 0);
+    // Within half a 4-bar block of the target.
+    assert.ok(Math.abs(song.duration - 60) <= song.barDuration * 2, bpm + ' BPM: ' + song.duration + 's');
+  }
+  const loop = MusicComposition.compose({ seed: 'dur', bpm: 120, duration: 32, loop: true });
+  assert.strictEqual(loop.bars, 16);
+});
+
+test('melodies move mostly by step and stay in range', () => {
+  let pairs = 0, wide = 0;
+  for (const style of MusicComposition.styles) {
+    for (let i = 0; i < 12; i++) {
+      const song = MusicComposition.compose({ seed: 'mel' + i, style });
+      const lead = song.notes.filter(n => n.inst === 'lead');
+      assert.ok(lead.length > 0, 'no melody');
+      lead.forEach(n => assert.ok(n.midi >= 40 && n.midi <= 100 && n.d > 0, 'bad note ' + JSON.stringify(n)));
+      for (let k = 1; k < lead.length; k++) {
+        if (lead[k].t - lead[k - 1].t > song.barDuration) continue;
+        pairs++;
+        if (Math.abs(lead[k].midi - lead[k - 1].midi) > 12) wide++;
+      }
+    }
+  }
+  assert.ok(wide / pairs < 0.005, wide + ' leaps wider than an octave in ' + pairs);
+});
+
 test('invalid options throw readable errors', () => {
   assert.throws(() => MusicComposition.compose({ style: 'polka' }), /unknown style/);
   assert.throws(() => MusicComposition.compose({ mode: 'phrygian' }), /unknown mode/);
@@ -87,12 +116,16 @@ test('invalid options throw readable errors', () => {
   assert.throws(() => MusicComposition.generate({ seed: 'x', bars: 8, sampleRate: 1000 }), /sampleRate/);
 });
 
-MusicComposition.generateAsync({ seed: 'async', bars: 8 }).then((buf) => {
+function asyncTest(name, fn) {
+  return fn().then(() => console.log('ok   ' + name), (err) => {
+    failures++;
+    console.log('FAIL ' + name + '\n     ' + (err && err.message));
+  });
+}
+
+asyncTest('generateAsync resolves to a WAV', async () => {
+  const buf = await MusicComposition.generateAsync({ seed: 'async', bars: 8 });
   assert.strictEqual(readWav(buf).riff, 'RIFF');
-  console.log('ok   generateAsync resolves to a WAV');
-}).catch((err) => {
-  failures++;
-  console.log('FAIL generateAsync resolves to a WAV\n     ' + (err && err.message));
 }).then(() => {
   if (failures) {
     console.log('\n' + failures + ' test(s) failed');

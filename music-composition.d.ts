@@ -21,7 +21,7 @@ declare namespace MusicComposition {
     mode?: Mode | 'auto';
     /** Length in bars, rounded to a multiple of 4 (8–256). Default 32. */
     bars?: number;
-    /** Target length in seconds, used when `bars` is omitted. */
+    /** Target length in seconds (including the reverb tail), used when `bars` is omitted. Rounded to whole 4-bar blocks. */
     duration?: number;
     /** true => seamless loop: no intro/outro, reverb tail folded onto the start. */
     loop?: boolean;

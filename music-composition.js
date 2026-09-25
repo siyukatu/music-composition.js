@@ -136,7 +136,7 @@
       chordBars: 1, swing: 0, sevenths: 0.15, humanize: 0,
       drums: 'pop', kit: 'std', bass: 'pop', bassPatch: 'bassSaw', bassOct: 0,
       chords: 'keys', pad: 'pad', arp: 'eighths', arpPatch: 'arp', lead: 'leadSaw',
-      melody: { grid: 2, density: 0.55, legato: 0.85, sixteenths: 0.12, center: [3, 6], octave: 0 },
+      melody: { slow: false, notes: 5, legato: 0.85, center: [3, 6], octave: 0 },
       fx: { room: 0.78, damp: 0.35, wet: 1, delay: 1, sidechain: 0, lofi: false, tail: 3 }
     },
     dance: {
@@ -144,7 +144,7 @@
       chordBars: 1, swing: 0, sevenths: 0.3, humanize: 0,
       drums: 'dance', kit: 'std', bass: 'dance', bassPatch: 'bassSaw', bassOct: 0,
       chords: null, pad: 'padWide', arp: 'sixteenths', arpPatch: 'arp', lead: 'leadPluck',
-      melody: { grid: 2, density: 0.5, legato: 0.7, sixteenths: 0.18, center: [3, 6], octave: 0 },
+      melody: { slow: false, notes: 5, legato: 0.7, center: [3, 6], octave: 0 },
       fx: { room: 0.82, damp: 0.3, wet: 1, delay: 1.2, sidechain: 0.7, lofi: false, tail: 3 }
     },
     lofi: {
@@ -152,7 +152,7 @@
       chordBars: 1, swing: 0.3, sevenths: 0.95, humanize: 1,
       drums: 'lofi', kit: 'lofi', bass: 'lofi', bassPatch: 'bassSine', bassOct: 0,
       chords: 'epiano', pad: null, arp: null, lead: 'leadSoft',
-      melody: { grid: 2, density: 0.42, legato: 0.9, sixteenths: 0.08, center: [2, 4], octave: 0 },
+      melody: { slow: false, notes: 4, legato: 0.9, center: [2, 4], octave: 0 },
       fx: { room: 0.7, damp: 0.5, wet: 0.9, delay: 0.6, sidechain: 0, lofi: true, tail: 3 }
     },
     chiptune: {
@@ -160,7 +160,7 @@
       chordBars: 1, swing: 0, sevenths: 0, humanize: 0,
       drums: 'chip', kit: 'chip', bass: 'chip', bassPatch: 'bassChip', bassOct: 12,
       chords: 'chiparp', pad: null, arp: null, lead: 'leadSquare',
-      melody: { grid: 2, density: 0.62, legato: 0.8, sixteenths: 0.2, center: [3, 6], octave: 12 },
+      melody: { slow: false, notes: 6, legato: 0.8, center: [3, 6], octave: 12 },
       fx: { room: 0.5, damp: 0.5, wet: 0.35, delay: 0.5, sidechain: 0, lofi: false, tail: 2 }
     },
     ambient: {
@@ -168,7 +168,7 @@
       chordBars: 2, swing: 0, sevenths: 0.6, humanize: 0,
       drums: null, kit: 'std', bass: 'ambient', bassPatch: 'bassSine', bassOct: 0,
       chords: null, pad: 'padAmbient', arp: 'bell', arpPatch: 'bellSoft', lead: 'bell',
-      melody: { grid: 4, density: 0.38, legato: 1, sixteenths: 0, center: [4, 7], octave: 0 },
+      melody: { slow: true, notes: 2.5, legato: 1, center: [4, 7], octave: 0 },
       fx: { room: 0.93, damp: 0.2, wet: 1.4, delay: 1.2, sidechain: 0, lofi: false, tail: 6 }
     }
   };
@@ -255,6 +255,50 @@
     [[0, 3, 1], [3, 5, 0.8], [8, 3, 0.9], [11, 5, 0.8]]
   ];
 
+  // Melody rhythms, one bar each: [step, length]. Gaps are rests.
+  // A section's melody is built from 4-bar phrases: motif, answer, motif, cadence.
+  var MELODY_RHYTHMS = {
+    motif: [
+      [[0, 3], [3, 1], [4, 2], [6, 2], [8, 4], [12, 4]],
+      [[0, 3], [3, 3], [6, 4], [10, 2], [12, 4]],
+      [[0, 2], [2, 2], [4, 4], [8, 2], [10, 2], [12, 4]],
+      [[2, 2], [4, 2], [6, 4], [10, 2], [12, 4]],
+      [[0, 6], [6, 2], [8, 2], [10, 2], [12, 4]],
+      [[0, 2], [2, 4], [6, 2], [8, 2], [10, 6]],
+      [[0, 4], [4, 2], [6, 4], [10, 6]],
+      [[0, 2], [2, 2], [4, 2], [6, 2], [8, 4], [12, 2], [14, 2]],
+      [[0, 1], [1, 1], [2, 2], [4, 2], [6, 2], [8, 2], [10, 2], [12, 4]],
+      [[0, 3], [3, 3], [6, 2], [8, 3], [11, 3], [14, 2]],
+      [[0, 4], [6, 2], [8, 4], [12, 4]]
+    ],
+    answer: [
+      [[0, 6], [6, 2], [8, 6]],
+      [[0, 4], [4, 4], [8, 6]],
+      [[0, 8], [8, 2], [10, 4]],
+      [[0, 2], [2, 2], [4, 10]],
+      [[0, 3], [3, 3], [6, 8]],
+      [[0, 2], [2, 2], [4, 2], [6, 2], [8, 6]],
+      [[0, 4], [4, 2], [6, 2], [8, 6]],
+      [[0, 3], [3, 1], [4, 2], [6, 2], [8, 6]]
+    ],
+    cadence: [
+      [[0, 12]],
+      [[0, 4], [4, 4], [8, 6]],
+      [[0, 2], [2, 2], [4, 10]],
+      [[0, 3], [3, 1], [4, 8]],
+      [[0, 2], [2, 2], [4, 2], [6, 6]]
+    ],
+    slowMotif: [
+      [[0, 8], [8, 4], [12, 4]],
+      [[0, 4], [4, 4], [8, 8]],
+      [[0, 12], [12, 4]],
+      [[0, 6], [6, 2], [8, 8]],
+      [[4, 4], [8, 8]]
+    ],
+    slowAnswer: [[[0, 14]], [[0, 8], [8, 6]], [[0, 4], [4, 10]]],
+    slowCadence: [[[0, 14]], [[0, 8], [8, 6]]]
+  };
+
   var TITLE_A = ['Neon', 'Paper', 'Velvet', 'Midnight', 'Golden', 'Crystal', 'Silent', 'Electric', 'Lunar', 'Amber',
     'Coral', 'Distant', 'Hidden', 'Morning', 'Glass', 'Cotton', 'Pixel', 'Solar', 'Violet', 'Rainy', 'Tidal', 'Static', 'Faded', 'Northern'];
   var TITLE_B = ['Harbor', 'Parade', 'Garden', 'Signal', 'Avenue', 'Drift', 'Horizon', 'Station', 'Letters', 'Circuit',
@@ -273,7 +317,7 @@
    * @param {string} [options.key]           'C' ... 'B' (sharps or flats). Random if omitted.
    * @param {string} [options.mode]          'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian'
    * @param {number} [options.bars]          Length in bars (rounded to a multiple of 4, 8–256). Default 32.
-   * @param {number} [options.duration]      Target length in seconds (used when bars is omitted).
+   * @param {number} [options.duration]      Target length in seconds, including the reverb tail (used when bars is omitted).
    * @param {boolean} [options.loop]         true => seamless loop (no intro/outro, reverb tail wrapped).
    * @returns {object} song
    */
@@ -302,7 +346,7 @@
     var barDur = stepDur * 16;
     var bars;
     if (o.bars) bars = Math.round(+o.bars / 4) * 4;
-    else if (o.duration) bars = Math.round(+o.duration / barDur / 4) * 4;
+    else if (o.duration) bars = Math.round((+o.duration - (loop ? 0 : st.fx.tail)) / barDur / 4) * 4;
     else bars = 32;
     bars = clamp(bars || 32, 8, 256);
 
@@ -412,6 +456,15 @@
       if (tone === 'o') m += 12;
       return m;
     }
+    // A scale tone one step away from `to`, on the side we are coming from.
+    function approachNote(from, to, toDeg) {
+      if (Math.abs(to - from) <= 2) return from;
+      var d = toDeg + (to > from ? -1 : 1);
+      var m = degToMidi(bassBase, scale, d);
+      while (m - to > 6) m -= 12;
+      while (to - m > 6) m += 12;
+      return m;
+    }
 
     // Choose patterns per section type so repeats sound like the same section.
     var pat = {};
@@ -478,10 +531,16 @@
       if (parts.bass && !info.cont) {
         var bp = parts.bass === 'long' ? BASS_PATTERNS.long[0] : P.bass;
         var span = st.chordBars > 1 && parts.bass !== 'long' ? st.chordBars : 1;
-        bp.forEach(function (e) {
+        var nextInfo = barInfo[bar + span];
+        bp.forEach(function (e, ei) {
           var len = (e[1] === 16 ? 16 * span : e[1]);
           if (lastOfSong) len = Math.max(len, 16);
-          notes.push({ t: T(bar, e[0]), d: len * stepDur * 0.92, midi: bassNote(info, e[2]), vel: V(e[3]), inst: 'bass', patch: st.bassPatch });
+          var m = bassNote(info, e[2]);
+          // Walk into the next chord: the last short note of the bar steps onto the next root.
+          if (st.bass !== 'dance' && ei === bp.length - 1 && e[0] >= 12 && e[1] <= 4 && nextInfo && nextInfo.deg !== info.deg && nextInfo.parts.bass) {
+            m = approachNote(bassNote(info, 'r'), bassNote(nextInfo, 'r'), nextInfo.deg);
+          }
+          notes.push({ t: T(bar, e[0]), d: len * stepDur * 0.92, midi: m, vel: V(e[3]), inst: 'bass', patch: st.bassPatch });
         });
       }
 
@@ -552,48 +611,123 @@
     }
 
     // Melody --------------------------------------------------------------
-    var motifs = {};
+    // Sections are built from 4-bar phrases: motif, answer, the motif again
+    // (moved onto the new chord), cadence. Strong beats sit on chord tones,
+    // lines move mostly by step, and a repeated section repeats its melody.
     var lo = st.melody.center[0] - 3, hi = st.melody.center[1] + 5;
-    sections.forEach(function (sec) {
+    var themes = {};
+    var pending = [];   // pickup notes waiting for the pitch they lead into
+    var dropped = [];
+    sections.forEach(function (sec, si) {
       if (!PARTS[sec.type].lead) return;
-      if (!motifs[sec.type]) motifs[sec.type] = makeMotif(R('motif-' + sec.type), st.melody);
-      var M = motifs[sec.type];
-      var center = sec.type === 'B' ? st.melody.center[1] : st.melody.center[0];
-      var phrases = Math.floor(sec.bars / 2);
+      if (!themes[sec.type]) themes[sec.type] = makeTheme(R('motif-' + sec.type), st.melody, sec.type === 'B');
+      var th = themes[sec.type];
+      var mr = R('melody-' + sec.type);
+      var base = sec.type === 'B' ? st.melody.center[1] : st.melody.center[0];
+      // Register plan per bar: the second half reaches higher (B peaks in bar 7).
+      var plan = sec.bars >= 8 ? (sec.type === 'B' ? [0, 1, 2, 1, 0, 2, 4, 1] : [0, 1, 1, 0, 0, 3, 2, 0]) : [0, 1, 1, 0];
+      var nextSec = sections[si + 1];
       var prev = null;
-      for (var p = 0; p < phrases; p++) {
-        var isEnd = p === phrases - 1;
-        var bar2 = isEnd ? M.end : (p % 2 === 0 ? M.bar2 : M.bar2b);
-        var bar1 = M.bar1;
-        var rhythms = [bar1, bar2];
-        prev = null;
-        for (var b = 0; b < 2; b++) {
-          var barIdx = sec.startBar + p * 2 + b;
-          var info = barInfo[barIdx];
-          var rh = rhythms[b];
+      for (var j = 0; j < sec.bars; j++) {
+        var barIdx = sec.startBar + j;
+        var info = barInfo[barIdx];
+        var target = base + plan[j % plan.length];
+        var role = j % 2 === 0 ? 'motif' : j % 4 === 1 ? 'answer' : 'cadence';
+        var half = Math.floor(j / 4) % 2;
+        var rh, degs = [];
+        if (role === 'motif') {
+          rh = th.motif;
+          var d = nearestChordTone(target, info, 0, lo, hi);
           for (var i = 0; i < rh.length; i++) {
-            var n = rh[i];
-            var d;
-            if (prev === null) {
-              d = nearestChordTone(center + M.offset, info, 0, lo, hi);
-            } else {
-              var mv = n.move;
-              d = prev + mv;
-              if (d > hi || d < lo) d = prev - mv;
-              var strong = n.s % 4 === 0 || n.len >= 4;
-              if (strong) d = nearestChordTone(d, info, mv, lo, hi);
+            if (i > 0) {
+              var mv = th.contour[i - 1];
+              var nd = d + mv;
+              if (nd > hi || nd < lo) nd = d - mv;
+              d = isStrong(rh[i]) ? nearestChordTone(nd, info, mv, lo, hi) : nd;
             }
-            if (isEnd && b === 1 && i === rh.length - 1) {
-              d = nearestTonic(d, lo, hi);
-            }
-            var vel = (n.s % 4 === 0 ? 0.9 : 0.72) + (n.s === 0 ? 0.1 : 0);
-            notes.push({ t: T(barIdx, n.s), d: n.len * stepDur * 0.97, midi: degToMidi(leadBase, scale, d), vel: V(vel), inst: 'lead', patch: st.lead });
-            prev = d;
+            degs.push(d);
           }
+        } else if (role === 'answer') {
+          rh = th.answers[half];
+          d = prev === null ? nearestChordTone(target, info, 0, lo, hi) : prev;
+          for (i = 0; i < rh.length; i++) {
+            var step = clamp(Math.round((target - d) / (rh.length - i)), -2, 2);
+            if (step === 0) step = mr.chance(0.6) ? mr.sign() : 0;
+            else if (mr.chance(0.25)) step += mr.sign();
+            var nd2 = d + step;
+            if (nd2 > hi || nd2 < lo) nd2 = d - step;
+            d = isStrong(rh[i]) || i === rh.length - 1 ? nearestChordTone(nd2, info, step, lo, hi) : nd2;
+            degs.push(d);
+          }
+        } else {
+          rh = th.cadences[half];
+          var last = j === sec.bars - 1;
+          var tones = chordDegs(info).map(function (x) { return ((x % 7) + 7) % 7; });
+          // Aim between where the line is and where the plan wants it, so the close is reached by step.
+          var gc = prev === null ? target : prev + clamp(target - prev, -3, 3);
+          var goal;
+          if (last) {
+            // Full close: the tonic if the chord has it, else the chord tone nearest to it.
+            goal = nearestTonic(gc, lo, hi);
+            if (tones.indexOf(0) < 0) goal = nearestChordTone(goal, info, 0, lo, hi);
+          } else {
+            // Half close: a chord tone that is not the tonic, so the phrase stays open.
+            goal = null;
+            for (var k = 0; k <= 3 && goal === null; k++) {
+              [gc + k, gc - k].forEach(function (c) {
+                if (goal === null && c >= lo && c <= hi && tones.indexOf(((c % 7) + 7) % 7) >= 0 && ((c % 7) + 7) % 7 !== 0) goal = c;
+              });
+            }
+            if (goal === null) goal = nearestChordTone(gc, info, 0, lo, hi);
+          }
+          var from = prev === null ? goal + 1 : prev;
+          var dir = from > goal ? 1 : from < goal ? -1 : (mr.chance(0.6) ? 1 : -1);
+          for (i = 0; i < rh.length; i++) {
+            var dd = goal + dir * (rh.length - 1 - i);
+            if (i === 0 && rh.length > 1 && isStrong(rh[i])) dd = nearestChordTone(dd, info, -dir, lo, hi);
+            degs.push(dd);
+          }
+        }
+
+        // Fill pickups from the previous bar now that we know where they lead.
+        if (pending.length) {
+          var into = degs[0], fromAbove = mr.chance(0.35);
+          var first = into + (fromAbove ? 1 : -1) * pending.length;
+          pending.forEach(function (p, pi) {
+            var dist = pending.length - pi;
+            p.midi = degToMidi(leadBase, scale, into + (fromAbove ? dist : -dist));
+            // Leave it out if it would leap away from the note before it.
+            if (Math.abs(first - p.after) > 4) dropped.push(p);
+          });
+          pending = [];
+        }
+
+        for (i = 0; i < rh.length; i++) {
+          var n = rh[i];
+          var vel = (n[0] % 4 === 0 ? 0.9 : 0.72) + (n[0] === 0 ? 0.1 : 0);
+          notes.push({ t: T(barIdx, n[0]), d: n[1] * stepDur * Math.min(0.97, st.melody.legato + 0.12), midi: degToMidi(leadBase, scale, degs[i]), vel: V(vel), inst: 'lead', patch: st.lead });
+        }
+        prev = degs[degs.length - 1];
+
+        // Pickup into the next phrase when this bar ends early.
+        var end = rh[rh.length - 1][0] + rh[rh.length - 1][1];
+        var leadsOn = role !== 'motif' && !st.melody.slow && (j < sec.bars - 1 || (nextSec && PARTS[nextSec.type].lead));
+        if (leadsOn && end <= 14 && mr.chance(0.55)) {
+          var steps = end <= 12 && mr.chance(0.5) ? [12, 14] : [14];
+          steps.forEach(function (s) {
+            var p = { t: T(barIdx, s), d: 2 * stepDur * 0.9, midi: 0, vel: V(0.62), inst: 'lead', patch: st.lead, after: prev };
+            notes.push(p);
+            pending.push(p);
+          });
         }
       }
     });
+    // Also drop a pickup with nothing after it (end of a loop).
+    dropped = dropped.concat(pending);
+    if (dropped.length) notes = notes.filter(function (n) { return dropped.indexOf(n) < 0; });
+    notes.forEach(function (n) { delete n.after; });
 
+    function isStrong(n) { return n[0] % 8 === 0 || n[1] >= 4 || (n[0] % 4 === 0 && n[1] >= 3); }
     function nearestChordTone(d, info, dir, lo, hi) {
       var tones = chordDegs(info).map(function (x) { return ((x % 7) + 7) % 7; });
       var order = dir >= 0 ? [0, 1, -1, 2, -2, 3, -3] : [0, -1, 1, -2, 2, -3, 3];
@@ -611,7 +745,6 @@
       }
       return best;
     }
-
     notes.sort(function (a, b) { return a.t - b.t; });
 
     var body = bars * barDur;
@@ -637,43 +770,38 @@
     };
   }
 
-  function makeMotif(rng, m) {
-    function rhythm(which) {
-      var g = m.grid, on = [];
-      for (var s = 0; s < 16; s += g) {
-        var p = m.density + (s % 8 === 0 ? 0.3 : s % 4 === 0 ? 0.1 : -0.08);
-        if (which === 1 && s >= 12) p -= 0.35;
-        if (rng.chance(p)) on.push(s);
-        else if (g === 2 && rng.chance(m.sixteenths)) on.push(s + 1);
-      }
-      if (on.length < 2) on = g === 4 ? [0, 8] : [0, 6];
-      return finish(on, which === 1);
+  // The fixed material of a section: rhythms for each phrase role and the
+  // motif's melodic shape (in scale steps).
+  function makeTheme(rng, m, hook) {
+    var MR = MELODY_RHYTHMS;
+    function pick(list, target, preferSync) {
+      var w = list.map(function (r) {
+        var x = Math.exp(-Math.abs(r.length - target) * 0.9);
+        // Choruses like notes that start off the beat and ring across it.
+        if (preferSync && r.some(function (n) { return n[0] % 4 !== 0 && n[0] % 4 + n[1] > 4; })) x *= 2.2;
+        return x;
+      });
+      var sum = w.reduce(function (a, b) { return a + b; }, 0), r = rng.next() * sum;
+      for (var i = 0; i < list.length; i++) { r -= w[i]; if (r <= 0) return list[i]; }
+      return list[list.length - 1];
     }
-    function finish(on, breathe) {
-      var out = [];
-      for (var i = 0; i < on.length; i++) {
-        var next = i + 1 < on.length ? on[i + 1] : 16;
-        var gap = next - on[i];
-        var len = Math.max(1, Math.round(gap * m.legato));
-        if (i === on.length - 1 && breathe) len = Math.min(len, 4);
-        out.push({ s: on[i], len: len, move: move() });
-      }
-      return out;
-    }
-    function move() {
+    var n = m.notes;
+    var motif = pick(m.slow ? MR.slowMotif : MR.motif, n, hook);
+    var answers = [pick(m.slow ? MR.slowAnswer : MR.answer, n - 2), pick(m.slow ? MR.slowAnswer : MR.answer, n - 2)];
+    var cadences = [pick(m.slow ? MR.slowCadence : MR.cadence, n - 3), pick(m.slow ? MR.slowCadence : MR.cadence, n - 3)];
+    var shape = rng.pick(['rise', 'fall', 'arch', 'arch', 'valley']);
+    var contour = [];
+    for (var i = 1; i < motif.length; i++) {
+      var firstHalf = i < motif.length / 2;
+      var dir = shape === 'rise' ? 1 : shape === 'fall' ? -1 : shape === 'arch' ? (firstHalf ? 1 : -1) : (firstHalf ? -1 : 1);
       var r = rng.next();
-      var size = r < 0.16 ? 0 : r < 0.6 ? 1 : r < 0.84 ? 2 : r < 0.95 ? 3 : 4;
-      return size * rng.sign();
+      var size = r < 0.12 ? 0 : r < 0.72 ? 1 : r < 0.92 ? 2 : 3;
+      var before = contour[i - 2];
+      if (before !== undefined && Math.abs(before) >= 2) { size = 1; dir = before > 0 ? -1 : 1; } // leap, then step back
+      else if (rng.chance(0.2)) dir = -dir;
+      contour.push(size * dir);
     }
-    var cadences = m.grid === 4
-      ? [[0, 16], [0, 8, 8]]
-      : [[0, 4], [0, 2, 4], [0, 6], [0], [0, 3, 6]];
-    var cad = rng.pick(cadences);
-    var end = cad.map(function (s, i) {
-      var next = i + 1 < cad.length ? cad[i + 1] : 16;
-      return { s: s, len: i === cad.length - 1 ? Math.min(16 - s, 12) : next - s, move: move() };
-    });
-    return { bar1: rhythm(0), bar2: rhythm(1), bar2b: rhythm(1), end: end, offset: rng.pick([0, 0, 2, -2, 4]) };
+    return { motif: motif, answers: answers, cadences: cadences, contour: contour };
   }
 
   // ---------------------------------------------------------------------------
