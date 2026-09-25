@@ -9,14 +9,26 @@
 - ゲーム用のシームレスなループ書き出しに対応
 - 出力は 16-bit ステレオ PCM WAV（`ArrayBuffer`）
 
-`index.html` はこのライブラリを使ったデモサイトです。
+`site/` にはこのライブラリを使ったサンプルページがあります。
+
+## インストール
+
+```bash
+npm install music-composition.js
+```
+
+ビルドせずにブラウザで使う場合は CDN から読み込めます。
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/music-composition.js@1"></script>
+```
 
 ## 使い方
 
 ### ブラウザ
 
 ```html
-<script src="music-composition.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/music-composition.js@1"></script>
 <script>
   const wav = MusicComposition.generate({ style: 'lofi', seed: 'sakura', loop: true }); // ArrayBuffer (WAV)
   const audio = new Audio(MusicComposition.toURL(wav));
@@ -26,21 +38,24 @@
 ```
 
 レンダリング中に画面を止めたくない場合は `generateAsync()` を使います。
-`<script src>` で読み込んだ場合は Web Worker で処理し、Worker が使えない環境では自動でメインスレッドにフォールバックします。
+`<script src>` で読み込んだ場合は Web Worker で処理します。バンドラー経由で読み込んだ場合など、Worker が使えない環境では自動でメインスレッドにフォールバックします（結果は同じです）。
 
 ```js
 const wav = await MusicComposition.generateAsync({ style: 'chiptune', seed: 'stage-1' });
 ```
 
-### Node.js
+### Node.js / バンドラー
 
 ```js
-const MusicComposition = require('./music-composition.js');
+const MusicComposition = require('music-composition.js');
+// または import MusicComposition from 'music-composition.js';
 const fs = require('fs');
 
 const wav = MusicComposition.generate({ style: 'chiptune', seed: 'stage-1', loop: true });
 fs.writeFileSync('stage-1.wav', Buffer.from(wav));
 ```
+
+TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 
 ## API
 
@@ -89,15 +104,33 @@ song.notes     // [{ t, d, midi, vel, inst: 'lead' | 'bass' | 'chords' | 'arp' |
 
 楽譜を見てから `render(song)` で音声化できるので、ピアノロールの表示などにも使えます。
 
-## デモサイト
+## サンプルページ
 
-`index.html` をブラウザで開くだけでは `music-composition.js` を読み込めないため（`file://` の制限）、ローカルサーバーから開いてください。
+`site/index.html` がサンプルページです。ライブラリ本体はリポジトリ直下の `music-composition.js` だけで、ビルド時に `site/` へコピーします（`site/music-composition.js` はコミットしません）。
+
+ローカルで確認するには:
 
 ```bash
-python3 -m http.server 8765
+npm run dev
 ```
 
-http://localhost:8765 にアクセスします。
+http://localhost:8765 を開きます。
+
+### Cloudflare Pages の設定
+
+| 項目 | 値 |
+|---|---|
+| ビルドコマンド | `npm run build` |
+| ビルド出力ディレクトリ | `site` |
+| ルートディレクトリ | （空欄） |
+
+## 開発
+
+```bash
+npm test
+```
+
+`npm publish` の前にも自動で実行されます。
 
 ## ライセンス
 

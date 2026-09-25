@@ -376,11 +376,12 @@
     <div>
       <h2 id="api-h">自分のページで使う</h2>
       <p><code>music-composition.js</code> を読み込むと、グローバルの <code>MusicComposition</code> から呼び出せます。<code>MusicComposition.generate()</code> は WAV ファイルそのもの（<code>ArrayBuffer</code>）を返すので、再生・保存・アップロードに直接使えます。</p>
-      <p>ブラウザ・Web Worker・Node.js で動き、外部ライブラリもサーバーも不要です。同じオプションとシードを渡せば、いつでも同じ曲が返ります。</p>
+      <p><code>npm install music-composition.js</code> でも、CDN からの読み込みでも使えます。ブラウザ・Web Worker・Node.js で動き、外部ライブラリもサーバーも不要です。同じオプションとシードを渡せば、いつでも同じ曲が返ります。</p>
       <div class="code-head"><span>いまの設定のコード</span><button class="copy" id="copy" type="button">コピー</button></div>
       <pre class="code" id="snippet"></pre>
       <div class="code-head"><span>Node.js</span></div>
-      <pre class="code"><span class="k">const</span> MusicComposition = <span class="n">require</span>(<span class="s">'./music-composition.js'</span>);
+      <pre class="code"><span class="c">// npm install music-composition.js</span>
+<span class="k">const</span> MusicComposition = <span class="n">require</span>(<span class="s">'music-composition.js'</span>);
 <span class="k">const</span> wav = MusicComposition.<span class="n">generate</span>({ style: <span class="s">'chiptune'</span>, seed: <span class="s">'stage-1'</span>, loop: <span class="k">true</span> });
 <span class="n">require</span>(<span class="s">'fs'</span>).<span class="n">writeFileSync</span>(<span class="s">'stage-1.wav'</span>, Buffer.<span class="n">from</span>(wav));</pre>
     </div>
@@ -818,7 +819,7 @@
     if (o.loop) parts.push('loop: <span class="k">true</span>');
     if (o.sampleRate) parts.push('sampleRate: <span class="n">' + o.sampleRate + '</span>');
     var html =
-      '&lt;<span class="k">script</span> src=<span class="s">"music-composition.js"</span>&gt;&lt;/<span class="k">script</span>&gt;\n' +
+      '&lt;<span class="k">script</span> src=<span class="s">"https://cdn.jsdelivr.net/npm/music-composition.js@1"</span>&gt;&lt;/<span class="k">script</span>&gt;\n' +
       '&lt;<span class="k">script</span>&gt;\n' +
       '  <span class="c">// WAV (ArrayBuffer) が返ります</span>\n' +
       '  <span class="k">const</span> wav = MusicComposition.<span class="n">generate</span>({ ' + parts.join(', ') + ' });\n' +
