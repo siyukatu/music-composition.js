@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>music-composition.js Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ground: #E7E9ED;
+    --surface: #F7F8FA;
+    --surface-2: #EEF0F3;
+    --ink: #15171C;
+    --muted: #5A616E;
+    --line: #D2D6DD;
+    --accent: #F2541B;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #FDE3D8;
+    --lead: #F2541B;
+    --bass: #2F66F0;
+    --chords: #10947A;
+    --arp: #9B45D6;
+    --drums: #8A909B;
+    --roll-bg: #FFFFFF;
+    --roll-band: #F2F3F6;
+    --roll-grid: #E4E7EC;
+    --error: #B42318;
+    --font-display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
+    --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --radius: 10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #111216;
+      --surface: #1A1C21;
+      --surface-2: #22252C;
+      --ink: #ECEEF2;
+      --muted: #969CA8;
+      --line: #2C3038;
+      --accent: #FF6A33;
+      --accent-ink: #1A0B04;
+      --accent-soft: #3A2016;
+      --lead: #FF6A33;
+      --bass: #5B8BFF;
+      --chords: #2EC4A0;
+      --arp: #C07BF0;
+      --drums: #6C727E;
+      --roll-bg: #15171B;
+      --roll-band: #1B1E24;
+      --roll-grid: #252930;
+      --error: #FF7A6B;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #111216;
+    --surface: #1A1C21;
+    --surface-2: #22252C;
+    --ink: #ECEEF2;
+    --muted: #969CA8;
+    --line: #2C3038;
+    --accent: #FF6A33;
+    --accent-ink: #1A0B04;
+    --accent-soft: #3A2016;
+    --lead: #FF6A33;
+    --bass: #5B8BFF;
+    --chords: #2EC4A0;
+    --arp: #C07BF0;
+    --drums: #6C727E;
+    --roll-bg: #15171B;
+    --roll-band: #1B1E24;
+    --roll-grid: #252930;
+    --error: #FF7A6B;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; }
+
+  /* Header */
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .wordmark { font-family: var(--font-display); font-size: clamp(24px, 5.5vw, 34px); overflow-wrap: anywhere; line-height: 1; letter-spacing: 0.01em; margin: 0; }
+  .wordmark span { color: var(--accent); }
+  .tagline { margin: 0; color: var(--muted); font-size: 14px; }
+  a.badge { text-decoration: none; }
+  a.badge:hover { color: var(--ink); border-color: var(--muted); }
+  .badge { font-family: var(--font-mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+
+  .app { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 880px) { .app { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+
+  /* Controls */
+  .controls { padding: 18px; display: grid; gap: 18px; }
+  .field { display: grid; gap: 7px; }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; align-items: baseline; }
+  .label small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 12px; }
+  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .style-btn {
+    appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+    font: 500 13px/1.2 var(--font-body); padding: 10px 6px; border-radius: 8px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .style-btn:hover { border-color: var(--muted); }
+  .style-btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .style-desc { font-size: 12.5px; color: var(--muted); margin: 0; min-height: 2.6em; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  select, input[type="text"], input[type="number"] {
+    width: 100%; font: 500 14px/1.2 var(--font-mono); color: var(--ink); background: var(--roll-bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-width: 0;
+  }
+  select { font-family: var(--font-body); }
+  .seed-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .icon-btn {
+    appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+    border-radius: 8px; width: 40px; display: grid; place-items: center; cursor: pointer;
+  }
+  .icon-btn:hover { border-color: var(--muted); }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+  .switch-text { font-size: 14px; }
+  .switch-text small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .track { width: 42px; height: 24px; border-radius: 99px; background: var(--line); position: relative; flex: none; transition: background .15s; }
+  .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .actions { display: grid; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); padding-block: 16px 0; }
+  .btn {
+    appearance: none; border: 1px solid transparent; border-radius: 8px; cursor: pointer;
+    font: 700 15px/1 var(--font-body); padding: 13px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); font-weight: 500; font-size: 14px; }
+  .btn-ghost:hover { border-color: var(--muted); }
+  .btn[disabled] { opacity: .55; cursor: progress; }
+  button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Player */
+  .player { padding: 20px; display: grid; gap: 16px; min-width: 0; }
+  .now { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  .song-title { font-family: var(--font-display); font-size: clamp(26px, 4vw, 38px); line-height: 1.1; margin: 0; text-wrap: balance; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-family: var(--font-mono); font-size: 12px; padding: 4px 9px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
+  .chip b { font-weight: 600; color: var(--muted); margin-right: 5px; }
+  .chip.loop { background: var(--accent-soft); border-color: transparent; }
+
+  .transport { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .play {
+    width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--ink); color: var(--surface);
+    display: grid; place-items: center; cursor: pointer; flex: none;
+  }
+  .play:hover { background: var(--accent); color: var(--accent-ink); }
+  .play[disabled] { opacity: .4; cursor: default; }
+  .time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; color: var(--muted); }
+  .time strong { color: var(--ink); font-weight: 600; }
+  .transport .spacer { flex: 1; }
+  .dl { text-decoration: none; }
+
+  .roll-wrap { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--roll-bg); }
+  canvas#roll { display: block; width: 100%; height: 300px; cursor: pointer; touch-action: manipulation; }
+  .busy-veil {
+    position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--roll-bg) 70%, transparent);
+    font-family: var(--font-mono); font-size: 13px; color: var(--muted);
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .stats { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin: 0; }
+  .error { color: var(--error); font-size: 14px; margin: 0; }
+
+  .progression { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .progression .c {
+    font-family: var(--font-mono); font-size: 13px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
+    white-space: nowrap; color: var(--muted); background: var(--surface);
+  }
+  .progression .c.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+
+  /* History */
+  .history { padding: 14px 18px 16px; margin-top: 20px; }
+  .history h2 { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  .history ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+  .history button {
+    appearance: none; width: 100%; text-align: left; background: none; border: none; color: var(--ink); cursor: pointer;
+    padding: 7px 8px; border-radius: 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font: inherit;
+  }
+  .history button:hover { background: var(--surface-2); }
+  .history .h-title { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history .h-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); grid-column: 1 / -1; }
+  .history .h-seed { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+  .history .empty { color: var(--muted); font-size: 13px; margin: 0; }
+
+  /* API */
+  .api { margin-top: 44px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 28px; align-items: start; }
+  @media (max-width: 880px) { .api { grid-template-columns: 1fr; } }
+  .api h2 { font-family: var(--font-display); font-size: 24px; margin: 0 0 8px; font-weight: 400; }
+  .api p { margin: 0 0 12px; max-width: 62ch; color: var(--muted); }
+  .api p code, td code { font-family: var(--font-mono); font-size: 0.9em; color: var(--ink); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .code {
+    position: relative; background: #16181D; color: #E6E8EC; border-radius: var(--radius); padding: 16px 18px; overflow-x: auto;
+    font: 13px/1.65 var(--font-mono); margin: 0 0 14px;
+  }
+  .code .k { color: #FF8A5C; } .code .s { color: #8BD5B8; } .code .c { color: #7C8391; } .code .n { color: #9DB8FF; }
+  .code-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px; }
+  .code-head span { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+  .copy { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 12px var(--font-body); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  th { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; background: var(--surface-2); }
+  td:first-child { white-space: nowrap; }
+  td code { white-space: nowrap; }
+  .sub { margin-top: 18px; }
+
+  footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (max-width: 480px) {
+    .wrap { padding-inline: 16px; }
+    canvas#roll { height: 240px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1 class="wordmark">music-composition<span>.js</span></h1>
+      <p class="tagline">シードから作曲して WAV を書き出す。すべてブラウザの中で。</p>
+    </div>
+    <a class="badge" id="version" href="https://github.com/siyukatu/music-composition.js">music-composition.js</a>
+  </header>
+
+  <div class="app">
+    <aside>
+      <form class="panel controls" id="form" autocomplete="off">
+        <div class="field">
+          <div class="label">スタイル</div>
+          <div class="styles" id="styles" role="group" aria-label="スタイル"></div>
+          <p class="style-desc" id="style-desc"></p>
+        </div>
+
+        <div class="field">
+          <label class="label" for="seed">シード <small>同じシード＝同じ曲</small></label>
+          <div class="seed-row">
+            <input type="text" id="seed" spellcheck="false" maxlength="64">
+            <button type="button" class="icon-btn" id="dice" title="新しいシードを入れる" aria-label="新しいシードを入れる">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label class="label" for="key">キー</label>
+            <select id="key"></select>
+          </div>
+          <div class="field">
+            <label class="label" for="mode">モード</label>
+            <select id="mode"></select>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label class="label" for="bpm">BPM</label>
+            <input type="number" id="bpm" min="40" max="240" step="1" placeholder="おまかせ" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label class="label" for="bars">長さ</label>
+            <select id="bars">
+              <option value="8">8 小節</option>
+              <option value="16">16 小節</option>
+              <option value="32" selected>32 小節</option>
+              <option value="48">48 小節</option>
+              <option value="64">64 小節</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="switch" for="loop">
+          <span class="switch-text">ループ用に書き出す<small>イントロ・アウトロなし。末尾の残響を先頭に折り返し、継ぎ目なくループします</small></span>
+          <input type="checkbox" id="loop">
+          <span class="track" aria-hidden="true"></span>
+        </label>
+
+        <div class="field">
+          <label class="label" for="rate">サンプルレート</label>
+          <select id="rate">
+            <option value="44100" selected>44.1 kHz</option>
+            <option value="32000">32 kHz</option>
+            <option value="22050">22.05 kHz（軽量）</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="gen-new">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>
+            新しい曲を作る
+          </button>
+          <button type="button" class="btn btn-ghost" id="gen-same">このシードで作り直す</button>
+        </div>
+      </form>
+
+      <section class="panel history" aria-labelledby="history-h">
+        <h2 id="history-h">作った曲</h2>
+        <ol id="history"></ol>
+        <p class="empty" id="history-empty">まだありません</p>
+      </section>
+    </aside>
+
+    <section class="panel player" aria-live="polite">
+      <div class="now">
+        <div>
+          <p class="eyebrow">Now composed</p>
+          <h2 class="song-title" id="title">…</h2>
+          <div class="chips" id="chips"></div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="play" id="play" aria-label="再生" disabled>
+          <svg id="play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+        </button>
+        <div class="time"><strong id="t-cur">0:00</strong> / <span id="t-dur">0:00</span></div>
+        <div class="spacer"></div>
+        <a class="btn btn-ghost dl" id="download" href="#" download="music.wav" aria-disabled="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+          WAV を保存
+        </a>
+      </div>
+
+      <div class="roll-wrap">
+        <canvas id="roll" aria-label="ピアノロール。クリックでその位置へ移動"></canvas>
+        <div class="busy-veil" id="veil">作曲中…</div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i style="background:var(--lead)"></i>メロディ</span>
+        <span><i style="background:var(--chords)"></i>コード / パッド</span>
+        <span><i style="background:var(--arp)"></i>アルペジオ</span>
+        <span><i style="background:var(--bass)"></i>ベース</span>
+        <span><i style="background:var(--drums)"></i>ドラム</span>
+      </div>
+
+      <div class="field">
+        <div class="label">コード進行</div>
+        <div class="progression" id="progression"></div>
+      </div>
+
+      <p class="stats" id="stats"></p>
+      <p class="error" id="error" hidden></p>
+    </section>
+  </div>
+
+  <section class="api" aria-labelledby="api-h">
+    <div>
+      <h2 id="api-h">自分のページで使う</h2>
+      <p><code>music-composition.js</code> を読み込むと、グローバルの <code>MusicComposition</code> から呼び出せます。<code>MusicComposition.generate()</code> は WAV ファイルそのもの（<code>ArrayBuffer</code>）を返すので、再生・保存・アップロードに直接使えます。</p>
+      <p>ブラウザ・Web Worker・Node.js で動き、外部ライブラリもサーバーも不要です。同じオプションとシードを渡せば、いつでも同じ曲が返ります。</p>
+      <div class="code-head"><span>いまの設定のコード</span><button class="copy" id="copy" type="button">コピー</button></div>
+      <pre class="code" id="snippet"></pre>
+      <div class="code-head"><span>Node.js</span></div>
+      <pre class="code"><span class="k">const</span> MusicComposition = <span class="n">require</span>(<span class="s">'./music-composition.js'</span>);
+<span class="k">const</span> wav = MusicComposition.<span class="n">generate</span>({ style: <span class="s">'chiptune'</span>, seed: <span class="s">'stage-1'</span>, loop: <span class="k">true</span> });
+<span class="n">require</span>(<span class="s">'fs'</span>).<span class="n">writeFileSync</span>(<span class="s">'stage-1.wav'</span>, Buffer.<span class="n">from</span>(wav));</pre>
+    </div>
+
+    <div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>関数</th><th>戻り値</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><code>generate(opts)</code></td><td><code>ArrayBuffer</code></td><td>作曲して WAV を返す（同期）</td></tr>
+            <tr><td><code>generateAsync(opts)</code></td><td><code>Promise</code></td><td>Worker でレンダリングし、画面を止めない</td></tr>
+            <tr><td><code>compose(opts)</code></td><td><code>song</code></td><td>楽譜だけ作る（音符・コード・構成・曲名）</td></tr>
+            <tr><td><code>render(song, {sampleRate})</code></td><td><code>ArrayBuffer</code></td><td>楽譜を WAV に書き出す</td></tr>
+            <tr><td><code>renderAsync(song, opts)</code></td><td><code>Promise</code></td><td>render の非同期版</td></tr>
+            <tr><td><code>toURL(wav)</code> / <code>toBlob(wav)</code></td><td><code>string</code> / <code>Blob</code></td><td><code>&lt;audio&gt;</code> やダウンロード用</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-scroll sub">
+        <table>
+          <thead><tr><th>オプション</th><th>値</th><th>既定</th></tr></thead>
+          <tbody>
+            <tr><td><code>seed</code></td><td>文字列 / 数値</td><td>ランダム</td></tr>
+            <tr><td><code>style</code></td><td><code>pop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>auto</code></td><td><code>auto</code></td></tr>
+            <tr><td><code>key</code></td><td><code>C</code>〜<code>B</code>（<code>F#</code>, <code>Bb</code> など）</td><td>シードで決定</td></tr>
+            <tr><td><code>mode</code></td><td><code>major</code> <code>minor</code> <code>dorian</code> <code>mixolydian</code> <code>lydian</code></td><td>スタイルに合わせて決定</td></tr>
+            <tr><td><code>bpm</code></td><td>40〜240</td><td>スタイルに合わせて決定</td></tr>
+            <tr><td><code>bars</code></td><td>8〜256（4 の倍数に丸め）</td><td><code>32</code></td></tr>
+            <tr><td><code>duration</code></td><td>秒数（<code>bars</code> がないとき）</td><td>—</td></tr>
+            <tr><td><code>loop</code></td><td><code>true</code> / <code>false</code></td><td><code>false</code></td></tr>
+            <tr><td><code>sampleRate</code></td><td>8000〜96000</td><td><code>44100</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>出力は 16-bit ステレオ PCM WAV。合成・エフェクト（リバーブ、ディレイ、サイドチェイン）はすべて JavaScript で計算しています。</footer>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+<script src="music-composition.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+
+  var STYLE_INFO = {
+    auto: ['おまかせ', 'シードからスタイルも選びます。'],
+    pop: ['Pop', '明るい8ビートに、鍵盤のバッキングとシンセリード。'],
+    dance: ['Dance', '4つ打ちとオフビートのベース。キックに合わせてパッドがうねります。'],
+    lofi: ['Lo-fi', 'スウィングするビートにエレピの7thコード、レコードのノイズ。'],
+    chiptune: ['Chiptune', '矩形波と三角波、ノイズドラムの8bitサウンド。'],
+    ambient: ['Ambient', 'ドラムなし。ゆっくり広がるパッドとベルの音。']
+  };
+  var MODE_JA = { major: 'メジャー', minor: 'マイナー', dorian: 'ドリアン', mixolydian: 'ミクソリディアン', lydian: 'リディアン' };
+  var SECTION_JA = { intro: 'INTRO', A: 'A', B: 'B', outro: 'OUTRO' };
+
+  var state = { style: 'lofi', song: null, url: null, busy: false, history: [], raf: 0 };
+  var audio = $('#audio');
+  var canvas = $('#roll');
+  var staticLayer = document.createElement('canvas');
+
+  $('#version').textContent = 'music-composition.js v' + MusicComposition.version + ' · GitHub';
+
+  // Controls ------------------------------------------------------------
+  var stylesEl = $('#styles');
+  ['auto'].concat(MusicComposition.styles).forEach(function (name) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'style-btn';
+    b.id = 'style-' + name;
+    b.textContent = STYLE_INFO[name] ? STYLE_INFO[name][0] : name;
+    b.setAttribute('aria-pressed', String(name === state.style));
+    b.addEventListener('click', function () { setStyle(name); });
+    stylesEl.appendChild(b);
+  });
+  function setStyle(name) {
+    state.style = name;
+    stylesEl.querySelectorAll('.style-btn').forEach(function (b) { b.setAttribute('aria-pressed', String(b.id === 'style-' + name)); });
+    $('#style-desc').textContent = STYLE_INFO[name] ? STYLE_INFO[name][1] : '';
+    updateSnippet();
+  }
+
+  var keySel = $('#key');
+  keySel.innerHTML = '<option value="">おまかせ</option>' + MusicComposition.keys.map(function (k) { return '<option value="' + k + '">' + k + '</option>'; }).join('');
+  var modeSel = $('#mode');
+  modeSel.innerHTML = '<option value="">おまかせ</option>' + MusicComposition.modes.map(function (m) { return '<option value="' + m + '">' + (MODE_JA[m] || m) + '</option>'; }).join('');
+
+  function newSeed() {
+    var words = ['sora', 'umi', 'hoshi', 'kaze', 'yuki', 'hana', 'tsuki', 'mori', 'ame', 'niji', 'kumo', 'yoru'];
+    return words[Math.floor(Math.random() * words.length)] + '-' + Math.floor(Math.random() * 9000 + 1000);
+  }
+  $('#seed').value = 'sakura-2026';
+  $('#dice').addEventListener('click', function () { $('#seed').value = newSeed(); updateSnippet(); });
+
+  function readOptions() {
+    var o = { seed: $('#seed').value.trim() || newSeed() };
+    if (state.style !== 'auto') o.style = state.style;
+    if (keySel.value) o.key = keySel.value;
+    if (modeSel.value) o.mode = modeSel.value;
+    var bpm = parseInt($('#bpm').value, 10);
+    if (bpm >= 40 && bpm <= 240) o.bpm = bpm;
+    o.bars = parseInt($('#bars').value, 10);
+    if ($('#loop').checked) o.loop = true;
+    var sr = parseInt($('#rate').value, 10);
+    if (sr !== 44100) o.sampleRate = sr;
+    return o;
+  }
+
+  ['#seed', '#key', '#mode', '#bpm', '#bars', '#loop', '#rate'].forEach(function (s) {
+    $(s).addEventListener('input', updateSnippet);
+    $(s).addEventListener('change', updateSnippet);
+  });
+
+  $('#form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('#seed').value = newSeed();
+    make(readOptions());
+  });
+  $('#gen-same').addEventListener('click', function () { make(readOptions()); });
+
+  // Generation ------------------------------------------------------------
+  function make(opts, fromHistory) {
+    if (state.busy) return;
+    setBusy(true);
+    $('#error').hidden = true;
+    var t0 = performance.now();
+    var song;
+    try {
+      song = MusicComposition.compose(opts);
+    } catch (err) {
+      showError(err); setBusy(false); return;
+    }
+    // Let the "composing" state paint before heavy work.
+    requestAnimationFrame(function () {
+      MusicComposition.renderAsync(song, { sampleRate: opts.sampleRate }).then(function (wav) {
+        var ms = performance.now() - t0;
+        load(song, wav, opts, ms);
+        if (!fromHistory) addHistory(song, opts);
+      }).catch(showError).then(function () { setBusy(false); });
+    });
+  }
+
+  function load(song, wav, opts, ms) {
+    var wasPlaying = !audio.paused;
+    audio.pause();
+    if (state.url) URL.revokeObjectURL(state.url);
+    state.song = song;
+    state.url = MusicComposition.toURL(wav);
+    audio.src = state.url;
+    audio.loop = song.loop;
+    $('#title').textContent = song.title;
+    var info = STYLE_INFO[song.style];
+    var chips = [
+      ['style', info ? info[0] : song.style],
+      ['key', song.key + ' ' + (MODE_JA[song.mode] || song.mode)],
+      ['bpm', song.bpm],
+      ['bars', song.bars],
+      ['seed', song.seed]
+    ].map(function (c) { return '<span class="chip"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
+    if (song.loop) chips += '<span class="chip loop"><b>loop</b>' + fmt(song.loopEnd) + '</span>';
+    $('#chips').innerHTML = chips;
+    $('#t-dur').textContent = fmt(playLength());
+    $('#t-cur').textContent = '0:00';
+    var dl = $('#download');
+    dl.href = state.url;
+    dl.download = (song.title.replace(/\s+/g, '-') + '_' + song.seed).replace(/[^\w.-]+/g, '') + '.wav';
+    dl.removeAttribute('aria-disabled');
+    $('#play').disabled = false;
+    var bytes = wav.byteLength;
+    $('#stats').textContent = '生成 ' + (ms / 1000).toFixed(2) + ' 秒 · ' + ((opts.sampleRate || 44100) / 1000) + ' kHz · ' +
+      (bytes / 1048576).toFixed(1) + ' MB · 音符 ' + song.notes.length + ' 個';
+    renderProgression(song);
+    drawStatic();
+    drawFrame();
+    updateSnippet(opts);
+    if (wasPlaying) audio.play().catch(function () {});
+  }
+
+  function playLength() { return state.song ? (state.song.loop ? state.song.loopEnd : state.song.duration) : 0; }
+
+  function setBusy(b) {
+    state.busy = b;
+    $('#veil').hidden = !b;
+    $('#gen-new').disabled = b;
+    $('#gen-same').disabled = b;
+  }
+  function showError(err) {
+    var el = $('#error');
+    el.textContent = '作曲できませんでした: ' + (err && err.message ? err.message : err);
+    el.hidden = false;
+  }
+
+  // History ---------------------------------------------------------------
+  function addHistory(song, opts) {
+    state.history.unshift({ title: song.title, style: song.style, key: song.key, mode: song.mode, bpm: song.bpm, seed: song.seed, opts: opts });
+    state.history = state.history.slice(0, 8);
+    renderHistory();
+  }
+  function renderHistory() {
+    var ol = $('#history');
+    ol.innerHTML = '';
+    $('#history-empty').hidden = state.history.length > 0;
+    state.history.forEach(function (h) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = '<span class="h-title"></span><span class="h-seed"></span><span class="h-meta"></span>';
+      b.querySelector('.h-title').textContent = h.title;
+      b.querySelector('.h-seed').textContent = h.seed;
+      b.querySelector('.h-meta').textContent = (STYLE_INFO[h.style] ? STYLE_INFO[h.style][0] : h.style) + ' · ' + h.key + ' ' + (MODE_JA[h.mode] || h.mode) + ' · ' + h.bpm + ' BPM';
+      b.title = '同じシードから再生成';
+      b.addEventListener('click', function () { applyOptions(h.opts); make(h.opts, true); });
+      li.appendChild(b);
+      ol.appendChild(li);
+    });
+  }
+  function applyOptions(o) {
+    $('#seed').value = o.seed;
+    setStyle(o.style || 'auto');
+    keySel.value = o.key || '';
+    modeSel.value = o.mode || '';
+    $('#bpm').value = o.bpm || '';
+    $('#bars').value = String(o.bars || 32);
+    $('#loop').checked = !!o.loop;
+    $('#rate').value = String(o.sampleRate || 44100);
+  }
+
+  // Transport ---------------------------------------------------------------
+  var playIcon = '<path d="M7 4.5v15l13-7.5z"/>';
+  var pauseIcon = '<path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/>';
+  $('#play').addEventListener('click', togglePlay);
+  // Inside the claude.ai artifact viewer plain download links are inert, and the
+  // viewer's save dialog does not accept .wav — so there we hand over a .zip.
+  var viewerDownloads = null;
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(function (d) {
+      viewerDownloads = d;
+      if (!d) $('#download').hidden = true;
+      else $('#download').lastChild.textContent = ' WAV を保存（zip）';
+    });
+  }
+  $('#download').addEventListener('click', function (e) {
+    if (!state.url) { e.preventDefault(); return; }
+    if (!window.claude) return; // normal page: the link downloads the WAV
+    e.preventDefault();
+    if (!viewerDownloads) return;
+    var name = $('#download').download;
+    fetch(state.url).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+      return viewerDownloads.save({ filename: name.replace(/\.wav$/, '.zip'), data: storeZip(name, new Uint8Array(buf)) });
+    }).catch(function (err) {
+      if (err && err.code === 'declined') return;
+      showError(err);
+    });
+  });
+  function storeZip(name, data) {
+    var crc = -1, i, k;
+    for (i = 0; i < data.length; i++) {
+      crc ^= data[i];
+      for (k = 0; k < 8; k++) crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+    }
+    crc = (crc ^ -1) >>> 0;
+    var fname = new TextEncoder().encode(name), n = fname.length, size = data.length;
+    var out = new Uint8Array(30 + n + size + 46 + n + 22), v = new DataView(out.buffer);
+    function head(off, central) {
+      v.setUint32(off, central ? 0x02014b50 : 0x04034b50, true);
+      var o = off + 4;
+      if (central) { v.setUint16(o, 20, true); o += 2; }
+      v.setUint16(o, 20, true); v.setUint16(o + 2, 0x0800, true); v.setUint16(o + 4, 0, true);
+      v.setUint16(o + 6, 0, true); v.setUint16(o + 8, 0x21, true);
+      v.setUint32(o + 10, crc, true); v.setUint32(o + 14, size, true); v.setUint32(o + 18, size, true);
+      v.setUint16(o + 22, n, true); v.setUint16(o + 24, 0, true);
+      o += 26;
+      if (central) { o += 14; }
+      out.set(fname, o);
+      return o + n;
+    }
+    var p = head(0, false);
+    out.set(data, p); p += size;
+    var cd = p;
+    p = head(cd, true);
+    v.setUint32(p, 0x06054b50, true);
+    v.setUint16(p + 8, 1, true); v.setUint16(p + 10, 1, true);
+    v.setUint32(p + 12, p - cd, true); v.setUint32(p + 16, cd, true);
+    return out;
+  }
+  function togglePlay() {
+    if (!state.song) return;
+    if (audio.paused) audio.play().catch(showError); else audio.pause();
+  }
+  audio.addEventListener('play', function () {
+    $('#play-icon').innerHTML = pauseIcon; $('#play').setAttribute('aria-label', '一時停止');
+    loopFrame();
+  });
+  audio.addEventListener('pause', function () {
+    $('#play-icon').innerHTML = playIcon; $('#play').setAttribute('aria-label', '再生');
+    cancelAnimationFrame(state.raf); drawFrame();
+  });
+  audio.addEventListener('ended', function () { drawFrame(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.code !== 'Space') return;
+    var tag = (e.target && e.target.tagName) || '';
+    if (/INPUT|SELECT|TEXTAREA|BUTTON|A/.test(tag)) return;
+    e.preventDefault(); togglePlay();
+  });
+  canvas.addEventListener('click', function (e) {
+    if (!state.song) return;
+    var r = canvas.getBoundingClientRect();
+    var x = (e.clientX - r.left) / r.width;
+    audio.currentTime = Math.max(0, Math.min(playLength() - 0.01, x * playLength()));
+    drawFrame();
+  });
+  function loopFrame() {
+    drawFrame();
+    if (!audio.paused) state.raf = requestAnimationFrame(loopFrame);
+  }
+
+  // Piano roll ------------------------------------------------------------
+  var ROLL = { top: 24, chordLane: 0, drumLane: 34 };
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function drawStatic() {
+    var song = state.song; if (!song) return;
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    staticLayer.width = canvas.width; staticLayer.height = canvas.height;
+    var g = staticLayer.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var total = playLength();
+    var X = function (t) { return (t / total) * w; };
+
+    g.fillStyle = css('--roll-bg'); g.fillRect(0, 0, w, h);
+
+    // Section bands
+    var fontMono = '600 10px ' + css('--font-mono');
+    song.sections.forEach(function (s, i) {
+      var x0 = X(s.start), x1 = X(s.start + s.bars * song.barDuration);
+      if (i % 2 === 1) { g.fillStyle = css('--roll-band'); g.fillRect(x0, 0, x1 - x0, h); }
+      g.fillStyle = css('--muted'); g.font = fontMono; g.textBaseline = 'middle';
+      if (x1 - x0 > 28) g.fillText(SECTION_JA[s.type] || s.type, x0 + 6, 12);
+    });
+    // Bar grid
+    g.strokeStyle = css('--roll-grid'); g.lineWidth = 1;
+    for (var b = 1; b < song.bars; b++) {
+      var bx = Math.round(X(b * song.barDuration)) + 0.5;
+      g.beginPath(); g.moveTo(bx, ROLL.top); g.lineTo(bx, h - ROLL.drumLane); g.stroke();
+    }
+
+    var pitched = song.notes.filter(function (n) { return n.inst !== 'drums'; });
+    var lo = 127, hi = 0;
+    pitched.forEach(function (n) { if (n.midi < lo) lo = n.midi; if (n.midi > hi) hi = n.midi; });
+    lo -= 1; hi += 1;
+    var top = ROLL.top + 4, bottom = h - ROLL.drumLane - 6;
+    var rowH = (bottom - top) / (hi - lo + 1);
+    var Y = function (m) { return bottom - (m - lo + 1) * rowH; };
+    var colors = { lead: css('--lead'), bass: css('--bass'), chords: css('--chords'), arp: css('--arp') };
+    var order = { chords: 0, bass: 1, arp: 2, lead: 3 };
+    pitched.sort(function (a, b) { return order[a.inst] - order[b.inst]; });
+    pitched.forEach(function (n) {
+      if (n.t >= total) return;
+      g.globalAlpha = n.inst === 'chords' ? 0.45 : n.inst === 'arp' ? 0.7 : 0.95;
+      g.fillStyle = colors[n.inst];
+      var x = X(n.t), wd = Math.max(1.5, X(Math.min(n.d, total - n.t)) - 0.5);
+      g.fillRect(x, Y(n.midi), wd, Math.max(1.5, rowH - 0.5));
+    });
+    g.globalAlpha = 1;
+
+    // Drum lane
+    var laneTop = h - ROLL.drumLane;
+    g.fillStyle = css('--roll-band'); g.fillRect(0, laneTop, w, ROLL.drumLane);
+    g.strokeStyle = css('--line'); g.beginPath(); g.moveTo(0, laneTop + 0.5); g.lineTo(w, laneTop + 0.5); g.stroke();
+    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, open: 0, crash: 0 };
+    g.fillStyle = css('--drums');
+    song.notes.forEach(function (n) {
+      if (n.inst !== 'drums' || n.t >= total) return;
+      var r = rows[n.drum];
+      g.globalAlpha = 0.35 + 0.65 * n.vel;
+      g.fillRect(X(n.t), laneTop + 6 + r * 8, n.drum === 'crash' ? 3 : 1.5, 6);
+    });
+    g.globalAlpha = 1;
+  }
+
+  function drawFrame() {
+    var song = state.song; if (!song) return;
+    var g = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(staticLayer, 0, 0);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    var t = audio.currentTime || 0;
+    var x = (t / playLength()) * w;
+    g.fillStyle = css('--accent');
+    g.fillRect(Math.round(x) - 1, 0, 2, h);
+    $('#t-cur').textContent = fmt(t);
+    // Highlight current chord
+    var idx = -1;
+    for (var i = 0; i < song.chords.length; i++) if (song.chords[i].time <= t + 0.01) idx = i;
+    if (idx !== state.chordIdx) {
+      var prev = document.querySelector('.progression .c.on'); if (prev) prev.classList.remove('on');
+      var cur = document.querySelector('.progression .c[data-i="' + idx + '"]');
+      if (cur) {
+        cur.classList.add('on');
+        var box = cur.parentElement;
+        if (cur.offsetLeft < box.scrollLeft || cur.offsetLeft + cur.offsetWidth > box.scrollLeft + box.clientWidth) box.scrollLeft = cur.offsetLeft - 8;
+      }
+      state.chordIdx = idx;
+    }
+  }
+
+  function renderProgression(song) {
+    var box = $('#progression');
+    box.innerHTML = song.chords.map(function (c, i) { return '<span class="c" data-i="' + i + '">' + escapeHtml(c.name) + '</span>'; }).join('');
+    box.scrollLeft = 0;
+    state.chordIdx = null;
+  }
+
+  if (window.ResizeObserver) new ResizeObserver(function () { drawStatic(); drawFrame(); }).observe(canvas);
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', function () { drawStatic(); drawFrame(); });
+  new MutationObserver(function () { drawStatic(); drawFrame(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // Snippet -----------------------------------------------------------------
+  function updateSnippet(optsIn) {
+    var o = (optsIn && optsIn.seed) ? optsIn : readOptions();
+    var parts = [];
+    if (o.style) parts.push('style: ' + s(o.style));
+    parts.push('seed: ' + s(o.seed));
+    if (o.key) parts.push('key: ' + s(o.key));
+    if (o.mode) parts.push('mode: ' + s(o.mode));
+    if (o.bpm) parts.push('bpm: <span class="n">' + o.bpm + '</span>');
+    if (o.bars && o.bars !== 32) parts.push('bars: <span class="n">' + o.bars + '</span>');
+    if (o.loop) parts.push('loop: <span class="k">true</span>');
+    if (o.sampleRate) parts.push('sampleRate: <span class="n">' + o.sampleRate + '</span>');
+    var html =
+      '&lt;<span class="k">script</span> src=<span class="s">"music-composition.js"</span>&gt;&lt;/<span class="k">script</span>&gt;\n' +
+      '&lt;<span class="k">script</span>&gt;\n' +
+      '  <span class="c">// WAV (ArrayBuffer) が返ります</span>\n' +
+      '  <span class="k">const</span> wav = MusicComposition.<span class="n">generate</span>({ ' + parts.join(', ') + ' });\n' +
+      '  <span class="k">const</span> audio = <span class="k">new</span> <span class="n">Audio</span>(MusicComposition.<span class="n">toURL</span>(wav));\n' +
+      (o.loop ? '  audio.loop = <span class="k">true</span>;\n' : '') +
+      '  audio.<span class="n">play</span>();\n' +
+      '&lt;/<span class="k">script</span>&gt;';
+    $('#snippet').innerHTML = html;
+    function s(v) { return '<span class="s">\'' + escapeHtml(String(v)).replace(/'/g, "\\'") + '\'</span>'; }
+  }
+  $('#copy').addEventListener('click', function () {
+    var text = $('#snippet').textContent;
+    var btn = this;
+    var done = function (ok) { btn.textContent = ok ? 'コピーしました' : 'テキストを選択しました'; setTimeout(function () { btn.textContent = 'コピー'; }, 1600); };
+    try {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { selectSnippet(); done(false); });
+    } catch (e) { selectSnippet(); done(false); }
+  });
+  function selectSnippet() {
+    var r = document.createRange(); r.selectNodeContents($('#snippet'));
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }
+
+  // Utils -----------------------------------------------------------------
+  function fmt(sec) {
+    sec = Math.max(0, sec || 0);
+    var m = Math.floor(sec / 60), s2 = Math.floor(sec % 60);
+    return m + ':' + (s2 < 10 ? '0' : '') + s2;
+  }
+  function escapeHtml(s) { return s.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // Start with a real song on screen (playback waits for a click).
+  setStyle(state.style);
+  renderHistory();
+  make(readOptions());
+})();
+</script>
+</body>
+</html>
