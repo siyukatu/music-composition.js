@@ -83,7 +83,7 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイルに合わせて決定 |
 | `bpm` | 40〜240 | スタイルに合わせて決定 |
 | `bars` | 8〜256（4 の倍数に丸め） | `32` |
-| `duration` | 目安の秒数（`bars` 未指定時） | — |
+| `duration` | 目安の秒数（残響を含む。`bars` 未指定時。4 小節単位に丸め） | — |
 | `loop` | `true` / `false` | `false` |
 | `sampleRate` | 8000〜96000 | `44100` |
 
@@ -117,6 +117,25 @@ npm run dev
 ```
 
 http://localhost:8765 を開きます。
+
+### 曲の共有
+
+曲はオプションだけで決まるので、URL がそのまま曲になります。
+
+```
+https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
+```
+
+| パラメータ | 内容 |
+|---|---|
+| `seed` | シード（必須） |
+| `style` `key` `mode` `bpm` | 省略するとシードから決まる |
+| `bars` / `sec` | 長さ（小節 / 秒）。どちらもなければ 32 小節 |
+| `loop=1` | ループ用 |
+
+共有ダイアログの「ほかのアプリで共有…」（`navigator.share`）では、ブラウザで描いたカード画像（1200×630 の PNG）も一緒に渡します。
+
+> 同じ URL で同じ曲が再現できるのは、同じバージョンのライブラリで作曲した場合です。作曲アルゴリズムを変えると、既存の URL の曲も変わります。
 
 ### Cloudflare Pages の設定
 
