@@ -13,14 +13,16 @@
 
 ## インストール
 
+> 現在はベータ版です。API は正式版までに変わる可能性があります。
+
 ```bash
-npm install music-composition.js
+npm install music-composition.js@beta
 ```
 
 ビルドせずにブラウザで使う場合は CDN から読み込めます。
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/music-composition.js@1"></script>
+<script src="https://cdn.jsdelivr.net/npm/music-composition.js@beta"></script>
 ```
 
 ## 使い方
@@ -28,7 +30,7 @@ npm install music-composition.js
 ### ブラウザ
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/music-composition.js@1"></script>
+<script src="https://cdn.jsdelivr.net/npm/music-composition.js@beta"></script>
 <script>
   const wav = MusicComposition.generate({ style: 'lofi', seed: 'sakura', loop: true }); // ArrayBuffer (WAV)
   const audio = new Audio(MusicComposition.toURL(wav));

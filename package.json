@@ -1,6 +1,6 @@
 {
   "name": "music-composition.js",
-  "version": "1.0.0",
+  "version": "1.0.0-beta.0",
   "description": "Client-side procedural music generator. Composes a song from a seed and renders it to WAV — no server, no dependencies.",
   "main": "music-composition.js",
   "types": "music-composition.d.ts",
