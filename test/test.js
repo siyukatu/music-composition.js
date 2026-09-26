@@ -96,7 +96,7 @@ test('melodies move mostly by step and stay in range', () => {
   for (const style of MusicComposition.styles) {
     for (let i = 0; i < 12; i++) {
       const song = MusicComposition.compose({ seed: 'mel' + i, style });
-      const lead = song.notes.filter(n => n.inst === 'lead');
+      const lead = song.notes.filter(n => n.inst === 'lead' && !n.harmony);
       assert.ok(lead.length > 0, 'no melody');
       lead.forEach(n => assert.ok(n.midi >= 40 && n.midi <= 100 && n.d > 0, 'bad note ' + JSON.stringify(n)));
       for (let k = 1; k < lead.length; k++) {

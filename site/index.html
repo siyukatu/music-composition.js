@@ -571,7 +571,7 @@
     ambient: ['Ambient', 'ドラムなし。ゆっくり広がるパッドとベルの音。']
   };
   var MODE_JA = { major: 'メジャー', minor: 'マイナー', dorian: 'ドリアン', mixolydian: 'ミクソリディアン', lydian: 'リディアン' };
-  var SECTION_JA = { intro: 'INTRO', A: 'A', B: 'B', outro: 'OUTRO' };
+  var SECTION_JA = { intro: 'INTRO', A: 'A', P: 'PRE', B: 'B', C: 'BRIDGE', outro: 'OUTRO' };
 
   var state = { style: 'lofi', unit: 'bars', song: null, opts: null, url: null, busy: false, history: [], raf: 0, syncUrl: false };
   var audio = $('#audio');
@@ -890,7 +890,8 @@
       var x0 = X(s.start), x1 = X(s.start + s.bars * song.barDuration);
       if (i % 2 === 1) { g.fillStyle = css('--roll-band'); g.fillRect(x0, 0, x1 - x0, h); }
       g.fillStyle = css('--muted'); g.font = fontMono; g.textBaseline = 'middle';
-      if (x1 - x0 > 28) g.fillText(SECTION_JA[s.type] || s.type, x0 + 6, 12);
+      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '');
+      if (x1 - x0 > 28) g.fillText(label, x0 + 6, 12);
     });
     // Bar grid
     g.strokeStyle = css('--roll-grid'); g.lineWidth = 1;

@@ -4,7 +4,8 @@
 declare namespace MusicComposition {
   type Style = 'pop' | 'dance' | 'lofi' | 'chiptune' | 'ambient';
   type Mode = 'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian';
-  type SectionType = 'intro' | 'A' | 'B' | 'outro';
+  /** A = verse, P = pre-chorus, B = chorus, C = bridge. */
+  type SectionType = 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro';
   type Instrument = 'lead' | 'bass' | 'chords' | 'arp' | 'drums';
   type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'open' | 'crash';
 
@@ -40,13 +41,17 @@ declare namespace MusicComposition {
     bars: number;
     /** Start time in seconds. */
     start: number;
+    /** Key of this section (after a key change, the new key). */
+    key: string;
+    /** Semitones above the song's key (a final chorus may move up). */
+    shift: number;
   }
 
   interface Chord {
     bar: number;
     /** Start time in seconds. */
     time: number;
-    /** e.g. 'Am7', 'F', 'Bbmaj7' */
+    /** e.g. 'Am7', 'F', 'Bbmaj7', 'E7', 'Gsus4', 'C/E' */
     name: string;
     /** 0-based scale degree. */
     degree: number;
@@ -67,6 +72,12 @@ declare namespace MusicComposition {
     drum?: Drum;
     kit?: string;
     pan?: number;
+    /** Pitch scoop: the note starts this many semitones off (negative = below) and glides in. */
+    bend?: number;
+    /** Length of the scoop in seconds. */
+    bendTime?: number;
+    /** A harmony line under the lead (final chorus). */
+    harmony?: boolean;
   }
 
   interface Song {
