@@ -280,6 +280,20 @@
   .share-actions .btn { flex: 1 1 auto; font-size: 14px; padding: 11px 12px; }
   .share-actions small { flex-basis: 100%; font-size: 12px; color: var(--muted); text-align: center; }
   @media (max-width: 480px) { .sns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .video-box { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
+  .video-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .video-head strong { font-size: 14px; }
+  .video-head .seg button { font-size: 12px; padding: 5px 9px; }
+  .video-note { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .video-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; }
+  .video-progress .vbar { height: 6px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+  .video-progress .vbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .video-progress span { font: 500 12.5px var(--font-mono); color: var(--muted); min-width: 3.5em; text-align: right; }
+  .video-progress .btn { padding: 7px 10px; font-size: 13px; }
+  .video-done { display: grid; gap: 8px; }
+  .video-done video { width: 100%; max-height: 42vh; border-radius: 8px; background: #000; border: 1px solid var(--line); }
+  .video-done .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .video-done .btn { flex: 1 1 auto; font-size: 14px; padding: 11px 12px; text-decoration: none; }
 
   /* History */
   .history { padding: 14px 18px 16px; margin-top: 20px; }
@@ -552,11 +566,34 @@
       <button type="button" class="btn btn-primary" id="share-native" hidden>ほかのアプリで共有…</button>
       <small id="share-native-note" hidden>曲のカード画像も一緒に共有します</small>
     </div>
+    <div class="video-box" id="video-box">
+      <div class="video-head">
+        <strong>動画として書き出す</strong>
+        <span class="seg" role="group" aria-label="動画の縦横比" id="video-aspect">
+          <button type="button" data-aspect="16:9" aria-pressed="true">横 16:9</button><button type="button" data-aspect="1:1" aria-pressed="false">正方形</button><button type="button" data-aspect="9:16" aria-pressed="false">縦 9:16</button>
+        </span>
+      </div>
+      <p class="video-note" id="video-note">曲に合わせてピアノロール・コード・ビートが動く MP4 動画を、ブラウザの中で作ります。</p>
+      <button type="button" class="btn btn-ghost" id="video-make">動画を書き出す</button>
+      <div class="video-progress" id="video-progress" hidden>
+        <div class="vbar"><i id="video-bar"></i></div>
+        <span id="video-pct">0%</span>
+        <button type="button" class="btn btn-ghost" id="video-cancel">中止</button>
+      </div>
+      <div class="video-done" id="video-done" hidden>
+        <video id="video-preview" controls playsinline preload="metadata"></video>
+        <div class="row">
+          <button type="button" class="btn btn-primary" id="video-share" hidden>動画を共有…</button>
+          <a class="btn btn-ghost" id="video-save" download>動画を保存</a>
+        </div>
+      </div>
+    </div>
   </div>
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js"></script>
+<script src="music-composition.js?h=79f5c1"></script>
+<script src="video.js?h=ceeab4"></script>
 <script>
 (function () {
   'use strict';
@@ -1135,6 +1172,74 @@
     } catch (e) { input.select(); done(false); }
   });
   $('#share-url').addEventListener('focus', function () { this.select(); });
+
+  // Video export (site/video.js) ---------------------------------------------
+  var video = { aspect: '16:9', song: null, file: null, url: null, abort: null };
+  var videoMode = window.MCVideo ? MCVideo.mode() : null;
+  if (!videoMode) $('#video-box').hidden = true;
+  $('#video-aspect').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b || video.abort) return;
+    video.aspect = b.dataset.aspect;
+    this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    resetVideo();
+  });
+  function resetVideo() {
+    if (video.abort) video.abort.abort();
+    if (video.url) URL.revokeObjectURL(video.url);
+    video.file = null; video.url = null; video.song = state.song;
+    $('#video-preview').removeAttribute('src');
+    $('#video-done').hidden = true;
+    $('#video-progress').hidden = true;
+    $('#video-make').hidden = false;
+    $('#video-note').textContent = videoMode === 'realtime'
+      ? '曲に合わせて動く動画を作ります。このブラウザでは再生しながら録画するので、曲の長さ（約 ' + fmt(playLength()) + '）かかります。'
+      : '曲に合わせてピアノロール・コード・ビートが動く MP4 動画を、ブラウザの中で作ります。';
+  }
+  $('#share-open').addEventListener('click', function () { if (video.song !== state.song && !video.abort) resetVideo(); });
+  $('#video-make').addEventListener('click', function () {
+    if (!state.song || video.abort) return;
+    var song = state.song, name = fileBase();
+    var ctl = new AbortController();
+    video.abort = ctl;
+    $('#video-make').hidden = true;
+    $('#video-progress').hidden = false;
+    $('#video-bar').style.width = '0%';
+    $('#video-pct').textContent = '0%';
+    fetch(state.url).then(function (r) { return r.arrayBuffer(); }).then(function (wav) {
+      return MCVideo.render(song, wav, {
+        aspect: video.aspect, signal: ctl.signal,
+        onProgress: function (p) {
+          $('#video-bar').style.width = (p * 100).toFixed(1) + '%';
+          $('#video-pct').textContent = Math.floor(p * 100) + '%';
+        }
+      });
+    }).then(function (blob) {
+      video.abort = null;
+      if (state.song !== song) return;
+      var ext = /webm/.test(blob.type) ? '.webm' : '.mp4';
+      video.file = new File([blob], name + ext, { type: blob.type });
+      video.url = URL.createObjectURL(blob);
+      $('#video-progress').hidden = true;
+      $('#video-done').hidden = false;
+      $('#video-preview').src = video.url;
+      $('#video-save').href = video.url;
+      $('#video-save').download = video.file.name;
+      $('#video-share').hidden = !(navigator.share && navigator.canShare && navigator.canShare({ files: [video.file] }));
+      $('#video-note').textContent = '書き出しました（' + (blob.size / 1048576).toFixed(1) + ' MB）。';
+    }).catch(function (err) {
+      video.abort = null;
+      $('#video-progress').hidden = true;
+      $('#video-make').hidden = false;
+      if (err && err.name === 'AbortError') return;
+      $('#video-note').textContent = '動画を書き出せませんでした: ' + (err && err.message ? err.message : err);
+    });
+  });
+  $('#video-cancel').addEventListener('click', function () { if (video.abort) video.abort.abort(); });
+  $('#video-share').addEventListener('click', function () {
+    if (!video.file) return;
+    navigator.share({ files: [video.file], title: state.song.title, text: shareText() + '\n' + shareUrl() }).catch(function () {});
+  });
   // Share card: 1200×630 PNG of the song, drawn here in the page.
   var CARD_COLORS = { ground: '#111216', surface: '#1A1C21', line: '#2C3038', ink: '#ECEEF2', muted: '#969CA8',
     lead: '#FF6A33', bass: '#5B8BFF', chords: '#2EC4A0', arp: '#C07BF0', drums: '#6C727E' };

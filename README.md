@@ -116,7 +116,7 @@ song.notes     // [{ t, d, midi, vel, inst: 'lead' | 'bass' | 'chords' | 'arp' |
 
 ## サンプルページ
 
-`site/index.html` がサンプルページです。ライブラリ本体はリポジトリ直下の `music-composition.js` だけで、ビルド時に `site/` へコピーします（`site/music-composition.js` はコミットしません）。
+`site/index.html` がサンプルページです。ライブラリ本体はリポジトリ直下の `music-composition.js` だけで、ビルド（`npm run build` = `scripts/build.js`）で `site/` へコピーします（`site/music-composition.js` はコミットしません）。ビルドは `site/*.html` の `<script src>` に `?h=<SHA-256 の先頭 6 桁>` を付け、デプロイ後に古い JS がキャッシュから読まれないようにします。
 
 ローカルで確認するには:
 
@@ -142,6 +142,13 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 | `loop=1` | ループ用 |
 
 共有ダイアログの「ほかのアプリで共有…」（`navigator.share`）では、ブラウザで描いたカード画像（1200×630 の PNG）も一緒に渡します。
+
+### 動画の書き出し
+
+共有ダイアログから、曲に合わせてピアノロール・コード・ビートが動く動画（横 16:9 / 正方形 / 縦 9:16）を書き出せます（`site/video.js`）。
+
+- WebCodecs が使えるブラウザでは、[Mediabunny](https://mediabunny.dev/)（MPL-2.0、書き出し時に jsDelivr から読み込み）で MP4（H.264 + AAC など）に実時間より速くエンコードします
+- 使えないブラウザでは MediaRecorder で再生しながら録画します（曲の長さだけかかります）
 
 > 同じ URL で同じ曲が再現できるのは、同じバージョンのライブラリで作曲した場合です。作曲アルゴリズムを変えると、既存の URL の曲も変わります。
 

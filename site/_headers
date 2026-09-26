@@ -12,3 +12,10 @@ https://:project.pages.dev/*
   Cache-Control: public, max-age=86400
 /apple-touch-icon.png
   Cache-Control: public, max-age=86400
+
+# The page is revalidated on every load, so a deploy's new script URLs
+# (?h=<hash>, stamped by scripts/build.js) are picked up immediately.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
