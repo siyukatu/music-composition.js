@@ -9,7 +9,7 @@
 - ゲーム用のシームレスなループ書き出しに対応
 - 出力は 16-bit ステレオ PCM WAV（`ArrayBuffer`）
 
-**デモ: https://mcj.siyukatu.me/**（`site/` にあるサンプルページです）
+**デモ: [https://mcj.siyukatu.me/](https://mcj.siyukatu.me/)**（`site/` にあるサンプルページです）
 
 ## 作曲のしくみ
 
