@@ -1558,7 +1558,9 @@
     var sevenths = {};
     function dia(deg) {
       deg = ((deg % 7) + 7) % 7;
-      if (sevenths[deg] === undefined) sevenths[deg] = hr.chance(st.sevenths);
+      // (Drawn per degree, so it doesn't depend on where the degree first turns up:
+      // a longer version of the song keeps every chord of the shorter one.)
+      if (sevenths[deg] === undefined) sevenths[deg] = R('seventh-' + deg).chance(st.sevenths);
       var tones = sevenths[deg] ? [0, 2, 4, 6] : [0, 2, 4];
       // Colour: add9 on stable major chords.
       if (!sevenths[deg] && (deg === 0 || deg === 3) && !isDim(deg) && (scale[(deg + 2) % 7] - scale[deg] + 12) % 12 === 4 && hr.chance(spice * 0.25)) tones = [0, 2, 4, 8];
@@ -1777,8 +1779,15 @@
     });
     // Lead each section into the next: a pre-chorus always ends on the dominant;
     // otherwise a dominant before the tonic, a secondary dominant before anything
-    // else, the new key's V7 before a key change.
+    // else, the new key's V7 before a key change. Each section draws from its
+    // own random stream, so its lead-in doesn't depend on how long the song is.
     sections.forEach(function (sec, si) {
+      var shared = hr;
+      hr = R('leadin-' + si);
+      leadIn(sec, si);
+      hr = shared;
+    });
+    function leadIn(sec, si) {
       var next = sections[si + 1] || (loop ? sections[0] : null);
       var b = sec.plan[sec.plan.length - 1];
       if (!next || sec.type === 'outro' || b.cont) return;
@@ -1806,7 +1815,7 @@
       } else if (x.deg !== last.deg && !isDim(x.deg) && hr.chance(0.15 + 0.4 * spice)) {
         b.segs = [{ s: 0, c: last }, { s: 8, c: sh(secondaryDominant(scale, x.deg, true)) }];
       }
-    });
+    }
 
     // Jazz harmony: every chord a seventh chord, with tensions from its own scale
     // (a 9th that is a whole step above the root, or b9 on a dominant; a natural
@@ -2227,6 +2236,9 @@
     var REG = { A: [0, 1, 1, 0, 0, 2, 1, 0], B: [0, 1, 2, 1, 0, 2, 3, 1], C: [1, 2, 1, 0, 2, 3, 2, 0], P: [0, 1, 1, 2] };
     var PEAK = { A: { bar: 5, above: 3 }, P: { bar: 2, above: 2 }, B: { bar: 6, above: 5 }, C: { bar: 5, above: 4 } };
     var themes = {};
+    // The melody's timing and velocity are humanized from a stream of their own
+    // (not after all the accompaniment), so a longer version keeps them.
+    if (hum) hum = R('humanize-melody');
     var pending = [];   // pickup notes waiting for the pitch they lead into
     var dropped = [];
     var leadNotes = [];

@@ -1,6 +1,6 @@
 {
-  "name": "music-composition.js",
-  "short_name": "MCJ",
+  "name": "MCJ Player",
+  "short_name": "MCJ Player",
   "description": "シードから曲を作曲して再生・保存する、ブラウザの中だけで動く作曲アプリ。",
   "id": "/",
   "start_url": "/?source=pwa",
