@@ -2265,13 +2265,17 @@
         } else if (role === 'answer') {
           rh = th.answers[half];
           d = prev === null ? nearestChordTone(target, cAt(rh[0]), 0, lo, hi) : prev;
+          // The answer heads for its target by steps; once there it stays (a
+          // repeated note) or, now and then, moves on the way it was going.
+          var lastDir = 0;
           for (i = 0; i < rh.length; i++) {
             var step = clamp(Math.round((target - d) / (rh.length - i)), -2, 2);
-            if (step === 0) step = mr.chance(0.8) ? mr.sign() : 0;
-            else if (mr.chance(0.25)) step += mr.sign();
+            if (step === 0 && lastDir && mr.chance(0.3)) step = lastDir;
             var nd2 = d + step;
             if (nd2 > hi || nd2 < lo) nd2 = d - step;
+            var was = d;
             d = isStrong(rh[i]) || i === rh.length - 1 ? nearestChordTone(nd2, cAt(rh[i]), step, lo, hi) : nd2;
+            if (d !== was) lastDir = d > was ? 1 : -1;
             degs.push(d);
           }
         } else {
@@ -2368,15 +2372,32 @@
           b.pickedUp = true;
           var into = degs[0], fromAbove = mr.chance(0.35);
           // Into a chorus the pickup runs up to it.
-          if (j === 0 && entry !== null) fromAbove = false;
-          var firstP = into + (fromAbove ? 1 : -1) * pending.length;
+          var mustKeep = j === 0 && entry !== null;
+          if (mustKeep) fromAbove = false;
+          // The run steps into the target. Its first note follows the note
+          // before without a breath, so (as a passing note) it is reached by
+          // step, or else it is a chord tone; never by a tritone or 7th leap.
+          var before = leadNotes.length ? leadNotes[leadNotes.length - 1].n : null;
+          if (before && pending[0].t - (before.t + before.d) > stepDur * 3) before = null;
+          var runFor = function (above) { return pending.map(function (p, pi) { return into + (above ? 1 : -1) * (pending.length - pi); }); };
+          var runOk = function (run) {
+            var p0 = pending[0], m0 = leadBase + chordPitch(p0.chord, run[0]);
+            if (!before) return true;
+            var lp = Math.abs(m0 - before.midi);
+            if (lp === 6 || lp === 10 || lp === 11 || lp > 12) return false;
+            return Math.abs(run[0] - p0.after) <= 1 || isChordDeg(p0.chord, run[0]);
+          };
+          var run = runFor(fromAbove);
+          if (!runOk(run)) run = runFor(!fromAbove);
+          if (!runOk(run)) { run = runFor(fromAbove); run[0] = nearestChordTone(run[0], pending[0].chord, fromAbove ? 1 : -1, lo - 2, hi + 1); }
+          if (!runOk(run)) run = mustKeep ? runFor(false) : null;
           pending.forEach(function (p, pi) {
-            var dist = pending.length - pi;
-            p.midi = leadBase + chordPitch(p.chord, into + (fromAbove ? dist : -dist));
             // A pickup belongs to what it leads into: the next section's instrument plays it.
             p.patch = leadPatch;
             p.into = si;
-            if (Math.abs(firstP - p.after) > 4 && !(j === 0 && entry !== null)) dropped.push(p);
+            if (!run) { dropped.push(p); return; }
+            p.midi = leadBase + chordPitch(p.chord, run[pi]);
+            if (Math.abs(run[0] - p.after) > 4 && !mustKeep) dropped.push(p);
           });
           pending = [];
         }
@@ -2418,6 +2439,58 @@
     if (dropped.length) notes = notes.filter(function (n) { return dropped.indexOf(n) < 0; });
     notes.forEach(function (n) { delete n.after; delete n.chord; });
 
+    // Melodic rules, as in voice-leading practice:
+    // - a note outside the chord resolves by step to the next note, and is
+    //   reached by step (a passing or neighbour note) unless it is accented
+    //   (an appoggiatura, which may be leapt to);
+    // - no leap of a tritone, a seventh or more than an octave;
+    // - a line does not end a phrase on a note outside the chord.
+    // A note that breaks one is moved to a chord tone close to the note before.
+    var gapOf = function (a, b) { return b.n.t - (a.n.t + a.n.d); };
+    function melodicFault(l, k) {
+      var a = leadNotes[k - 1], z = leadNotes[k + 1];
+      if (a && gapOf(a, l) > stepDur * 3) a = null;
+      if (z && gapOf(l, z) > stepDur * 3) z = null;
+      if (a) {
+        var lp = Math.abs(l.n.midi - a.n.midi);
+        if (lp === 6 || lp === 10 || lp === 11 || lp > 12) return true;
+      }
+      if (isChordDeg(chordAt(l.bar, l.step), l.deg)) return false;
+      if (!z || Math.abs(z.deg - l.deg) !== 1) return true;       // unresolved
+      return !(l.strong || (a && Math.abs(l.deg - a.deg) <= 1));   // leapt to, unaccented
+    }
+    var badLeap = function (x, y) { var lp = Math.abs(x - y); return lp === 6 || lp === 10 || lp === 11 || lp > 12; };
+    // Move note k to a chord tone near where it was, smooth with its neighbours.
+    function repitch(k) {
+      var l = leadNotes[k], c = chordAt(l.bar, l.step);
+      var a = leadNotes[k - 1], z = leadNotes[k + 1];
+      if (a && gapOf(a, l) > stepDur * 3) a = null;
+      if (z && gapOf(l, z) > stepDur * 3) z = null;
+      var best = null, bestCost = 1e9;
+      for (var dd = l.deg - 3; dd <= l.deg + 3; dd++) {
+        if (!isChordDeg(c, dd) || dd < lo || dd > hi) continue;
+        var m = pitch(l.bar, l.step, dd);
+        if (m >= l.top) continue;
+        if ((a && badLeap(m, a.n.midi)) || (z && badLeap(m, z.n.midi))) continue;
+        var cost = Math.abs(dd - l.deg) + (a ? 0.6 * Math.abs(dd - a.deg) : 0);
+        if (cost < bestCost) { bestCost = cost; best = dd; }
+      }
+      if (best === null) return false;
+      l.deg = best;
+      l.n.midi = pitch(l.bar, l.step, best);
+      if (l.h) l.h.midi = pitch(l.bar, l.step, harmonyDeg(l.bar, [l.step, 4], best));
+      return true;
+    }
+    for (var mpass = 0; mpass < 2; mpass++) {
+      leadNotes.forEach(function (l, k) {
+        if (!melodicFault(l, k)) return;
+        // A note that must stay (the climax, a cadence goal, the target of a
+        // pickup) keeps its pitch; the note before it moves instead.
+        if (!l.fixed) repitch(k);
+        else if (k > 0 && !leadNotes[k - 1].fixed) repitch(k - 1);
+      });
+    }
+
     // Outer voices: no parallel (or, after a leap, direct) perfect fifths or
     // octaves between melody and bass from one downbeat to the next. The
     // melody moves to a neighbouring chord tone; the climax, cadence goals and
@@ -2451,6 +2524,7 @@
         var m = pitch(l.bar, l.step, d);
         if (m >= l.top) continue;
         if ((nb[0] !== null && Math.abs(m - nb[0]) > 9) || (nb[1] !== null && Math.abs(m - nb[1]) > 9)) continue;
+        if ((nb[0] !== null && badLeap(m, nb[0])) || (nb[1] !== null && badLeap(m, nb[1]))) continue;
         if (avoid(m)) continue;
         l.deg = d;
         l.n.midi = m;
@@ -2762,11 +2836,23 @@
     if (motifVar.length < 2) motifVar = motif;
     var an = three ? n - 1.5 : n - 2;
     var answers = [gen() ? genR(an, sync * 0.7, true) : pick(answersL, an), gen() ? genR(an, sync * 0.7, true) : pick(answersL, an)];
+    // Call and response: an answer often starts with the motif's rhythm and
+    // settles on a long note, so the two halves of a phrase sound related.
+    if (!three) {
+      for (var ai = 0; ai < 2; ai++) {
+        if (!rng.chance(0.5)) continue;
+        var head = motif.filter(function (x) { return x[0] < 8; }).map(function (x) { return [x[0], Math.min(x[1], 8 - x[0])]; });
+        if (head.length >= 2) answers[ai] = head.concat(rng.chance(0.5) ? [[8, 8]] : [[8, 4], [12, 4]]);
+      }
+    }
     var cadences = [pick(cadL, n - 3), pick(three ? (m.slow ? MELODY_RHYTHMS_3.slowCadence : MELODY_RHYTHMS_3.fullCadence) : cadL, n - 3)];
     // A chorus hook should not sink right after its (high) entry.
     var shape = type === 'P' ? 'rise' : type === 'B' ? rng.pick(['arch', 'arch', 'valley', 'rise']) : rng.pick(['rise', 'fall', 'arch', 'arch', 'valley']);
-    // A motif needs a shape: at least one leap and a span of a 4th or more
-    // over its notes, not a zig-zag around one pitch.
+    // A motif needs a shape: a leap or a span of a 4th, at most a 6th, over its
+    // notes, not a zig-zag around one pitch. The line keeps its direction (a
+    // turn is a single neighbour note); a short note (an eighth or less) leads
+    // on by a repeated note or a step, as sung lines do; leaps come from longer
+    // notes and are followed by a step back.
     var contour;
     for (var attempt = 0; attempt < 12; attempt++) {
       contour = [];
@@ -2774,11 +2860,12 @@
       for (var i = 1; i < 13; i++) {
         var firstHalf = i < motif.length / 2;
         var dir = shape === 'rise' ? 1 : shape === 'fall' ? -1 : shape === 'arch' ? (firstHalf ? 1 : -1) : (firstHalf ? -1 : 1);
+        var prevLen = motif[(i - 1) % motif.length][1];
         var r = rng.next();
-        var size = r < 0.1 ? 0 : r < 0.66 ? 1 : r < 0.9 ? 2 : 3;
+        var size = prevLen <= 2 ? (r < 0.35 ? 0 : r < 0.93 ? 1 : 2) : (r < 0.18 ? 0 : r < 0.64 ? 1 : r < 0.9 ? 2 : 3);
         var before = contour[i - 2];
         if (before !== undefined && Math.abs(before) >= 2) { size = 1; dir = before > 0 ? -1 : 1; } // leap, then step back
-        else if (!flipped && rng.chance(0.15)) { dir = -dir; flipped = true; }
+        else if (!flipped && rng.chance(0.1)) { dir = -dir; flipped = true; }
         else flipped = false;
         contour.push(size * dir);
       }
@@ -2787,7 +2874,7 @@
         pos += contour[i]; top = Math.max(top, pos); bottom = Math.min(bottom, pos);
         if (Math.abs(contour[i]) >= 2) leap = true;
       }
-      if (leap && top - bottom >= 3 && top - bottom <= 5) break;
+      if ((leap || top - bottom >= 3) && top - bottom >= 2 && top - bottom <= 5) break;
     }
     return { motif: motif, motifVar: motifVar, answers: answers, cadences: cadences, contour: contour, devel: rng.pick(['same', 'invert', 'vary', 'vary']) };
   }

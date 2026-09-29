@@ -433,6 +433,36 @@ for (const meter of ['4/4', '3/4']) {
   });
 }
 
+// The melodic line itself, as voice-leading practice has it.
+for (const meter of ['4/4', '3/4']) {
+  test(meter + ': melodies resolve non-chord tones by step, avoid tritone and 7th leaps, and repeat notes', () => {
+    let pairs = 0, repeats = 0, badLeaps = 0, notes = 0, unresolved = 0;
+    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jazz', 'jpop+lofi']) {
+      for (let i = 0; i < 8; i++) {
+        const s = MusicComposition.compose({ seed: 'line' + i, style, meter, bars: 48 });
+        const sd = s.stepDuration;
+        const lead = s.notes.filter(n => n.inst === 'lead' && !n.harmony && !n.layer && !n.counter).sort((a, b) => a.t - b.t);
+        const chordAt = t => { let c = s.chords[0]; for (const x of s.chords) if (x.time <= t + 0.03) c = x; return c.tones; };
+        lead.forEach((n, k) => {
+          notes++;
+          const a = k > 0 && n.t - (lead[k - 1].t + lead[k - 1].d) <= sd * 3 ? lead[k - 1] : null;
+          const z = k + 1 < lead.length && lead[k + 1].t - (n.t + n.d) <= sd * 3 ? lead[k + 1] : null;
+          if (a) {
+            pairs++;
+            const lp = Math.abs(n.midi - a.midi);
+            if (lp === 0) repeats++;
+            if (lp === 6 || lp === 10 || lp === 11 || lp > 12) badLeaps++;
+          }
+          if (!chordAt(n.t).includes(n.midi % 12) && (!z || z.midi === n.midi || Math.abs(z.midi - n.midi) > 2)) unresolved++;
+        });
+      }
+    }
+    assert.ok(unresolved / notes < 0.015, unresolved + ' unresolved non-chord tones in ' + notes);
+    assert.ok(badLeaps / pairs < 0.004, badLeaps + ' tritone/7th leaps in ' + pairs);
+    assert.ok(repeats / pairs > 0.18, (100 * repeats / pairs).toFixed(0) + '% repeated notes');
+  });
+}
+
 test('invalid options throw readable errors', () => {
   assert.throws(() => MusicComposition.compose({ parts: { drums: 'tabla' } }), /unknown drums/);
   assert.throws(() => MusicComposition.compose({ parts: { kazoo: 'loud' } }), /unknown part/);
