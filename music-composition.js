@@ -928,7 +928,8 @@
         on.forEach(function (x, j) {
           var next = j + 1 < on.length ? on[j + 1] : 16;
           var e = [x, Math.max(1, next - x), x === 0 ? 0.95 : x % 4 === 0 ? 0.8 : 0.68];
-          if (x === 14 && rng.chance(0.5 + 0.4 * sync)) e[3] = 'p';
+          // A push into the next chord (not in an intro, which sets out the harmony plainly).
+          if (x === 14 && rng.chance(0.5 + 0.4 * sync) && level > 0) e[3] = 'p';
           ev.push(e);
         });
         return ev;
@@ -1949,6 +1950,22 @@
       while (to - m > 6) m += 12;
       return m;
     }
+    // How long a push into bar nb rings on: as long as the note it replaces on
+    // that bar's downbeat (up to the first chord change), so the part does not
+    // drop out after anticipating the chord.
+    function pushLength(nb, kind) {
+      var nx = barInfo[nb];
+      if (!nx) return 4;
+      var first = nx.segs.length > 1 ? nx.segs[1].s : SPB * spanOf(nb);
+      var pattern;
+      if (kind === 'bass') pattern = nx.parts.bass === 'long' || soundsOf(nx.patKey).parts.bassLine === 'long' ? [[0, first]] : pat[nx.patKey].bass;
+      else pattern = nx.parts.chords === 'still' || nx.sec.type === 'outro' ? [[0, SPB]] : pat[nx.patKey].comp;
+      var e0 = null;
+      for (var i = 0; i < pattern.length; i++) if (pattern[i][0] === 0) e0 = pattern[i];
+      // Without an event on the downbeat, the part comes in at its first event.
+      var len = e0 ? e0[1] : pattern.length ? pattern[0][0] : first;
+      return Math.max(2, Math.min(len, first));
+    }
     // Pattern events inside [s0, end), always starting with one at s0.
     function segEvents(pattern, s0, end, head) {
       var evs = pattern.filter(function (e) { return e[0] >= s0 && e[0] < end; }).map(function (e) { return e.slice(); });
@@ -2064,7 +2081,7 @@
             var lastNote = ei === evs.length - 1 && k === segs.length - 1;
             if (tone === 'p' && lastNote && nextC && !sameChord(nextC, sg.c) && e[0] >= SPB - 4 && stopAt === SPB) {
               m = bassNote(nextC, 'r');
-              len += 4;
+              len += pushLength(bar + span, 'bass');
               bassPushed = true;
               // The push belongs to the next bar: played by the next section's bass.
               var nbS = intoSounds(bar + span);
@@ -2106,7 +2123,7 @@
             var chord = vc, len = e[1], cPatch = chordPatch, spec = chordSpec;
             if (e[3] === 'p' && ei === evs.length - 1 && k === segs.length - 1 && nextSeg && !sameChord(nextSeg.c, sg.c) && stopAt === SPB) {
               chord = voicing(nextSeg);
-              len += 4;
+              len += pushLength(bar + span, 'chords');
               compPushed = true;
               // The push belongs to the next bar: played by the next section's chord instrument.
               var ncS = intoSounds(bar + span);
