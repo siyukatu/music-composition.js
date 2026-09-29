@@ -91,7 +91,7 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 |---|---|---|
 | `seed` | 文字列 / 数値 | ランダム |
 | `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `auto`、ミックス（`'jpop+lofi'`）、カスタムスタイル（オブジェクト） | `auto`（シードで決定） |
-| `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き。値を配列にすると、その中からシードで 1 つ選ぶ | スタイルどおり |
+| `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き。値を配列にすると 1 曲の中で使い分ける（下を参照） | スタイルどおり |
 | `key` | `C`〜`B`（`F#`, `Bb` なども可） | シードで決定 |
 | `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイルに合わせて決定 |
 | `bpm` | 40〜240 | スタイルに合わせて決定 |
@@ -121,7 +121,9 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 
 ```js
 MusicComposition.generate({ style: 'lofi', seed: 'rain', parts: { chords: 'piano', guitar: 'arpeggio', bassLine: 'walking' } });
-MusicComposition.generate({ seed: 'rain', parts: { lead: ['violin', 'flute', 'harp'] } }); // 候補からシードで選ぶ
+// 配列: 1 曲の中で使い分ける（Aメロ・サビ・ブリッジ・Bメロの順に割り当て、最後のサビは 2 つを重ねる）
+// 'none' を混ぜると、そのパートが入らないセクションができる。sometimes: 曲によっては使わないパート
+MusicComposition.generate({ seed: 'rain', parts: { lead: ['flute', 'violin'], guitar: ['arpeggio', 'none'], sometimes: ['arp'] } });
 MusicComposition.parts        // 選べる値の一覧
 MusicComposition.styleParts   // 各スタイルの既定値
 ```
@@ -196,7 +198,7 @@ http://localhost:8765 を開きます。
 
 - **ミックス**: スタイル欄の「ミックス」で、スタイルごとの割合（0〜3）をスライダーで決めます
 - **カスタムスタイル**: 「＋ カスタム」で、元にするスタイル（ミックスも可）・BPM の範囲・モード・和声（彩り、7th、自由な進行、コードの長さ）・メロディ（音の数、シンコペーション、しゃくり、ハモり）・構成（Bメロ、ブリッジ、落ちサビ、転調の確率）・揺らぎと音づくり（残響、ディレイ、サイドチェイン、テープ）・楽器と演奏を決めて保存します。保存先はブラウザ（localStorage）で、変えた項目だけを保存します。共有 URL に入るので、開いた人のブラウザにも追加されます。連続再生でも選べます
-- **楽器と演奏**: パートごとに、使ってよい楽器・弾き方をチェックボックスで選びます。何も選ばなければスタイルどおり（点線で表示）、1 つならそれ、複数なら曲ごとにシードで 1 つ選びます。「なし」を選ぶとそのパートを鳴らしません
+- **楽器と演奏**: パートごとに、使ってよい楽器・弾き方をチェックボックスで選びます。何も選ばなければスタイルどおり（点線で表示）、1 つならそれ、複数なら 1 曲の中で使い分けます（Aメロ・サビ・ブリッジ・Bメロの順に割り当て、最後のサビは 2 つを重ねます）。「なし」だけならそのパートを鳴らさず、ほかと一緒に選ぶと入らないセクションができます。「曲によっては使わない」をオンにしたパートは、半分ほどの曲で抜けます
 
 ### 曲の共有
 
@@ -214,7 +216,7 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 | `bars` / `sec` | 長さ（小節 / 秒）。どちらもなければ 32 小節 |
 | `loop=1` | ループ用 |
 | `meter=3/4` | 三拍子 |
-| `parts` | 楽器と演奏。`parts=guitar:strum,lead:brass|violin,swing:0.15`（`|` で区切った候補からシードで選ぶ） |
+| `parts` | 楽器と演奏。`parts=guitar:strum,lead:brass|violin,sometimes:arp|pad`（`|` 区切りは 1 曲の中で使い分け） |
 
 共有ダイアログの「ほかのアプリで共有…」（`navigator.share`）では、ブラウザで描いたカード画像（1200×630 の PNG）も一緒に渡します。
 

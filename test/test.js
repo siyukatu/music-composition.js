@@ -247,19 +247,34 @@ test('custom styles change the base style and render on their own', () => {
   assert.throws(() => MusicComposition.compose({ style: { modes: ['phrygian'] } }), /unknown mode/);
 });
 
-test('parts may list choices: the seed picks one, reproducibly', () => {
-  const seen = {};
-  for (let i = 0; i < 30; i++) {
-    const o = { seed: 'ch' + i, style: 'pop', bars: 8, parts: { lead: ['violin', 'flute', 'harp'], drums: ['brush'], guitar: [] } };
+test('a list of parts is used across the song: verse, chorus, bridge; the last chorus layers them', () => {
+  let layered = 0;
+  for (let i = 0; i < 12; i++) {
+    const o = { seed: 'ch' + i, style: 'jpop', bars: 64, parts: { lead: ['violin', 'flute'], chords: ['piano', 'harp', 'none'] } };
     const s = MusicComposition.compose(o);
-    assert.ok(['violin', 'flute', 'harp'].includes(s.parts.lead));
-    assert.strictEqual(s.parts.drums, 'brush');
-    assert.strictEqual(s.parts.guitar, MusicComposition.styleParts.pop.guitar);
     assert.deepStrictEqual(MusicComposition.compose(o).notes, s.notes);
-    seen[s.parts.lead] = 1;
+    assert.deepStrictEqual(s.parts.lead.slice().sort(), ['flute', 'violin']);
+    const leadIn = type => new Set(s.notes.filter(n => n.inst === 'lead' && !n.layer && s.sections.some(x => x.type === type && n.t >= x.start && n.t < x.start + x.bars * s.barDuration)).map(n => n.patch));
+    const a = leadIn('A'), b = leadIn('B');
+    assert.strictEqual(a.size, 1);
+    assert.strictEqual(b.size, 1);
+    assert.notDeepStrictEqual([...a], [...b], 'verse and chorus use different leads');
+    // 'none' among others: some sections go without chords, the chorus keeps them.
+    assert.notStrictEqual(s.parts.chords[1], 'none');
+    if (s.notes.some(n => n.layer)) layered++;
   }
-  assert.strictEqual(Object.keys(seen).length, 3);
+  assert.ok(layered >= 10, layered + ' songs layered the last chorus');
   assert.throws(() => MusicComposition.compose({ parts: { lead: ['violin', 'kazoo'] } }), /unknown lead/);
+});
+
+test('parts.sometimes leaves parts out of some songs', () => {
+  let without = 0;
+  for (let i = 0; i < 40; i++) {
+    const s = MusicComposition.compose({ seed: 'so' + i, style: 'jpop', bars: 8, parts: { sometimes: ['guitar'] } });
+    if (s.parts.guitar === 'none') { without++; assert.ok(!s.notes.some(n => n.inst === 'guitar')); }
+  }
+  assert.ok(without > 8 && without < 32, without + ' of 40 without guitar');
+  assert.throws(() => MusicComposition.compose({ parts: { sometimes: ['lead'] } }), /cannot be left out/);
 });
 
 test('release-cut piano stops short; stabs sit on the offbeats', () => {

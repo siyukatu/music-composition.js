@@ -221,6 +221,7 @@
     lead: ['saw', 'pluck', 'soft', 'square', 'pwm', 'fm', 'robot', 'flute', 'whistle', 'brass', 'violin', 'voice', 'bell', 'piano', 'harp', 'marimba', 'musicbox', 'accordion'],
     arp: ['eighths', 'sixteenths', 'bells', 'harp', 'marimba', 'musicbox', 'digital', 'none']
   };
+  var PART_KEYS = Object.keys(PART_OPTIONS).concat('swing');
   // Part value -> synth patch (or drum kit).
   var SOUND = {
     drums: { acoustic: 'std', electronic: 'elec', lofi: 'lofi', chip: 'chip', brush: 'brush', perc: 'perc' },
@@ -310,9 +311,10 @@
     if (three && st.parts3) for (k in st.parts3) p[k] = st.parts3[k];
     return p;
   }
-  // Parts on top of a base. A value may be a list of choices ({ lead: ['violin',
-  // 'flute'] }): one of them is picked with `rng` (so the seed decides).
-  function resolveParts(base, custom, rng) {
+  // Parts on top of a base. A value may be a list: the song uses all of them,
+  // section by section (see sectionParts in compose). parts.sometimes lists
+  // parts that some songs leave out.
+  function resolveParts(base, custom) {
     var p = {};
     for (var k in base) p[k] = base[k];
     if (custom) {
@@ -320,17 +322,27 @@
       Object.keys(custom).forEach(function (k) {
         var v = custom[k];
         if (v === undefined || v === null || v === '' || v === 'auto') return;
+        if (k === 'sometimes') {
+          var ks = typeof v === 'string' ? v.split(/[,|\s]+/).filter(Boolean) : v;
+          if (!Array.isArray(ks)) throw new Error('music-composition.js: parts.sometimes must list parts');
+          ks.forEach(function (x) {
+            if (!PART_OPTIONS[x] || PART_OPTIONS[x].indexOf('none') < 0) throw new Error('music-composition.js: parts.sometimes: "' + x + '" cannot be left out (use ' + Object.keys(PART_OPTIONS).filter(function (q) { return PART_OPTIONS[q].indexOf('none') >= 0; }).join(', ') + ')');
+          });
+          if (ks.length) p.sometimes = ks.filter(function (x, i) { return ks.indexOf(x) === i; });
+          return;
+        }
         var list = Array.isArray(v) ? v.filter(function (x) { return x !== undefined && x !== null && x !== '' && x !== 'auto'; }) : [v];
+        list = list.filter(function (x, i) { return list.indexOf(x) === i; });
         if (!list.length) return;
         list.forEach(function (x) {
           if (k === 'swing') {
             if (typeof x !== 'number' || !(x >= 0 && x <= 0.5)) throw new Error('music-composition.js: parts.swing must be a number from 0 to 0.5');
             return;
           }
-          if (!PART_OPTIONS[k]) throw new Error('music-composition.js: unknown part "' + k + '" (use ' + Object.keys(PART_OPTIONS).concat('swing').join(', ') + ')');
+          if (!PART_OPTIONS[k]) throw new Error('music-composition.js: unknown part "' + k + '" (use ' + Object.keys(PART_OPTIONS).concat('swing', 'sometimes').join(', ') + ')');
           if (PART_OPTIONS[k].indexOf(x) < 0) throw new Error('music-composition.js: unknown ' + k + ' "' + x + '" (use ' + PART_OPTIONS[k].join(', ') + ')');
         });
-        p[k] = list.length === 1 ? list[0] : rng.pick(list);
+        p[k] = list.length === 1 ? list[0] : list;
       });
     }
     return p;
@@ -502,7 +514,7 @@
     if ((v = num(def.delay, 'delay', 0, 1)) !== undefined) st.fx.delay = v * 1.2;
     if ((v = num(def.sidechain, 'sidechain', 0, 1)) !== undefined) st.fx.sidechain = v;
     if (def.lofi !== undefined && def.lofi !== null) st.fx.lofi = !!def.lofi;
-    st.parts = resolveParts(st.parts, def.parts, rng);
+    st.parts = resolveParts(st.parts, def.parts);
     return st;
   }
 
@@ -1190,7 +1202,35 @@
       else { st = blendStyles(mix.list, R('mix'), BEATS === 3); styleName = mix.name; }
     }
     if (!st) { st = STYLES[styleName]; mix = { list: [[styleName, 1]] }; }
-    var parts = resolveParts(styleParts(st, BEATS === 3), o.parts, R('parts'));
+    var chosen = resolveParts(styleParts(st, BEATS === 3), o.parts);
+    // Each part as a list of what it plays (in order: verse, chorus, bridge,
+    // pre-chorus); parts.sometimes may leave a part out of this song.
+    var pr = R('parts'), lists = {};
+    PART_KEYS.forEach(function (k) {
+      var L = [].concat(chosen[k]);
+      for (var i = L.length - 1; i > 0; i--) { var j = Math.floor(pr.next() * (i + 1)), x = L[i]; L[i] = L[j]; L[j] = x; }
+      // Drums build up: the lightest kit in the verse, the heaviest in the chorus.
+      if (k === 'drums' && L.length > 1) {
+        var W = ['none', 'brush', 'perc', 'lofi', 'chip', 'acoustic', 'electronic'];
+        L.sort(function (a, b) { return W.indexOf(a) - W.indexOf(b); });
+        L = [L[0], L[L.length - 1]].concat(L.slice(1, -1));
+      }
+      // A part that is left out of some sections should still be in the chorus.
+      if (L.length > 1 && L[1] === 'none') { L[1] = L[0]; L[0] = 'none'; }
+      lists[k] = L;
+    });
+    (chosen.sometimes || []).forEach(function (k) { if (pr.chance(0.5)) lists[k] = ['none']; });
+    var ROLE = { A: 0, B: 1, C: 2, P: 3, intro: 0, outro: 1, drop: 1 };
+    function sectionParts(type) {
+      var o2 = {};
+      PART_KEYS.forEach(function (k) {
+        var L = lists[k], i = ROLE[type] || 0;
+        if (i >= L.length) i = type === 'C' && L.length > 1 ? L.length - 1 : 0;
+        o2[k] = L[i];
+      });
+      return o2;
+    }
+    var parts = sectionParts('B');
 
     var bpm = o.bpm ? clamp(Math.round(+o.bpm), 40, 240) : Math.round(R('bpm').range(st.bpm[0], st.bpm[1]));
     var modeName;
@@ -1211,15 +1251,24 @@
     bars = clamp(bars || 32, 8, 256);
 
     // Sounds
-    var kit = SOUND.drums[parts.drums] || null;
-    var bassPatch = SOUND.bass[parts.bass] || null;
-    var bassOct = parts.bass === 'chip' ? 12 : 0;
-    var chordPatch = SOUND.chords[parts.chords] || null;
-    var padPatch = SOUND.pad[parts.pad] || null;
-    var leadPatch = SOUND.lead[parts.lead];
-    var arpPatch = SOUND.arp[parts.arp] || null;
-    var guitarPatch = parts.guitar === 'fingerpick' ? 'nylon' : 'guitar';
-    var swing = parts.swing;
+    // The sounds of the section being written (useSounds switches them).
+    var kit, bassPatch, bassOct, chordPatch, padPatch, leadPatch, arpPatch, guitarPatch, swing, snareKind;
+    var soundCache = {};
+    function useSounds(type) {
+      var S = soundCache[type];
+      if (!S) {
+        var q = sectionParts(type);
+        S = soundCache[type] = {
+          parts: q, kit: SOUND.drums[q.drums] || null, bassPatch: SOUND.bass[q.bass] || null, bassOct: q.bass === 'chip' ? 12 : 0,
+          chordPatch: SOUND.chords[q.chords] || null, padPatch: SOUND.pad[q.pad] || null, leadPatch: SOUND.lead[q.lead],
+          arpPatch: SOUND.arp[q.arp] || null, guitarPatch: q.guitar === 'fingerpick' ? 'nylon' : 'guitar', swing: q.swing,
+          snareKind: q.drums === 'electronic' || q.groove === 'fourfloor' ? 'clap' : 'snare'
+        };
+      }
+      parts = S.parts; kit = S.kit; bassPatch = S.bassPatch; bassOct = S.bassOct; chordPatch = S.chordPatch; padPatch = S.padPatch;
+      leadPatch = S.leadPatch; arpPatch = S.arpPatch; guitarPatch = S.guitarPatch; swing = S.swing; snareKind = S.snareKind;
+    }
+    useSounds('B');
 
     // Registers
     var leadBase = 60 + keyPc - (keyPc >= 6 ? 12 : 0) + st.melody.octave;
@@ -1542,6 +1591,7 @@
     var barInfo = [];
     sections.forEach(function (sec, si) {
       var next = sections[si + 1];
+      useSounds(sec.drop ? 'drop' : sec.type);
       for (var j = 0; j < sec.bars; j++) {
         var info = {
           sec: sec, secIndex: si, j: j, segs: sec.plan[j].segs, cont: sec.plan[j].cont, parts: partsOf(sec),
@@ -1648,6 +1698,7 @@
     // like the same section.
     var pat = {};
     ['intro', 'A', 'P', 'B', 'C', 'outro', 'drop'].forEach(function (type) {
+      useSounds(type);
       var level = { intro: 0, A: 1, P: 1, B: 2, C: 1, outro: 0, drop: 0 }[type];
       var fam = type === 'C' && parts.groove !== 'fourfloor' && parts.groove !== 'halftime' && gr.chance(0.6) ? 'halftime' : parts.groove;
       var three = BEATS === 3;
@@ -1667,11 +1718,11 @@
     function drum(bar, step, kind, vel, pan) {
       notes.push({ t: T(bar, step), d: stepDur, midi: { kick: 36, snare: 38, clap: 39, hat: 42, open: 46, crash: 49 }[kind], vel: V(Math.min(1, vel * E)), inst: 'drums', drum: kind, kit: kit, pan: pan || 0 });
     }
-    var snareKind = parts.drums === 'electronic' || parts.groove === 'fourfloor' ? 'clap' : 'snare';
     var bassPushed = false, compPushed = false;
 
     for (var bar = 0; bar < bars; bar++) {
       var info = barInfo[bar];
+      useSounds(info.patKey);
       var prt = info.parts;
       var type = info.sec.type;
       var P = pat[info.patKey];
@@ -1896,6 +1947,7 @@
     function pitch(bar, step, d) { return leadBase + chordPitch(chordAt(bar, step), d); }
     sections.forEach(function (sec, si) {
       var prt = partsOf(sec);
+      useSounds(sec.drop ? 'drop' : sec.type);
       if (!prt.lead) return;
       var key = sec.type;
       if (!themes[key]) themes[key] = makeTheme(R('motif-' + key), st.melody, key, BEATS);
@@ -2165,7 +2217,7 @@
       var leapUp = prevLead && n.midi - prevLead.midi >= 3;
       if (st.expr.bend && n.d >= stepDur * 2 && (afterRest || leapUp) && ex.chance(st.expr.bend)) {
         n.bend = -(ex.chance(0.7) ? 1 : 2);
-        n.bendTime = leadPatch === 'leadSquare' ? 0.04 : 0.08;
+        n.bendTime = n.patch === 'leadSquare' ? 0.04 : 0.08;
       }
       prevLead = n;
     });
@@ -2200,13 +2252,38 @@
       return best;
     }
 
+    // The last chorus layers the chorus instrument with another of the chosen
+    // ones (lead, chords, pad, arpeggio), for a bigger climax.
+    useSounds('B');
+    if (lastChorus >= 0) {
+      var lc = sections[lastChorus], lc0 = lc.start, lc1 = lc.start + lc.bars * barDur;
+      var layer = {};
+      [['lead', 'lead', SOUND.lead], ['chords', 'chords', SOUND.chords], ['pad', 'chords', SOUND.pad], ['arp', 'arp', SOUND.arp]].forEach(function (x) {
+        var main = parts[x[0]], other = lists[x[0]].filter(function (v) { return v !== main && v !== 'none'; })[0];
+        if (main !== 'none' && other && x[2][main] && x[2][other]) layer[x[2][main]] = x[2][other];
+      });
+      var extra = [];
+      notes.forEach(function (n) {
+        var to = layer[n.patch];
+        if (!to || n.harmony || n.t < lc0 - 1e-6 || n.t >= lc1 - 1e-6) return;
+        var c = {};
+        for (var key in n) c[key] = n[key];
+        c.patch = to;
+        c.vel = n.vel * 0.7;
+        if (PATCHES[to].gate) c.d = Math.min(c.d, PATCHES[to].gate * stepDur);
+        c.layer = true;
+        extra.push(c);
+      });
+      notes = notes.concat(extra);
+    }
     notes.sort(function (a, b) { return a.t - b.t; });
 
     var body = bars * barDur;
     var tail = loop ? 0 : st.fx.tail;
     var tr = R('title');
+    // What each part played: one value, or the list used across the sections.
     var outParts = {};
-    for (var pk in parts) outParts[pk] = parts[pk];
+    PART_KEYS.forEach(function (k) { outParts[k] = lists[k].length === 1 ? lists[k][0] : lists[k].slice(); });
     return {
       version: VERSION,
       title: tr.pick(TITLE_A) + ' ' + tr.pick(TITLE_B),

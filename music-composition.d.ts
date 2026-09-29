@@ -11,7 +11,9 @@ declare namespace MusicComposition {
 
   /**
    * What plays and how. Every field is optional; the style supplies the rest.
-   * Any field may also be a list of choices (e.g. lead: ['violin', 'flute']): the seed picks one.
+   * Any field may also be a list (e.g. lead: ['violin', 'flute']): the song uses them all,
+   * section by section (verse, chorus, bridge, pre-chorus), and the last chorus layers two.
+   * 'none' in a list leaves the part out of some sections.
    */
   interface Parts {
     /** Drum kit. */
@@ -83,8 +85,11 @@ declare namespace MusicComposition {
     lofi?: boolean;
   }
 
-  /** Parts where each field may be one value or a list to pick from. */
-  type PartChoices = { [K in keyof Parts]?: Parts[K] | Array<NonNullable<Parts[K]>> };
+  /** Parts where each field may be one value or a list used across the song. */
+  type PartChoices = { [K in keyof Parts]?: Parts[K] | Array<NonNullable<Parts[K]>> } & {
+    /** Parts that some songs leave out (half of them, decided by the seed). */
+    sometimes?: Array<'drums' | 'bass' | 'chords' | 'guitar' | 'pad' | 'arp'>;
+  };
 
   interface ComposeOptions {
     /** Same seed + options => same song. Random if omitted. */
@@ -163,6 +168,8 @@ declare namespace MusicComposition {
     bendTime?: number;
     /** A harmony line under the lead (final chorus). */
     harmony?: boolean;
+    /** A second instrument doubling this part in the last chorus. */
+    layer?: boolean;
   }
 
   interface Song {
@@ -176,8 +183,8 @@ declare namespace MusicComposition {
     styleLabel: string;
     /** Weight of each style (1 for a single style). */
     mix: { [S in Style]?: number };
-    /** The parts actually used (style defaults plus overrides). */
-    parts: Required<Parts>;
+    /** The parts actually used (style defaults plus overrides); a list where the song changes them by section. */
+    parts: { [K in keyof Parts]-?: NonNullable<Parts[K]> | Array<NonNullable<Parts[K]>> };
     meter: '4/4' | '3/4';
     /** 4 or 3. A bar is beatsPerBar * 4 sixteenths long. */
     beatsPerBar: number;

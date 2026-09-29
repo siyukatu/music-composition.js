@@ -235,6 +235,8 @@
   .pchk.is-default span { border-style: dashed; border-color: var(--muted); color: var(--ink); }
   .pchk input:checked + span { background: var(--ink); color: var(--surface); border: 1px solid var(--ink); }
   .pchk input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .maybe { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .maybe input { accent-color: var(--accent); margin: 0; }
   .cs .parts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @media (max-width: 560px) { .cs .parts-grid { grid-template-columns: minmax(0, 1fr); } }
   .parts-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -675,7 +677,7 @@
           <tbody>
             <tr><td><code>seed</code></td><td>文字列 / 数値</td><td>ランダム</td></tr>
             <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
-            <tr><td><code>parts</code></td><td>楽器と演奏。候補の配列ならシードで 1 つ選ぶ（<code>lead: ['violin', 'flute']</code>）</td><td>スタイルどおり</td></tr>
+            <tr><td><code>parts</code></td><td>楽器と演奏。配列なら 1 曲の中で使い分ける（<code>lead: ['flute', 'violin']</code>）。<code>sometimes: ['guitar']</code> は曲によって抜く</td><td>スタイルどおり</td></tr>
             <tr><td><code>meter</code></td><td><code>'4/4'</code> / <code>'3/4'</code></td><td><code>'4/4'</code></td></tr>
             <tr><td><code>key</code></td><td><code>C</code>〜<code>B</code>（<code>F#</code>, <code>Bb</code> など）</td><td>シードで決定</td></tr>
             <tr><td><code>mode</code></td><td><code>major</code> <code>minor</code> <code>dorian</code> <code>mixolydian</code> <code>lydian</code></td><td>スタイルに合わせて決定</td></tr>
@@ -805,7 +807,7 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=54803e"></script>
+<script src="music-composition.js?h=95a43c"></script>
 <script src="video.js?h=a8c186"></script>
 <script>
 (function () {
@@ -969,7 +971,8 @@
   var PART_KEYS = Object.keys(PART_LABELS);
   function partLabel(k, v) { return PART_LABELS[k][1][String(v)] || String(v); }
   // Part checkboxes: nothing ticked = as the style, one = that one, several =
-  // the seed picks one of them for each song. prefix makes the ids unique.
+  // all of them in one song, section by section. "Sometimes leave out" makes
+  // some songs go without the part. prefix makes the ids unique.
   function buildPartsGrid(grid, prefix, onChange) {
     PART_KEYS.forEach(function (k) {
       var f = document.createElement('fieldset');
@@ -980,12 +983,18 @@
       f.querySelector('.part-opts').innerHTML = values.map(function (v) {
         return '<label class="pchk"><input type="checkbox" value="' + v + '"><span>' + escapeHtml(partLabel(k, v)) + '</span></label>';
       }).join('');
+      if (values.indexOf('none') >= 0) {
+        var m = document.createElement('label');
+        m.className = 'maybe';
+        m.innerHTML = '<input type="checkbox" data-maybe="1">曲によっては使わない';
+        f.appendChild(m);
+      }
       f.addEventListener('change', function () { markParts(prefix); onChange(); });
       grid.appendChild(f);
     });
   }
   function partValues(prefix, k) {
-    return Array.prototype.map.call($('#' + prefix + k).querySelectorAll('input:checked'), function (i) { return k === 'swing' ? parseFloat(i.value) : i.value; });
+    return Array.prototype.map.call($('#' + prefix + k).querySelectorAll('.pchk input:checked'), function (i) { return k === 'swing' ? parseFloat(i.value) : i.value; });
   }
   function readPartsFrom(prefix) {
     var p = {}, any = false;
@@ -995,12 +1004,16 @@
       p[k] = v.length === 1 ? v[0] : v;
       any = true;
     });
+    var maybe = PART_KEYS.filter(function (k) { var m = $('#' + prefix + k).querySelector('[data-maybe]'); return m && m.checked; });
+    if (maybe.length) { p.sometimes = maybe; any = true; }
     return any ? p : null;
   }
   function setPartsIn(prefix, p) {
     PART_KEYS.forEach(function (k) {
       var want = p && p[k] !== undefined ? [].concat(p[k]).map(String) : [];
-      $('#' + prefix + k).querySelectorAll('input').forEach(function (i) { i.checked = want.indexOf(i.value) >= 0; });
+      $('#' + prefix + k).querySelectorAll('.pchk input').forEach(function (i) { i.checked = want.indexOf(i.value) >= 0; });
+      var m = $('#' + prefix + k).querySelector('[data-maybe]');
+      if (m) m.checked = !!(p && p.sometimes && p.sometimes.indexOf(k) >= 0);
     });
     markParts(prefix);
   }
@@ -1009,11 +1022,12 @@
   function markParts(prefix) {
     var d = partDefaults[prefix] || { def: null, fallback: '' };
     PART_KEYS.forEach(function (k) {
-      var f = $('#' + prefix + k), n = partValues(prefix, k).length, dv = d.def && d.def[k] !== undefined ? String(d.def[k]) : null;
+      var f = $('#' + prefix + k), n = partValues(prefix, k).length;
+      var dv = d.def && d.def[k] !== undefined ? [].concat(d.def[k]).map(String) : null;
       var small = f.querySelector('legend small');
       small.classList.toggle('on', n > 0);
-      small.textContent = n > 1 ? n + ' 種類から曲ごとに' : n === 1 ? '指定' : dv !== null ? 'スタイルどおり（' + partLabel(k, dv) + '）' : d.fallback;
-      f.querySelectorAll('.pchk').forEach(function (l) { l.classList.toggle('is-default', !n && l.querySelector('input').value === dv); });
+      small.textContent = n > 1 ? n + ' 種類を曲の中で使い分け' : n === 1 ? '指定' : dv ? 'スタイルどおり（' + dv.map(function (v) { return partLabel(k, v); }).join('・') + '）' : d.fallback;
+      f.querySelectorAll('.pchk').forEach(function (l) { l.classList.toggle('is-default', !n && !!dv && dv.indexOf(l.querySelector('input').value) >= 0); });
     });
   }
   function labelDefaults(prefix, def, fallback) {
@@ -2001,6 +2015,11 @@
     var p = {}, any = false;
     (v || '').split(',').forEach(function (kv) {
       var i = kv.indexOf(':'), k = kv.slice(0, i);
+      if (k === 'sometimes') {
+        var ks = kv.slice(i + 1).split('|').filter(function (x) { return MusicComposition.parts[x] && MusicComposition.parts[x].indexOf('none') >= 0; });
+        if (ks.length) { p.sometimes = ks; any = true; }
+        return;
+      }
       var vals = kv.slice(i + 1).split('|').map(function (val) {
         if (k === 'swing') { var n = parseFloat(val); return n >= 0 && n <= 0.5 ? n : null; }
         return MusicComposition.parts[k] && MusicComposition.parts[k].indexOf(val) >= 0 ? val : null;
