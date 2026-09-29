@@ -222,6 +222,8 @@
     arp: ['eighths', 'sixteenths', 'bells', 'harp', 'marimba', 'musicbox', 'digital', 'none']
   };
   var PART_KEYS = Object.keys(PART_OPTIONS).concat('swing');
+  // Parts whose instruments can sound together (parts.together).
+  var LAYERABLE = ['lead', 'bass', 'chords', 'pad', 'arp'];
   // Part value -> synth patch (or drum kit).
   var SOUND = {
     drums: { acoustic: 'std', electronic: 'elec', lofi: 'lofi', chip: 'chip', brush: 'brush', perc: 'perc' },
@@ -312,8 +314,9 @@
     return p;
   }
   // Parts on top of a base. A value may be a list: the song uses all of them,
-  // section by section (see sectionParts in compose). parts.sometimes lists
-  // parts that some songs leave out.
+  // section by section (see sectionParts in compose), or all at once for the
+  // parts named in parts.together. parts.sometimes lists parts that some songs
+  // leave out.
   function resolveParts(base, custom) {
     var p = {};
     for (var k in base) p[k] = base[k];
@@ -322,6 +325,15 @@
       Object.keys(custom).forEach(function (k) {
         var v = custom[k];
         if (v === undefined || v === null || v === '' || v === 'auto') return;
+        if (k === 'together') {
+          var tk = typeof v === 'string' ? v.split(/[,|\s]+/).filter(Boolean) : v;
+          if (!Array.isArray(tk)) throw new Error('music-composition.js: parts.together must list parts');
+          tk.forEach(function (x) {
+            if (LAYERABLE.indexOf(x) < 0) throw new Error('music-composition.js: parts.together: "' + x + '" cannot be layered (use ' + LAYERABLE.join(', ') + ')');
+          });
+          if (tk.length) p.together = tk.filter(function (x, i) { return tk.indexOf(x) === i; });
+          return;
+        }
         if (k === 'sometimes') {
           var ks = typeof v === 'string' ? v.split(/[,|\s]+/).filter(Boolean) : v;
           if (!Array.isArray(ks)) throw new Error('music-composition.js: parts.sometimes must list parts');
@@ -1174,6 +1186,9 @@
    * @param {number} [options.duration]      Target length in seconds, including the reverb tail (used when bars is omitted).
    * @param {boolean} [options.loop]         true => seamless loop (no intro/outro, reverb tail wrapped).
    * @param {string} [options.meter]         '4/4' (default) or '3/4'.
+   * @param {boolean|number} [options.extend] Allow a longer song (true: up to 30 seconds, at least 8 bars;
+   *                                          a number: up to that many seconds) so it ends on a whole chorus
+   *                                          (if that is too far, up to 8 bars shorter instead).
    * @returns {object} song
    */
   function compose(options) {
@@ -1220,6 +1235,12 @@
       lists[k] = L;
     });
     (chosen.sometimes || []).forEach(function (k) { if (pr.chance(0.5)) lists[k] = ['none']; });
+    // parts.together: every instrument of the list plays all the way through (layered on the first).
+    var together = {};
+    (chosen.together || []).forEach(function (k) {
+      var L = lists[k].filter(function (v) { return v !== 'none'; });
+      if (L.length > 1) { together[k] = L; lists[k] = [L[0]]; }
+    });
     var ROLE = { A: 0, B: 1, C: 2, P: 3, intro: 0, outro: 1, drop: 1 };
     function sectionParts(type) {
       var o2 = {};
@@ -1293,20 +1314,46 @@
     var first = ['A'].concat(usePre ? ['P'] : [], ['B', 'A'], usePre ? ['P'] : [], ['B'],
       useBridge ? ['C'] : [], useDrop ? ['D'] : [], useBridge || useDrop ? ['B'] : []);
     var again = ['A'].concat(usePre ? ['P'] : [], ['B']);
-    var sections = [];
-    var remaining = bars;
-    var hasIntroOutro = !loop && bars >= 16;
-    if (hasIntroOutro) { remaining -= 8; sections.push({ type: 'intro', bars: 4 }); }
-    for (var fi = 0; remaining > 0; fi++) {
-      var ftype = fi < first.length ? first[fi] : again[(fi - first.length) % again.length];
-      if (ftype === 'D' && remaining < 16) continue;
-      // A pre-chorus or bridge needs a chorus after it; whatever is left becomes (part of) a chorus.
-      if ((ftype === 'P' && remaining < 12) || (ftype === 'C' && remaining < 16) || LEN[ftype] > remaining) ftype = 'B';
-      var flen = Math.min(LEN[ftype], remaining);
-      sections.push({ type: ftype === 'D' ? 'B' : ftype, bars: flen, drop: ftype === 'D' });
-      remaining -= flen;
+    function buildForm(total) {
+      var out = [];
+      var remaining = total;
+      var io = !loop && total >= 16;
+      if (io) { remaining -= 8; out.push({ type: 'intro', bars: 4 }); }
+      for (var fi = 0; remaining > 0; fi++) {
+        var ftype = fi < first.length ? first[fi] : again[(fi - first.length) % again.length];
+        if (ftype === 'D' && remaining < 16) continue;
+        // A pre-chorus or bridge needs a chorus after it; whatever is left becomes (part of) a chorus.
+        if ((ftype === 'P' && remaining < 12) || (ftype === 'C' && remaining < 16) || LEN[ftype] > remaining) ftype = 'B';
+        var flen = Math.min(LEN[ftype], remaining);
+        out.push({ type: ftype === 'D' ? 'B' : ftype, bars: flen, drop: ftype === 'D' });
+        remaining -= flen;
+      }
+      if (io) out.push({ type: 'outro', bars: 4 });
+      return out;
     }
-    if (hasIntroOutro) sections.push({ type: 'outro', bars: 4 });
+    // A form ends well when every section is whole and the last one before
+    // the ending is a full chorus (not a half chorus, a verse or the quiet one).
+    function endsWell(form) {
+      var body = form.filter(function (x) { return x.type !== 'intro' && x.type !== 'outro'; });
+      var last = body[body.length - 1];
+      if (body.length === 1 && last.bars === LEN[last.type]) return true; // a short piece: one whole section
+      return !!last && last.type === 'B' && !last.drop && body.every(function (x) { return x.bars === LEN[x.drop ? 'D' : x.type]; });
+    }
+    var sections = buildForm(bars);
+    // extend: lengthen the song (4 bars at a time, up to the limit) until it ends well.
+    if (o.extend && !endsWell(sections)) {
+      var maxExtra = Math.max(typeof o.extend === 'number' ? 0 : 8, Math.floor((typeof o.extend === 'number' ? Math.max(0, o.extend) : 30) / barDur / 4) * 4);
+      var fixed = false;
+      for (var extra = 4; extra <= maxExtra && bars + extra <= 256; extra += 4) {
+        var cand = buildForm(bars + extra);
+        if (endsWell(cand)) { sections = cand; bars += extra; fixed = true; break; }
+      }
+      // Too far to the next whole chorus: end a little earlier instead (up to 8 bars).
+      for (var less = 4; !fixed && less <= 8 && bars - less >= 8; less += 4) {
+        var cand2 = buildForm(bars - less);
+        if (endsWell(cand2)) { sections = cand2; bars -= less; fixed = true; }
+      }
+    }
     var chorusIdx = [];
     sections.forEach(function (s, i) { if (s.type === 'B' && !s.drop) chorusIdx.push(i); });
     var modAt = -1;
@@ -2262,19 +2309,32 @@
         var main = parts[x[0]], other = lists[x[0]].filter(function (v) { return v !== main && v !== 'none'; })[0];
         if (main !== 'none' && other && x[2][main] && x[2][other]) layer[x[2][main]] = x[2][other];
       });
+    }
+    // Layers: the last chorus's extra instrument, and parts.together all the way through.
+    var LAYER_SOUND = { lead: SOUND.lead, bass: SOUND.bass, chords: SOUND.chords, pad: SOUND.pad, arp: SOUND.arp };
+    var always = {};
+    Object.keys(together).forEach(function (k) {
+      var S2 = LAYER_SOUND[k], main = S2[together[k][0]];
+      always[main] = together[k].slice(1).map(function (v) { return S2[v]; });
+    });
+    if (lastChorus >= 0 || Object.keys(always).length) {
       var extra = [];
       notes.forEach(function (n) {
-        var to = layer[n.patch];
-        if (!to || n.harmony || n.t < lc0 - 1e-6 || n.t >= lc1 - 1e-6) return;
-        var c = {};
-        for (var key in n) c[key] = n[key];
-        c.patch = to;
-        c.vel = n.vel * 0.7;
-        if (PATCHES[to].gate) c.d = Math.min(c.d, PATCHES[to].gate * stepDur);
-        c.layer = true;
-        extra.push(c);
+        if (n.harmony) return;
+        var tos = (always[n.patch] || []).slice();
+        if (lastChorus >= 0 && layer[n.patch] && n.t >= lc0 - 1e-6 && n.t < lc1 - 1e-6 && tos.indexOf(layer[n.patch]) < 0) tos.push(layer[n.patch]);
+        tos.forEach(function (to) { add(n, to); });
       });
       notes = notes.concat(extra);
+    }
+    function add(n, to) {
+      var c = {};
+      for (var key in n) c[key] = n[key];
+      c.patch = to;
+      c.vel = n.vel * 0.7;
+      if (PATCHES[to].gate) c.d = Math.min(c.d, PATCHES[to].gate * stepDur);
+      c.layer = true;
+      extra.push(c);
     }
     notes.sort(function (a, b) { return a.t - b.t; });
 
@@ -2283,7 +2343,11 @@
     var tr = R('title');
     // What each part played: one value, or the list used across the sections.
     var outParts = {};
-    PART_KEYS.forEach(function (k) { outParts[k] = lists[k].length === 1 ? lists[k][0] : lists[k].slice(); });
+    PART_KEYS.forEach(function (k) {
+      var L = together[k] || lists[k];
+      outParts[k] = L.length === 1 ? L[0] : L.slice();
+    });
+    if (Object.keys(together).length) outParts.together = Object.keys(together);
     return {
       version: VERSION,
       title: tr.pick(TITLE_A) + ' ' + tr.pick(TITLE_B),

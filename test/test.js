@@ -267,6 +267,50 @@ test('a list of parts is used across the song: verse, chorus, bridge; the last c
   assert.throws(() => MusicComposition.compose({ parts: { lead: ['violin', 'kazoo'] } }), /unknown lead/);
 });
 
+test('parts.together layers the listed instruments all the way through', () => {
+  const s = MusicComposition.compose({ seed: 'tg', style: 'jpop', bars: 32, parts: { lead: ['flute', 'violin'], bass: ['finger', 'sine'], together: ['lead', 'bass'] } });
+  assert.deepStrictEqual(s.parts.together, ['lead', 'bass']);
+  for (const sec of s.sections.filter(x => x.type === 'A' || x.type === 'B')) {
+    const ns = s.notes.filter(n => n.inst === 'lead' && !n.harmony && n.t >= sec.start && n.t < sec.start + sec.bars * s.barDuration);
+    const main = ns.filter(n => !n.layer), dup = ns.filter(n => n.layer);
+    assert.ok(main.length > 4 && dup.length === main.length, sec.type + ': every lead note doubled');
+    assert.notStrictEqual(main[0].patch, dup[0].patch);
+  }
+  assert.ok(s.notes.some(n => n.inst === 'bass' && n.layer));
+  assert.throws(() => MusicComposition.compose({ parts: { together: ['drums'] } }), /cannot be layered/);
+});
+
+test('extend lengthens a song so it ends on a whole chorus', () => {
+  const LEN = { A: 8, P: 4, B: 8, C: 8 };
+  const ok = s => {
+    const body = s.sections.filter(x => x.type !== 'intro' && x.type !== 'outro'), last = body[body.length - 1];
+    if (body.length === 1 && last.bars === LEN[last.type]) return true;
+    return last.type === 'B' && !last.drop && body.every(x => x.bars === LEN[x.type]);
+  };
+  let bad = 0, badBefore = 0, n = 0;
+  for (const style of ['pop', 'jpop', 'lofi', 'ambient']) {
+    for (let i = 0; i < 20; i++) {
+      const o = { seed: 'ex' + i, style, duration: 30 + i * 5 };
+      const a = MusicComposition.compose(o), e = MusicComposition.compose(Object.assign({ extend: true }, o));
+      n++;
+      if (!ok(a)) badBefore++;
+      if (!ok(e)) bad++;
+      if (e.bars > a.bars) assert.ok(e.duration - a.duration <= 30.5 + e.barDuration * 8, 'extended by ' + (e.duration - a.duration));
+    }
+  }
+  assert.ok(badBefore > n / 3, badBefore + ' bad endings without extend');
+  assert.ok(bad <= n * 0.05, bad + ' of ' + n + ' still end mid-section');
+  // A song that already ends well is not changed.
+  let checked = 0;
+  for (let bars = 24; bars <= 48; bars += 4) {
+    const same = MusicComposition.compose({ seed: 'ex', style: 'pop', bars });
+    if (!ok(same)) continue;
+    checked++;
+    assert.deepStrictEqual(MusicComposition.compose({ seed: 'ex', style: 'pop', bars, extend: true }).notes, same.notes);
+  }
+  assert.ok(checked > 0);
+});
+
 test('parts.sometimes leaves parts out of some songs', () => {
   let without = 0;
   for (let i = 0; i < 40; i++) {

@@ -235,7 +235,9 @@
   .pchk.is-default span { border-style: dashed; border-color: var(--muted); color: var(--ink); }
   .pchk input:checked + span { background: var(--ink); color: var(--surface); border: 1px solid var(--ink); }
   .pchk input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .maybe { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .part-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 6px; }
+  .part-foot .seg button { font-size: 11.5px; padding: 4px 8px; }
+  .maybe { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
   .maybe input { accent-color: var(--accent); margin: 0; }
   .cs .parts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @media (max-width: 560px) { .cs .parts-grid { grid-template-columns: minmax(0, 1fr); } }
@@ -498,6 +500,11 @@
           </div>
         </div>
         <p class="hint" id="len-hint" hidden>BPM を変えても長さは変わりません。4 小節単位で、いちばん近い長さにします。</p>
+        <label class="switch" for="extend">
+          <span class="switch-text">区切りのいいところまで延長<small>サビの途中やAメロのあとでアウトロに入らないよう、サビを丸ごと終えるところまで延ばします（最大 30 秒。届かないときは少し短く）</small></span>
+          <input type="checkbox" id="extend">
+          <span class="track" aria-hidden="true"></span>
+        </label>
 
         <div class="field meter-field">
           <div class="label">
@@ -544,6 +551,11 @@
         <label class="switch" for="radio-mix">
           <span class="switch-text">ときどきスタイルを混ぜる<small>選んだスタイルから 2 つを混ぜた曲も流します</small></span>
           <input type="checkbox" id="radio-mix">
+          <span class="track" aria-hidden="true"></span>
+        </label>
+        <label class="switch" for="radio-extend">
+          <span class="switch-text">区切りのいいところまで延長<small>1 曲の長さを少し超えても、サビを丸ごと終えてから次の曲へ</small></span>
+          <input type="checkbox" id="radio-extend" checked>
           <span class="track" aria-hidden="true"></span>
         </label>
         <div class="field">
@@ -677,8 +689,9 @@
           <tbody>
             <tr><td><code>seed</code></td><td>文字列 / 数値</td><td>ランダム</td></tr>
             <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
-            <tr><td><code>parts</code></td><td>楽器と演奏。配列なら 1 曲の中で使い分ける（<code>lead: ['flute', 'violin']</code>）。<code>sometimes: ['guitar']</code> は曲によって抜く</td><td>スタイルどおり</td></tr>
+            <tr><td><code>parts</code></td><td>楽器と演奏。配列なら 1 曲の中で使い分ける（<code>lead: ['flute', 'violin']</code>）。<code>together: ['lead']</code> は重ねて同時に鳴らし、<code>sometimes: ['guitar']</code> は曲によって抜く</td><td>スタイルどおり</td></tr>
             <tr><td><code>meter</code></td><td><code>'4/4'</code> / <code>'3/4'</code></td><td><code>'4/4'</code></td></tr>
+            <tr><td><code>extend</code></td><td><code>true</code>（最大 30 秒）/ 秒数。サビを丸ごと終えるところまで延ばす</td><td><code>false</code></td></tr>
             <tr><td><code>key</code></td><td><code>C</code>〜<code>B</code>（<code>F#</code>, <code>Bb</code> など）</td><td>シードで決定</td></tr>
             <tr><td><code>mode</code></td><td><code>major</code> <code>minor</code> <code>dorian</code> <code>mixolydian</code> <code>lydian</code></td><td>スタイルに合わせて決定</td></tr>
             <tr><td><code>bpm</code></td><td>40〜240</td><td>スタイルに合わせて決定</td></tr>
@@ -807,7 +820,7 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=95a43c"></script>
+<script src="music-composition.js?h=759f3a"></script>
 <script src="video.js?h=a8c186"></script>
 <script>
 (function () {
@@ -971,8 +984,10 @@
   var PART_KEYS = Object.keys(PART_LABELS);
   function partLabel(k, v) { return PART_LABELS[k][1][String(v)] || String(v); }
   // Part checkboxes: nothing ticked = as the style, one = that one, several =
-  // all of them in one song, section by section. "Sometimes leave out" makes
-  // some songs go without the part. prefix makes the ids unique.
+  // all of them in one song, taking turns by section or (for the pitched
+  // parts) layered all the way through. "Sometimes leave out" makes some songs
+  // go without the part. prefix makes the ids unique.
+  var LAYERABLE = ['lead', 'bass', 'chords', 'pad', 'arp'];
   function buildPartsGrid(grid, prefix, onChange) {
     PART_KEYS.forEach(function (k) {
       var f = document.createElement('fieldset');
@@ -983,12 +998,31 @@
       f.querySelector('.part-opts').innerHTML = values.map(function (v) {
         return '<label class="pchk"><input type="checkbox" value="' + v + '"><span>' + escapeHtml(partLabel(k, v)) + '</span></label>';
       }).join('');
+      var foot = document.createElement('div');
+      foot.className = 'part-foot';
+      if (LAYERABLE.indexOf(k) >= 0) {
+        var seg = document.createElement('span');
+        seg.className = 'seg';
+        seg.dataset.layer = '1';
+        seg.setAttribute('role', 'group');
+        seg.setAttribute('aria-label', PART_LABELS[k][0] + 'の使い方');
+        seg.hidden = true;
+        seg.innerHTML = '<button type="button" data-mode="turns" aria-pressed="true">使い分ける</button><button type="button" data-mode="together" aria-pressed="false">重ねる</button>';
+        seg.addEventListener('click', function (e) {
+          var b = e.target.closest('button');
+          if (!b) return;
+          seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+          markParts(prefix); onChange();
+        });
+        foot.appendChild(seg);
+      }
       if (values.indexOf('none') >= 0) {
         var m = document.createElement('label');
         m.className = 'maybe';
         m.innerHTML = '<input type="checkbox" data-maybe="1">曲によっては使わない';
-        f.appendChild(m);
+        foot.appendChild(m);
       }
+      if (foot.childNodes.length) f.appendChild(foot);
       f.addEventListener('change', function () { markParts(prefix); onChange(); });
       grid.appendChild(f);
     });
@@ -1006,7 +1040,13 @@
     });
     var maybe = PART_KEYS.filter(function (k) { var m = $('#' + prefix + k).querySelector('[data-maybe]'); return m && m.checked; });
     if (maybe.length) { p.sometimes = maybe; any = true; }
+    var together = LAYERABLE.filter(function (k) { return Array.isArray(p[k]) && isLayered(prefix, k); });
+    if (together.length) p.together = together;
     return any ? p : null;
+  }
+  function isLayered(prefix, k) {
+    var b = $('#' + prefix + k).querySelector('[data-layer] [data-mode="together"]');
+    return !!b && b.getAttribute('aria-pressed') === 'true';
   }
   function setPartsIn(prefix, p) {
     PART_KEYS.forEach(function (k) {
@@ -1014,6 +1054,8 @@
       $('#' + prefix + k).querySelectorAll('.pchk input').forEach(function (i) { i.checked = want.indexOf(i.value) >= 0; });
       var m = $('#' + prefix + k).querySelector('[data-maybe]');
       if (m) m.checked = !!(p && p.sometimes && p.sometimes.indexOf(k) >= 0);
+      var layered = !!(p && p.together && p.together.indexOf(k) >= 0);
+      $('#' + prefix + k).querySelectorAll('[data-layer] button').forEach(function (b) { b.setAttribute('aria-pressed', String((b.dataset.mode === 'together') === layered)); });
     });
     markParts(prefix);
   }
@@ -1026,7 +1068,9 @@
       var dv = d.def && d.def[k] !== undefined ? [].concat(d.def[k]).map(String) : null;
       var small = f.querySelector('legend small');
       small.classList.toggle('on', n > 0);
-      small.textContent = n > 1 ? n + ' 種類を曲の中で使い分け' : n === 1 ? '指定' : dv ? 'スタイルどおり（' + dv.map(function (v) { return partLabel(k, v); }).join('・') + '）' : d.fallback;
+      var seg = f.querySelector('[data-layer]');
+      if (seg) seg.hidden = n < 2;
+      small.textContent = n > 1 ? (isLayered(prefix, k) ? n + ' 種類を重ねる' : n + ' 種類を曲の中で使い分け') : n === 1 ? '指定' : dv ? 'スタイルどおり（' + dv.map(function (v) { return partLabel(k, v); }).join('・') + '）' : d.fallback;
       f.querySelectorAll('.pchk').forEach(function (l) { l.classList.toggle('is-default', !n && !!dv && dv.indexOf(l.querySelector('input').value) >= 0); });
     });
   }
@@ -1319,6 +1363,7 @@
     else o.bars = parseInt($('#bars').value, 10);
     if (state.meter === '3/4') o.meter = '3/4';
     if ($('#loop').checked) o.loop = true;
+    if ($('#extend').checked) o.extend = true;
     var parts = readParts();
     if (parts) o.parts = parts;
     var sr = parseInt($('#rate').value, 10);
@@ -1326,7 +1371,7 @@
     return o;
   }
 
-  ['#seed', '#key', '#mode', '#bpm', '#bars', '#sec', '#loop', '#rate'].forEach(function (s) {
+  ['#seed', '#key', '#mode', '#bpm', '#bars', '#sec', '#loop', '#extend', '#rate'].forEach(function (s) {
     $(s).addEventListener('input', updateSnippet);
     $(s).addEventListener('change', updateSnippet);
   });
@@ -1470,6 +1515,7 @@
       setUnit('bars');
     }
     $('#loop').checked = !!o.loop;
+    $('#extend').checked = !!o.extend;
     setMeter(o.meter || '4/4');
     $('#rate').value = String(o.sampleRate || 44100);
     setParts(o.parts || {});
@@ -1703,6 +1749,7 @@
     if (o.duration) parts.push('duration: <span class="n">' + o.duration + '</span>');
     if (o.meter) parts.push('meter: ' + s(o.meter));
     if (o.loop) parts.push('loop: <span class="k">true</span>');
+    if (o.extend) parts.push('extend: <span class="k">true</span>');
     if (o.parts) parts.push('parts: { ' + Object.keys(o.parts).map(function (k) {
       return k + ': ' + styleObj(o.parts[k]);
     }).join(', ') + ' }');
@@ -1775,6 +1822,7 @@
   }
   renderRadioStyles();
   $('#radio-mix').addEventListener('change', radioRulesChanged);
+  $('#radio-extend').addEventListener('change', radioRulesChanged);
   chipButtons($('#radio-modes'), RADIO_MODES, function (v) { return MODE_JA[v] || v; }, []);
   var RADIO_METERS = ['4/4', '3/4'];
   chipButtons($('#radio-meters'), RADIO_METERS, function (v) { return v; }, ['4/4']);
@@ -1818,6 +1866,7 @@
     return {
       styles: pressedValues($('#radio-styles')).filter(function (v) { return v.indexOf('custom:') < 0 || findCustom(v.slice(7)); }),
       mix: $('#radio-mix').checked,
+      extend: $('#radio-extend').checked,
       modes: pressedValues($('#radio-modes')),
       meters: pressedValues($('#radio-meters')),
       bpm: numRange('#radio-bpm-min', '#radio-bpm-max', 40, 240),
@@ -1831,6 +1880,7 @@
     var plain = r.styles.filter(function (v) { return RADIO_STYLES.indexOf(v) >= 0; });
     if (plain.length !== RADIO_STYLES.length || plain.length !== r.styles.length) q.set('styles', plain.join(',')); // custom styles stay in this browser
     if (r.mix) q.set('mix', '1');
+    if (!r.extend) q.set('ext', '0');
     if (r.modes.length) q.set('modes', r.modes.join(','));
     if (r.meters.length && r.meters.join() !== '4/4') q.set('meters', r.meters.join(','));
     if (r.bpm) q.set('bpm', r.bpm.join('-'));
@@ -1847,6 +1897,7 @@
     var styles = (p.get('styles') || '').split(',').filter(function (v) { return RADIO_STYLES.indexOf(v) >= 0; });
     set($('#radio-styles'), styles.length ? styles : RADIO_STYLES);
     $('#radio-mix').checked = p.get('mix') === '1';
+    $('#radio-extend').checked = p.get('ext') !== '0';
     set($('#radio-modes'), (p.get('modes') || '').split(',').filter(function (v) { return RADIO_MODES.indexOf(v) >= 0; }));
     var meters = (p.get('meters') || '').split(',').filter(function (v) { return RADIO_METERS.indexOf(v) >= 0; });
     set($('#radio-meters'), meters.length ? meters : ['4/4']);
@@ -1887,6 +1938,7 @@
     var meter = r.meters.length ? r.meters[Math.floor(Math.random() * r.meters.length)] : '4/4';
     if (meter === '3/4') o.meter = '3/4';
     if (r.bpm) o.bpm = between(r.bpm);
+    if (r.extend) o.extend = true;
     var sr = parseInt($('#rate').value, 10);
     if (sr !== 44100) o.sampleRate = sr;
     return o;
@@ -2006,8 +2058,10 @@
     else if (!o.bars && o.duration) q.set('sec', String(o.duration));
     if (o.meter === '3/4') q.set('meter', '3/4');
     if (o.loop) q.set('loop', '1');
+    if (o.extend) q.set('ext', '1');
     // parts=drums:lofi,guitar:strum,swing:0.3
-    // parts=lead:violin|flute,drums:brush (a list: the seed picks one)
+    // parts=lead:violin|flute,drums:brush (a list: all of them, by section),
+    // sometimes:arp (left out of some songs), together:lead (the list layered)
     if (o.parts) q.set('parts', Object.keys(o.parts).map(function (k) { return k + ':' + [].concat(o.parts[k]).join('|'); }).join(','));
     return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%2F/g, '/').replace(/%7C/g, '|');
   }
@@ -2018,6 +2072,11 @@
       if (k === 'sometimes') {
         var ks = kv.slice(i + 1).split('|').filter(function (x) { return MusicComposition.parts[x] && MusicComposition.parts[x].indexOf('none') >= 0; });
         if (ks.length) { p.sometimes = ks; any = true; }
+        return;
+      }
+      if (k === 'together') {
+        var tk = kv.slice(i + 1).split('|').filter(function (x) { return LAYERABLE.indexOf(x) >= 0; });
+        if (tk.length) p.together = tk;
         return;
       }
       var vals = kv.slice(i + 1).split('|').map(function (val) {
@@ -2053,6 +2112,7 @@
     else if (sec > 0) o.duration = Math.max(10, Math.min(600, sec));
     if (p.get('meter') === '3/4' || p.get('meter') === '3') o.meter = '3/4';
     if (p.get('loop') === '1') o.loop = true;
+    if (p.get('ext') === '1') o.extend = true;
     var parts = partsFromParam(p.get('parts'));
     if (parts) o.parts = parts;
     return o;

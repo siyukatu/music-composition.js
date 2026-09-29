@@ -89,6 +89,8 @@ declare namespace MusicComposition {
   type PartChoices = { [K in keyof Parts]?: Parts[K] | Array<NonNullable<Parts[K]>> } & {
     /** Parts that some songs leave out (half of them, decided by the seed). */
     sometimes?: Array<'drums' | 'bass' | 'chords' | 'guitar' | 'pad' | 'arp'>;
+    /** Parts whose listed instruments all play at once, all the way through (layered), instead of taking turns by section. */
+    together?: Array<'lead' | 'bass' | 'chords' | 'pad' | 'arp'>;
   };
 
   interface ComposeOptions {
@@ -112,6 +114,12 @@ declare namespace MusicComposition {
     loop?: boolean;
     /** '4/4' (default) or '3/4' (triple meter: waltz patterns, downbeat-led phrasing, and instruments that suit it). */
     meter?: '4/4' | '3/4';
+    /**
+     * Let the song run longer so it ends on a whole chorus rather than mid-section
+     * (true: up to 30 seconds more, at least 8 bars; a number: up to that many seconds).
+     * If the next whole chorus is further than that, the song ends up to 8 bars earlier instead.
+     */
+    extend?: boolean | number;
   }
 
   interface RenderOptions {
@@ -184,7 +192,7 @@ declare namespace MusicComposition {
     /** Weight of each style (1 for a single style). */
     mix: { [S in Style]?: number };
     /** The parts actually used (style defaults plus overrides); a list where the song changes them by section. */
-    parts: { [K in keyof Parts]-?: NonNullable<Parts[K]> | Array<NonNullable<Parts[K]>> };
+    parts: { [K in keyof Parts]-?: NonNullable<Parts[K]> | Array<NonNullable<Parts[K]>> } & { together?: string[] };
     meter: '4/4' | '3/4';
     /** 4 or 3. A bar is beatsPerBar * 4 sixteenths long. */
     beatsPerBar: number;
