@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>music-composition.js — ブラウザで自動作曲して WAV を書き出す JavaScript ライブラリ</title>
-<meta name="description" content="シード値から曲を自動で作曲し、WAV ファイルとして書き出す JavaScript ライブラリ。Pop・J-POP・Dance・Lo-fi・Chiptune・Ambient の6スタイルとそのミックス、自分で作るカスタムスタイル、三拍子、ゲーム向けのシームレスループに対応。サーバー不要・依存ライブラリなしで、ブラウザと Node.js で動作します。">
+<meta name="description" content="シード値から曲を自動で作曲し、WAV ファイルとして書き出す JavaScript ライブラリ。Pop・J-POP・Dance・Lo-fi・Chiptune・Ambient・Jazz の7スタイルとそのミックス、自分で作るカスタムスタイル、三拍子、ゲーム向けのシームレスループに対応。サーバー不要・依存ライブラリなしで、ブラウザと Node.js で動作します。">
 <link rel="canonical" href="https://mcj.siyukatu.me/">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="author" content="siyukatu">
@@ -688,7 +688,7 @@
           <thead><tr><th>オプション</th><th>値</th><th>既定</th></tr></thead>
           <tbody>
             <tr><td><code>seed</code></td><td>文字列 / 数値</td><td>ランダム</td></tr>
-            <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
+            <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>jazz</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
             <tr><td><code>parts</code></td><td>楽器と演奏。配列なら 1 曲の中で使い分ける（<code>lead: ['flute', 'violin']</code>）。<code>together: ['lead']</code> は重ねて同時に鳴らし、<code>sometimes: ['guitar']</code> は曲によって抜く</td><td>スタイルどおり</td></tr>
             <tr><td><code>meter</code></td><td><code>'4/4'</code> / <code>'3/4'</code></td><td><code>'4/4'</code></td></tr>
             <tr><td><code>extend</code></td><td><code>true</code>（最大 30 秒）/ 秒数。サビを丸ごと終えるところまで延ばす</td><td><code>false</code></td></tr>
@@ -820,8 +820,8 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=2fc2f4"></script>
-<script src="video.js?h=a8c186"></script>
+<script src="music-composition.js?h=c88ad9"></script>
+<script src="video.js?h=ccf100"></script>
 <script>
 (function () {
   'use strict';
@@ -835,6 +835,7 @@
     lofi: ['Lo-fi', 'スウィングするビートにエレピの7thコード、レコードのノイズ。'],
     chiptune: ['Chiptune', '矩形波と三角波、ノイズドラムの8bitサウンド。'],
     ambient: ['Ambient', 'ドラムなし。ゆっくり広がるパッドとベルの音。'],
+    jazz: ['Jazz', 'スウィングのライドとウォーキングベース、9th・13th のピアノ。ii–V–I や裏コード（♭II7）の上でサックスが歌います。'],
     mix: ['ミックス', '選んだスタイルを混ぜます。スライダーで割合を決めます。'],
     add: ['＋ カスタム', '']
   };
@@ -969,15 +970,15 @@
 
   // Parts: instruments and playing, on top of the style ------------------------
   var PART_LABELS = {
-    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', brush: 'ブラシ（ジャズ）', perc: 'パーカッション', none: 'なし' }],
-    groove: ['リズム', { eightbeat: '8ビート', sixteenbeat: '16ビート', fourfloor: '4つ打ち', halftime: 'ハーフタイム', shuffle: 'シャッフル', breakbeat: 'ブレイクビーツ', chip: 'チップチューン' }],
+    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', brush: 'ブラシ', perc: 'パーカッション', jazz: 'ジャズ（スティック）', none: 'なし' }],
+    groove: ['リズム', { eightbeat: '8ビート', sixteenbeat: '16ビート', fourfloor: '4つ打ち', halftime: 'ハーフタイム', shuffle: 'シャッフル', swing: 'スウィング', breakbeat: 'ブレイクビーツ', chip: 'チップチューン' }],
     bass: ['ベース', { synth: 'シンセ', finger: '指弾き', sine: 'サイン波', chip: '三角波', upright: 'ウッドベース', fm: 'FM ベース', tuba: 'チューバ', none: 'なし' }],
     bassLine: ['ベースの弾き方', { root: 'ルート', drive: '8分刻み', offbeat: '裏打ち', syncopated: 'キックに合わせる', walking: 'ウォーキング', long: '伸ばす' }],
-    chords: ['コード楽器', { piano: 'ピアノ', cutpiano: 'リリースカットピアノ', epiano: 'エレピ', synth: 'シンセ', organ: 'オルガン', chip: '矩形波', harp: 'ハープ', marimba: 'マリンバ', accordion: 'アコーディオン', pizzicato: 'ピチカート', musicbox: 'オルゴール', none: 'なし' }],
-    comping: ['コードの弾き方', { block: 'ブロック', rhythm: 'リズム', arpeggio: 'アルペジオ', sustain: '伸ばす', stab: '裏拍で短く', broken: '分散和音' }],
+    chords: ['コード楽器', { piano: 'ピアノ', cutpiano: 'リリースカットピアノ', epiano: 'エレピ', synth: 'シンセ', organ: 'オルガン', chip: '矩形波', harp: 'ハープ', marimba: 'マリンバ', vibes: 'ビブラフォン', accordion: 'アコーディオン', pizzicato: 'ピチカート', musicbox: 'オルゴール', none: 'なし' }],
+    comping: ['コードの弾き方', { block: 'ブロック', rhythm: 'リズム', arpeggio: 'アルペジオ', sustain: '伸ばす', stab: '裏拍で短く', broken: '分散和音', jazz: 'ジャズ（チャールストン）' }],
     guitar: ['ギター', { strum: 'ストローク', cutting: 'カッティング', arpeggio: 'アルペジオ', fingerpick: 'ナイロン指弾き', none: 'なし' }],
     pad: ['パッド', { warm: 'ウォーム', wide: 'ワイド', strings: 'ストリングス', ambient: 'アンビエント', choir: 'クワイア', none: 'なし' }],
-    lead: ['メロディ楽器', { saw: 'ノコギリ波', pluck: 'プラック', soft: 'ソフト', square: '矩形波', pwm: 'PWM', fm: 'FM シンセ', robot: 'ロボット', flute: 'フルート', whistle: '口笛', brass: 'ブラス', violin: 'バイオリン', voice: 'ボイス', bell: 'ベル', piano: 'ピアノ', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', accordion: 'アコーディオン' }],
+    lead: ['メロディ楽器', { saw: 'ノコギリ波', pluck: 'プラック', soft: 'ソフト', square: '矩形波', pwm: 'PWM', fm: 'FM シンセ', robot: 'ロボット', flute: 'フルート', whistle: '口笛', sax: 'サックス', brass: 'ブラス', violin: 'バイオリン', voice: 'ボイス', bell: 'ベル', piano: 'ピアノ', vibes: 'ビブラフォン', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', accordion: 'アコーディオン' }],
     arp: ['アルペジオ', { eighths: '8分', sixteenths: '16分', bells: 'ベル', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', digital: 'デジタル', none: 'なし' }],
     swing: ['スウィング', { '0': 'なし', '0.15': '軽め', '0.3': '強め' }]
   };
@@ -1679,7 +1680,7 @@
     var laneTop = h - ROLL.drumLane;
     g.fillStyle = css('--roll-band'); g.fillRect(0, laneTop, w, ROLL.drumLane);
     g.strokeStyle = css('--line'); g.beginPath(); g.moveTo(0, laneTop + 0.5); g.lineTo(w, laneTop + 0.5); g.stroke();
-    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, open: 0, crash: 0 };
+    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
     g.fillStyle = css('--drums');
     song.notes.forEach(function (n) {
       if (n.inst !== 'drums' || n.t >= total) return;
@@ -2332,7 +2333,7 @@
         g.fillStyle = C[n.inst];
         g.fillRect(X(n.t), bottom - (n.midi - lo + 1) * rowH, Math.max(2, X(Math.min(n.d, total - n.t)) - X(0) - 1), Math.max(2, rowH - 1));
       });
-      var rows = { kick: 2, snare: 1, clap: 1, hat: 0, open: 0, crash: 0 };
+      var rows = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
       g.fillStyle = C.drums;
       song.notes.forEach(function (n) {
         if (n.inst !== 'drums' || n.t >= total) return;

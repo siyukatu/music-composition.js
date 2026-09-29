@@ -15,6 +15,7 @@
 
 - **構成**: イントロ・Aメロ・プレコーラス（Bメロ）・サビ・ブリッジ・アウトロから、長さに合わせて組み立てます。最後のサビの前に静かな「落ちサビ」を入れたり、最後のサビで半音〜全音上に転調したりします（直前に新しいキーの V7 を置きます）
 - **和声**: 王道進行・小室進行・カノン進行・丸サ進行・下降ベースなど、名前のある進行をスタイルとセクションの役割に合わせて選び、機能が同じコードへの置き換え（I↔vi、IV↔ii、iii→III7）で変化を付けます。プレコーラスは必ずドミナントで終わり、サビへ向かいます。セカンダリードミナント、同主調からの借用和音（iv・♭VI・♭VII など）、sus4 の解決、ベースが順次進行になる転回形、セクションの変わり目の ii–V も使います。マイナーキーのドミナントは導音を上げた V です
+- **ジャズ**: ii–V–I（マイナーでは ii ø7–V7(♭9)–i）、I–vi–ii–V、iii–VI–ii–V の循環、裏コード（V7 の代わりの ♭II7）を使い、すべてのコードを 7th にして、それぞれのスケールで使える 9th・13th（ドミナントでは ♭9）を足します（11th と、ドミナント以外の ♭9 は避けます）。ピアノはルートを省いたルートレス・ボイシング（ルートはウォーキングベース）で、チャールストンなどのリズムで刻みます。ドラムはライドの「チン、チキ、チン」とハイハットのペダル（2・4 拍）。メロディは 8 分音符の格子の上でつくり、2:1 でスウィングさせます
 - **メロディ**: 4 小節の「モチーフ→応答→モチーフ（移高・反行・語尾の変化）→終止」でつくり、強拍はコードトーン、ときどき倚音で解決させます。リズムは拍ごとのリズムセル（シンコペーション・タイを含む）から曲ごとに生成します。サビは直前のメロディより 3〜5 度上から入り、サビの終盤に一度だけ最高音を置きます（最後のサビはさらに高く）。コードごとのスケールで鳴らすので、借用和音やセカンダリードミナントの上でも音が外れません
 - **伴奏**: ドラム・ベース・コードのパターンを、リズムの種類（8 ビート、4 つ打ち、シャッフル…）のルールに沿って曲ごとに生成します。4 小節ごとのフレーズ終わりのバリエーション、キックに合わせたベース、次のコードを先取りする「食い」も入ります
 - **拍子**: 4/4 と 3/4。3/4 は強・弱・弱の拍節に合わせて、キックは 1 拍目、ワルツの伴奏はベースが 1 拍目・コードが 2・3 拍目（ブン・チャッ・チャッ）、コードの変わり目は 1 拍目（または 2+1 の 3 拍目）、メロディのフレーズは 1 拍目か 3 拍目の弱起から始まり、終止は 1 拍目に着地します
@@ -90,7 +91,7 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | オプション | 値 | 既定値 |
 |---|---|---|
 | `seed` | 文字列 / 数値 | ランダム |
-| `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `auto`、ミックス（`'jpop+lofi'`）、カスタムスタイル（オブジェクト） | `auto`（シードで決定） |
+| `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `jazz` `auto`、ミックス（`'jpop+lofi'`）、カスタムスタイル（オブジェクト） | `auto`（シードで決定） |
 | `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き。値を配列にすると 1 曲の中で使い分ける（下を参照） | スタイルどおり |
 | `key` | `C`〜`B`（`F#`, `Bb` なども可） | シードで決定 |
 | `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイルに合わせて決定 |
@@ -106,15 +107,15 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 
 | キー | 値 |
 |---|---|
-| `drums` | `acoustic` `electronic` `lofi` `chip` `brush`（ブラシとライド）`perc`（コンガ・リム・シェイカー・タンバリン）`none` |
-| `groove` | `eightbeat` `sixteenbeat` `fourfloor` `halftime` `shuffle` `breakbeat` `chip` |
+| `drums` | `acoustic` `electronic` `lofi` `chip` `brush`（ブラシとライド）`perc`（コンガ・リム・シェイカー・タンバリン）`jazz`（スティックとライド）`none` |
+| `groove` | `eightbeat` `sixteenbeat` `fourfloor` `halftime` `shuffle` `swing`（ライドとハイハットのペダル）`breakbeat` `chip` |
 | `bass` | `synth` `finger` `sine` `chip` `upright`（ウッドベース）`fm` `tuba` `none` |
 | `bassLine` | `root` `drive` `offbeat` `syncopated`（キックに合わせる）`walking` `long` |
-| `chords` | `piano` `cutpiano`（リリースカットピアノ）`epiano` `synth` `organ` `chip` `harp` `marimba` `accordion` `pizzicato` `musicbox`（オルゴール）`none` |
-| `comping` | `block` `rhythm` `arpeggio` `sustain` `stab`（裏拍の短いコード）`broken`（分散和音／アルベルティ・バス） |
+| `chords` | `piano` `cutpiano`（リリースカットピアノ）`epiano` `synth` `organ` `chip` `harp` `marimba` `vibes`（ビブラフォン）`accordion` `pizzicato` `musicbox`（オルゴール）`none` |
+| `comping` | `block` `rhythm` `arpeggio` `sustain` `stab`（裏拍の短いコード）`broken`（分散和音／アルベルティ・バス）`jazz`（チャールストンなどのジャズの刻み） |
 | `guitar` | `strum` `cutting` `arpeggio` `fingerpick`（ナイロン弦の指弾き）`none` |
 | `pad` | `warm` `wide` `strings` `ambient` `choir` `none` |
-| `lead` | `saw` `pluck` `soft` `square` `pwm` `fm` `robot`（リング変調＋ビットクラッシュ）`flute` `whistle` `brass` `violin` `voice` `bell` `piano` `harp` `marimba` `musicbox` `accordion` |
+| `lead` | `saw` `pluck` `soft` `square` `pwm` `fm` `robot`（リング変調＋ビットクラッシュ）`flute` `whistle` `sax` `brass` `violin` `voice` `bell` `piano` `vibes` `harp` `marimba` `musicbox` `accordion` |
 | `arp` | `eighths` `sixteenths` `bells` `harp` `marimba` `musicbox` `digital` `none` |
 | `swing` | 0〜0.5 |
 

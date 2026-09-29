@@ -2,12 +2,13 @@
 // https://github.com/siyukatu/music-composition.js
 
 declare namespace MusicComposition {
-  type Style = 'pop' | 'jpop' | 'dance' | 'lofi' | 'chiptune' | 'ambient';
+  type Style = 'pop' | 'jpop' | 'dance' | 'lofi' | 'chiptune' | 'ambient' | 'jazz';
   type Mode = 'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian';
   /** A = verse, P = pre-chorus, B = chorus, C = bridge. */
   type SectionType = 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro';
   type Instrument = 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums';
-  type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'open' | 'crash';
+  /** 'hat' is the ride cymbal in the jazz and brush kits; 'pedal' is the hi-hat played with the foot. */
+  type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'pedal' | 'open' | 'crash';
 
   /**
    * What plays and how. Every field is optional; the style supplies the rest.
@@ -17,21 +18,21 @@ declare namespace MusicComposition {
    */
   interface Parts {
     /** Drum kit. */
-    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'brush' | 'perc' | 'none';
+    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'brush' | 'perc' | 'jazz' | 'none';
     /** Drum pattern family (each song generates its own pattern within it). */
-    groove?: 'eightbeat' | 'sixteenbeat' | 'fourfloor' | 'halftime' | 'shuffle' | 'breakbeat' | 'chip';
+    groove?: 'eightbeat' | 'sixteenbeat' | 'fourfloor' | 'halftime' | 'shuffle' | 'swing' | 'breakbeat' | 'chip';
     bass?: 'synth' | 'finger' | 'sine' | 'chip' | 'upright' | 'fm' | 'tuba' | 'none';
     /** How the bass plays: 'syncopated' locks to the kick drum, 'walking' in quarter notes. */
     bassLine?: 'root' | 'drive' | 'offbeat' | 'syncopated' | 'walking' | 'long';
     /** Chord instrument. 'cutpiano' = a piano whose notes are cut short (release cut). */
-    chords?: 'piano' | 'cutpiano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'harp' | 'marimba' | 'accordion' | 'pizzicato' | 'musicbox' | 'none';
-    /** How the chords play. 'rhythm' is a generated syncopated pattern, 'stab' short offbeat chords, 'broken' broken chords (Alberti). */
-    comping?: 'block' | 'rhythm' | 'arpeggio' | 'sustain' | 'stab' | 'broken';
+    chords?: 'piano' | 'cutpiano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'harp' | 'marimba' | 'vibes' | 'accordion' | 'pizzicato' | 'musicbox' | 'none';
+    /** How the chords play. 'rhythm' is a generated syncopated pattern, 'stab' short offbeat chords, 'broken' broken chords (Alberti), 'jazz' swing comping figures (Charleston, pushes). */
+    comping?: 'block' | 'rhythm' | 'arpeggio' | 'sustain' | 'stab' | 'broken' | 'jazz';
     /** Guitar (plucked string synthesis): strumming, 16th-note cutting, arpeggios, or nylon-string fingerpicking. */
     guitar?: 'strum' | 'cutting' | 'arpeggio' | 'fingerpick' | 'none';
     pad?: 'warm' | 'wide' | 'strings' | 'ambient' | 'choir' | 'none';
     /** Melody instrument. 'pwm', 'fm' and 'robot' (ring modulation, bit-crushed) are machine sounds. */
-    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'pwm' | 'fm' | 'robot' | 'flute' | 'whistle' | 'brass' | 'violin' | 'voice' | 'bell' | 'piano' | 'harp' | 'marimba' | 'musicbox' | 'accordion';
+    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'pwm' | 'fm' | 'robot' | 'flute' | 'whistle' | 'sax' | 'brass' | 'violin' | 'voice' | 'bell' | 'piano' | 'vibes' | 'harp' | 'marimba' | 'musicbox' | 'accordion';
     arp?: 'eighths' | 'sixteenths' | 'bells' | 'harp' | 'marimba' | 'musicbox' | 'digital' | 'none';
     /** 0 (straight) – 0.5. */
     swing?: number;

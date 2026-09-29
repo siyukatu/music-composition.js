@@ -344,6 +344,33 @@ test('parts.sometimes leaves parts out of some songs', () => {
   assert.throws(() => MusicComposition.compose({ parts: { sometimes: ['lead'] } }), /cannot be left out/);
 });
 
+test('jazz: seventh chords with tensions, ii-V motion, rootless piano, walking bass, swing', () => {
+  let chords = 0, sevenths = 0, twoFives = 0, pianoNotes = 0, rootInHands = 0, walk = 0, bassNotes = 0, rides = 0;
+  for (let i = 0; i < 10; i++) {
+    const s = MusicComposition.compose({ seed: 'jazz' + i, style: 'jazz', bars: 48, parts: { swing: 0 } });
+    assert.strictEqual(s.parts.groove, 'swing');
+    s.chords.forEach((c, k) => {
+      chords++;
+      if (c.tones.length >= 4 || /sus/.test(c.name)) sevenths++;
+      const nx = s.chords[k + 1];
+      // ii-V: a minor seventh (or half-diminished) chord followed by a dominant a fourth up.
+      if (nx && /m7|m9|m7b5|m9b5/.test(c.name) && /^[A-G][b#]?(7|9|13)/.test(nx.name) && (nx.tones[0] - c.tones[0] + 12) % 12 === 5) twoFives++;
+    });
+    const chordAt = t => { let c = s.chords[0]; for (const x of s.chords) if (x.time <= t + 0.03) c = x; return c; };
+    s.notes.forEach(n => {
+      if (n.patch === 'piano') { pianoNotes++; if (n.midi % 12 === chordAt(n.t).tones[0]) rootInHands++; }
+      if (n.inst === 'bass') { bassNotes++; if (Math.abs(n.d - s.stepDuration * 4 * 0.92) < 0.02) walk++; }
+      if (n.drum === 'hat') rides++;
+    });
+    assert.ok(s.notes.some(n => n.drum === 'pedal'), 'hi-hat pedal on 2 and 4');
+  }
+  assert.ok(sevenths / chords > 0.97, sevenths + ' of ' + chords + ' chords are seventh chords or more');
+  assert.ok(twoFives > 40, twoFives + ' ii-V moves');
+  assert.ok(rootInHands / pianoNotes < 0.15, rootInHands + ' of ' + pianoNotes + ' piano notes double the root');
+  assert.ok(walk / bassNotes > 0.6, walk + ' of ' + bassNotes + ' bass notes walk in quarters');
+  assert.ok(rides > 1000);
+});
+
 test('release-cut piano stops short; stabs sit on the offbeats', () => {
   const s = MusicComposition.compose({ seed: 'cut', style: 'dance', bars: 16, parts: { chords: 'cutpiano', comping: 'stab' } });
   const ch = s.notes.filter(n => n.patch === 'cutPiano');
@@ -357,7 +384,7 @@ test('release-cut piano stops short; stabs sit on the offbeats', () => {
 for (const meter of ['4/4', '3/4']) {
   test(meter + ': strong-beat melody notes are chord tones, outer voices avoid parallel 5ths/8ves', () => {
     let strong = 0, off = 0, downbeats = 0, parallels = 0;
-    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jpop+lofi', 'pop:2+chiptune']) {
+    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jazz', 'jpop+lofi', 'pop:2+chiptune']) {
       for (let i = 0; i < 12; i++) {
         const song = MusicComposition.compose({ seed: 'rules' + i, style, meter, bars: 48 });
         const spb = song.beatsPerBar * 4, sd = song.stepDuration, bd = song.barDuration;

@@ -20,7 +20,7 @@
   };
   var SECTION = { intro: 'INTRO', A: 'VERSE', P: 'PRE-CHORUS', B: 'CHORUS', C: 'BRIDGE', outro: 'OUTRO' };
   var SECTION_COLOR = { intro: C.muted, A: C.bass, P: C.arp, B: C.lead, C: C.chords, outro: C.muted };
-  var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient' };
+  var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient', jazz: 'Jazz' };
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -173,7 +173,7 @@
 
     // Drum lane
     var laneTop = L.rollBottom - L.drumH;
-    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, open: 0, crash: 0 };
+    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
     g.fillStyle = C.drums;
     var dFrom = firstIndexFrom(P.drums, t0);
     for (var di = dFrom; di < P.drums.length && P.drums[di].t <= t1; di++) {
