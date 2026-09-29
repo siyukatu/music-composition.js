@@ -33,7 +33,9 @@
     std: { kick: 36, snare: 38, clap: 39, hat: 42, pedal: 44, open: 46, crash: 49 },
     brush: { kick: 36, snare: 40, clap: 40, hat: 51, pedal: 44, open: 59, crash: 49 },
     jazz: { kick: 36, snare: 38, clap: 37, hat: 51, pedal: 44, open: 59, crash: 49 },
-    perc: { kick: 64, snare: 37, clap: 37, hat: 70, pedal: 69, open: 54, crash: 54 }
+    perc: { kick: 64, snare: 37, clap: 37, hat: 70, pedal: 69, open: 54, crash: 54 },
+    // Bossa: bass drum, side stick, maracas / cabasa, ride.
+    bossa: { kick: 35, snare: 37, clap: 37, hat: 70, pedal: 69, open: 54, crash: 51 }
   };
   var INST_NAME = { lead: 'Melody', bass: 'Bass', chords: 'Chords', guitar: 'Guitar', arp: 'Arpeggio' };
   var PADS = { pad: 1, padWide: 1, strings: 1, padAmbient: 1, choir: 1 };

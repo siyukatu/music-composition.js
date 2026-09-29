@@ -165,6 +165,23 @@ test('pre-choruses end on a dominant chord', () => {
   }
 });
 
+test('after a key change, the song stays in the new key for at least two choruses', () => {
+  let modulated = 0;
+  for (let i = 0; i < 30; i++) {
+    for (const bars of [32, 48]) {
+      const song = MusicComposition.compose({ seed: 'mod' + i, style: 'jpop', bars });
+      const k = song.sections.findIndex(s => s.shift);
+      if (k < 0) continue;
+      modulated++;
+      const body = song.sections.slice(k).filter(s => s.type !== 'outro');
+      assert.ok(body.reduce((a, s) => a + s.bars, 0) >= 16, song.sections.map(s => s.type + (s.shift ? "'" : '')).join(' '));
+      assert.ok(body.filter(s => s.type === 'B').length >= 2 || body[0].type !== 'B', 'two choruses in the new key');
+      assert.ok(song.sections.slice(k).every(s => s.shift === song.sections[k].shift), 'no key change back');
+    }
+  }
+  assert.ok(modulated >= 5, 'some J-POP songs change key: ' + modulated);
+});
+
 test('3/4: 12-step bars, downbeat kick, chords change on beat 1 or 3, melody phrases start on beats', () => {
   for (const style of MusicComposition.styles) {
     const song = MusicComposition.compose({ seed: 'waltz', style, meter: '3/4', bars: 32 });
@@ -384,6 +401,34 @@ test('jazz: seventh chords with tensions, ii-V motion, rootless piano, walking b
   assert.ok(rides > 1000);
 });
 
+test('bossa nova: the bossa clave over two bars, bass on 1 and the "and" of 2, nylon batida, seventh chords', () => {
+  let chords = 0, sevenths = 0, rims = 0, onClave = 0, bassNotes = 0, bossaBass = 0, plucks = 0;
+  // The 3-2 bossa clave in 16ths over two bars: 0, 6, 12 | 4, 10.
+  const CLAVE = [[0, 6, 12, 13, 14], [4, 10, 13, 14]];
+  for (let i = 0; i < 8; i++) {
+    const s = MusicComposition.compose({ seed: 'bossa' + i, style: 'bossa', bars: 32 });
+    assert.strictEqual(s.parts.groove, 'bossa');
+    assert.strictEqual(s.parts.swing, 0);
+    s.chords.forEach(c => { chords++; if (c.tones.length >= 4) sevenths++; });
+    assert.ok(s.chords.every(c => !/bb|##/.test(c.name)), 'no double accidentals: ' + s.chords.map(c => c.name).join(' '));
+    const sd = s.stepDuration;
+    s.sections.filter(x => x.type !== 'intro' && x.type !== 'outro').forEach(sec => {
+      s.notes.forEach(n => {
+        const step = Math.round((n.t - sec.start) / sd);
+        if (step < 0 || step >= sec.bars * 16) return;
+        const j = Math.floor(step / 16), p = step % 16;
+        if (n.drum === 'snare') { rims++; if (CLAVE[j % 2].includes(p)) onClave++; }
+        if (n.inst === 'bass') { bassNotes++; if ([0, 6, 8, 14].includes(p)) bossaBass++; }
+        if (n.patch === 'nylon') plucks++;
+      });
+    });
+  }
+  assert.ok(sevenths / chords > 0.95, sevenths + ' of ' + chords + ' chords are seventh chords');
+  assert.ok(rims > 200 && onClave / rims > 0.95, onClave + ' of ' + rims + ' rim clicks on the clave');
+  assert.ok(bossaBass / bassNotes > 0.9, bossaBass + ' of ' + bassNotes + ' bass notes on 1, the "and" of 2, 3, the "and" of 4');
+  assert.ok(plucks > 1000, plucks + ' nylon guitar notes');
+});
+
 test('release-cut piano stops short; stabs sit on the offbeats', () => {
   const s = MusicComposition.compose({ seed: 'cut', style: 'dance', bars: 16, parts: { chords: 'cutpiano', comping: 'stab' } });
   const ch = s.notes.filter(n => n.patch === 'cutPiano');
@@ -397,7 +442,7 @@ test('release-cut piano stops short; stabs sit on the offbeats', () => {
 for (const meter of ['4/4', '3/4']) {
   test(meter + ': strong-beat melody notes are chord tones, outer voices avoid parallel 5ths/8ves', () => {
     let strong = 0, off = 0, downbeats = 0, parallels = 0;
-    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jazz', 'jpop+lofi', 'pop:2+chiptune']) {
+    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jazz', 'bossa', 'jpop+lofi', 'pop:2+chiptune']) {
       for (let i = 0; i < 12; i++) {
         const song = MusicComposition.compose({ seed: 'rules' + i, style, meter, bars: 48 });
         const spb = song.beatsPerBar * 4, sd = song.stepDuration, bd = song.barDuration;
@@ -437,7 +482,7 @@ for (const meter of ['4/4', '3/4']) {
 for (const meter of ['4/4', '3/4']) {
   test(meter + ': melodies resolve non-chord tones by step, avoid tritone and 7th leaps, and repeat notes', () => {
     let pairs = 0, repeats = 0, badLeaps = 0, notes = 0, unresolved = 0;
-    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jazz', 'jpop+lofi']) {
+    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jazz', 'bossa', 'jpop+lofi']) {
       for (let i = 0; i < 8; i++) {
         const s = MusicComposition.compose({ seed: 'line' + i, style, meter, bars: 48 });
         const sd = s.stepDuration;

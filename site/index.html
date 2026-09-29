@@ -865,7 +865,7 @@
           <thead><tr><th>オプション</th><th>値</th><th>既定</th></tr></thead>
           <tbody>
             <tr><td><code>seed</code></td><td>文字列 / 数値</td><td>ランダム</td></tr>
-            <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>jazz</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
+            <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>jazz</code> <code>bossa</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
             <tr><td><code>parts</code></td><td>楽器と演奏。配列なら 1 曲の中で使い分ける（<code>lead: ['flute', 'violin']</code>）。<code>together: ['lead']</code> は重ねて同時に鳴らし、<code>sometimes: ['guitar']</code> は曲によって抜く</td><td>スタイルどおり</td></tr>
             <tr><td><code>meter</code></td><td><code>'4/4'</code> / <code>'3/4'</code></td><td><code>'4/4'</code></td></tr>
             <tr><td><code>extend</code></td><td><code>true</code>（最大 30 秒）/ 秒数。サビを丸ごと終えるところまで延ばす</td><td><code>false</code></td></tr>
@@ -1048,9 +1048,9 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=e74dd0"></script>
-<script src="video.js?h=ccf100"></script>
-<script src="midi.js?h=b9f9b9"></script>
+<script src="music-composition.js?h=c666a3"></script>
+<script src="video.js?h=0b38ed"></script>
+<script src="midi.js?h=9648b8"></script>
 <script>
 (function () {
   'use strict';
@@ -1065,6 +1065,7 @@
     chiptune: ['Chiptune', '矩形波と三角波、ノイズドラムの8bitサウンド。'],
     ambient: ['Ambient', 'ドラムなし。ゆっくり広がるパッドとベルの音。'],
     jazz: ['Jazz', 'スウィングのライドとウォーキングベース、9th・13th のピアノ。ii–V–I や裏コード（♭II7）の上でサックスが歌います。'],
+    bossa: ['Bossa Nova', 'ナイロンギターのバチーダ、リムのボサノバ・クラーベとシェイカー、1 拍目と 2 拍裏のベース。maj7・m9 のコードの上でフルートが歌います。'],
     mix: ['ミックス', '選んだスタイルを混ぜます。スライダーで割合を決めます。'],
     add: ['＋ カスタム', '']
   };
@@ -1200,13 +1201,13 @@
 
   // Parts: instruments and playing, on top of the style ------------------------
   var PART_LABELS = {
-    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', brush: 'ブラシ', perc: 'パーカッション', jazz: 'ジャズ（スティック）', none: 'なし' }],
-    groove: ['リズム', { eightbeat: '8ビート', sixteenbeat: '16ビート', fourfloor: '4つ打ち', halftime: 'ハーフタイム', shuffle: 'シャッフル', swing: 'スウィング', breakbeat: 'ブレイクビーツ', chip: 'チップチューン' }],
+    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', brush: 'ブラシ', perc: 'パーカッション', jazz: 'ジャズ（スティック）', bossa: 'ボサノバ（リム・シェイカー）', none: 'なし' }],
+    groove: ['リズム', { eightbeat: '8ビート', sixteenbeat: '16ビート', fourfloor: '4つ打ち', halftime: 'ハーフタイム', shuffle: 'シャッフル', swing: 'スウィング', breakbeat: 'ブレイクビーツ', chip: 'チップチューン', bossa: 'ボサノバ' }],
     bass: ['ベース', { synth: 'シンセ', finger: '指弾き', sine: 'サイン波', chip: '三角波', upright: 'ウッドベース', fm: 'FM ベース', tuba: 'チューバ', none: 'なし' }],
-    bassLine: ['ベースの弾き方', { root: 'ルート', drive: '8分刻み', offbeat: '裏打ち', syncopated: 'キックに合わせる', walking: 'ウォーキング', long: '伸ばす' }],
+    bassLine: ['ベースの弾き方', { root: 'ルート', drive: '8分刻み', offbeat: '裏打ち', syncopated: 'キックに合わせる', walking: 'ウォーキング', long: '伸ばす', bossa: 'ボサノバ' }],
     chords: ['コード楽器', { piano: 'ピアノ', cutpiano: 'リリースカットピアノ', epiano: 'エレピ', synth: 'シンセ', organ: 'オルガン', chip: '矩形波', harp: 'ハープ', marimba: 'マリンバ', vibes: 'ビブラフォン', accordion: 'アコーディオン', pizzicato: 'ピチカート', musicbox: 'オルゴール', none: 'なし' }],
-    comping: ['コードの弾き方', { block: 'ブロック', rhythm: 'リズム', arpeggio: 'アルペジオ', sustain: '伸ばす', stab: '裏拍で短く', broken: '分散和音', jazz: 'ジャズ（チャールストン）' }],
-    guitar: ['ギター', { strum: 'ストローク', cutting: 'カッティング', arpeggio: 'アルペジオ', fingerpick: 'ナイロン指弾き', none: 'なし' }],
+    comping: ['コードの弾き方', { block: 'ブロック', rhythm: 'リズム', arpeggio: 'アルペジオ', sustain: '伸ばす', stab: '裏拍で短く', broken: '分散和音', jazz: 'ジャズ（チャールストン）', bossa: 'ボサノバ（裏拍）' }],
+    guitar: ['ギター', { strum: 'ストローク', cutting: 'カッティング', arpeggio: 'アルペジオ', fingerpick: 'ナイロン指弾き', bossa: 'ボサノバ（バチーダ）', none: 'なし' }],
     pad: ['パッド', { warm: 'ウォーム', wide: 'ワイド', strings: 'ストリングス', ambient: 'アンビエント', choir: 'クワイア', none: 'なし' }],
     lead: ['メロディ楽器', { saw: 'ノコギリ波', pluck: 'プラック', soft: 'ソフト', square: '矩形波', pwm: 'PWM', fm: 'FM シンセ', robot: 'ロボット', flute: 'フルート', whistle: '口笛', sax: 'サックス', brass: 'ブラス', violin: 'バイオリン', voice: 'ボイス', bell: 'ベル', piano: 'ピアノ', vibes: 'ビブラフォン', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', accordion: 'アコーディオン' }],
     arp: ['アルペジオ', { eighths: '8分', sixteenths: '16分', bells: 'ベル', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', digital: 'デジタル', none: 'なし' }],
@@ -2240,7 +2241,7 @@
   }
 
   // Cover art: the song's piano roll on its style's colour (bar, lock screen).
-  var ART_BG = { pop: '#F2541B', jpop: '#E0457B', dance: '#5B4BFF', lofi: '#8C6A4A', chiptune: '#2EA043', ambient: '#2C7DA0', jazz: '#B7791F' };
+  var ART_BG = { pop: '#F2541B', jpop: '#E0457B', dance: '#5B4BFF', lofi: '#8C6A4A', chiptune: '#2EA043', ambient: '#2C7DA0', jazz: '#B7791F', bossa: '#1F9E89' };
   function drawArt(song, cv) {
     var g = cv.getContext('2d'), W = cv.width, H = cv.height;
     var base = ART_BG[Object.keys(song.mix || {})[0]] || '#F2541B';

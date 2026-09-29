@@ -180,7 +180,8 @@
   function spell(tonicName, deg, pc) {
     var li = (LETTERS.indexOf(tonicName.charAt(0)) + ((deg % 7) + 7) % 7) % 7;
     var acc = ((pc - LETTER_PC[li]) % 12 + 18) % 12 - 6;
-    if (acc < -2 || acc > 2) return NOTE_NAMES[((pc % 12) + 12) % 12];
+    // No double flats or sharps in chord symbols: bII7 in Gb is G7, not Abb7.
+    if (acc < -1 || acc > 1) return (acc < 0 ? NOTE_NAMES_FLAT : NOTE_NAMES)[((pc % 12) + 12) % 12];
     return LETTERS[li] + (acc > 0 ? '##'.slice(0, acc) : 'bb'.slice(0, -acc));
   }
   function chordName(c, tonicName, keyPc) {
@@ -221,13 +222,13 @@
   // settings; compose({ parts }) overrides any of them.
   // ---------------------------------------------------------------------------
   var PART_OPTIONS = {
-    drums: ['acoustic', 'electronic', 'lofi', 'chip', 'brush', 'perc', 'jazz', 'none'],
-    groove: ['eightbeat', 'sixteenbeat', 'fourfloor', 'halftime', 'shuffle', 'swing', 'breakbeat', 'chip'],
+    drums: ['acoustic', 'electronic', 'lofi', 'chip', 'brush', 'perc', 'jazz', 'bossa', 'none'],
+    groove: ['eightbeat', 'sixteenbeat', 'fourfloor', 'halftime', 'shuffle', 'swing', 'breakbeat', 'chip', 'bossa'],
     bass: ['synth', 'finger', 'sine', 'chip', 'upright', 'fm', 'tuba', 'none'],
-    bassLine: ['root', 'drive', 'offbeat', 'syncopated', 'walking', 'long'],
+    bassLine: ['root', 'drive', 'offbeat', 'syncopated', 'walking', 'long', 'bossa'],
     chords: ['piano', 'cutpiano', 'epiano', 'synth', 'organ', 'chip', 'harp', 'marimba', 'vibes', 'accordion', 'pizzicato', 'musicbox', 'none'],
-    comping: ['block', 'rhythm', 'arpeggio', 'sustain', 'stab', 'broken', 'jazz'],
-    guitar: ['strum', 'cutting', 'arpeggio', 'fingerpick', 'none'],
+    comping: ['block', 'rhythm', 'arpeggio', 'sustain', 'stab', 'broken', 'jazz', 'bossa'],
+    guitar: ['strum', 'cutting', 'arpeggio', 'fingerpick', 'bossa', 'none'],
     pad: ['warm', 'wide', 'strings', 'ambient', 'choir', 'none'],
     lead: ['saw', 'pluck', 'soft', 'square', 'pwm', 'fm', 'robot', 'flute', 'whistle', 'sax', 'brass', 'violin', 'voice', 'bell', 'piano', 'vibes', 'harp', 'marimba', 'musicbox', 'accordion'],
     arp: ['eighths', 'sixteenths', 'bells', 'harp', 'marimba', 'musicbox', 'digital', 'none']
@@ -237,7 +238,7 @@
   var LAYERABLE = ['lead', 'bass', 'chords', 'pad', 'arp'];
   // Part value -> synth patch (or drum kit).
   var SOUND = {
-    drums: { acoustic: 'std', electronic: 'elec', lofi: 'lofi', chip: 'chip', brush: 'brush', perc: 'perc', jazz: 'jazz' },
+    drums: { acoustic: 'std', electronic: 'elec', lofi: 'lofi', chip: 'chip', brush: 'brush', perc: 'perc', jazz: 'jazz', bossa: 'bossa' },
     bass: { synth: 'bassSaw', finger: 'bassFinger', sine: 'bassSine', chip: 'bassChip', upright: 'bassUpright', fm: 'bassFM', tuba: 'tuba' },
     chords: { piano: 'piano', cutpiano: 'cutPiano', epiano: 'epiano', synth: 'keys', organ: 'organ', chip: 'chipArp', harp: 'harp', marimba: 'marimba', vibes: 'vibes', accordion: 'accordion', pizzicato: 'pizzicato', musicbox: 'musicbox' },
     pad: { warm: 'pad', wide: 'padWide', strings: 'strings', ambient: 'padAmbient', choir: 'choir' },
@@ -325,6 +326,18 @@
       expr: { bend: 0.3, ghost: 0.4, harmony: false },
       melody: { slow: false, notes: 5.5, legato: 0.8, center: [3, 6], octave: 0, sync: 0.65, gen: 0.8, eighths: true },
       fx: { room: 0.72, damp: 0.45, wet: 0.8, delay: 0.15, sidechain: 0, lofi: false, tail: 3 }
+    },
+    // Bossa nova: nylon guitar playing the batida (thumb on the beats, fingers
+    // syncopated), a bass on 1 and the "and" of 2, rim click on the bossa clave
+    // over two bars, a shaker; maj7/m7 chords with 9ths, ii-V and bII7; straight eighths.
+    bossa: {
+      label: 'Bossa Nova', bpm: [118, 142], modes: ['major', 'major', 'minor', 'dorian'],
+      chordBars: 1, sevenths: 1, humanize: 0.4, tensions: 0.6,
+      parts: { drums: 'bossa', groove: 'bossa', bass: 'upright', bassLine: 'bossa', chords: 'epiano', comping: 'bossa', guitar: 'bossa', pad: 'none', lead: 'flute', arp: 'none', swing: 0 },
+      spice: 0.7, idioms: 'bossa', functional: 0.1, form: { pre: 0.3, bridge: 0.7, drop: 0.2, modulate: 0.3 },
+      expr: { bend: 0.1, ghost: 0.2, harmony: false },
+      melody: { slow: false, notes: 4.5, legato: 0.85, center: [2, 5], octave: 0, sync: 0.75, gen: 0.8, eighths: true },
+      fx: { room: 0.7, damp: 0.5, wet: 0.8, delay: 0.25, sidechain: 0, lofi: false, tail: 3 }
     }
   };
   var STYLE_NAMES = Object.keys(STYLES);
@@ -666,15 +679,21 @@
       { p: 'vi | iii | IV | I', roles: 'CA', tags: 'pop jpop' },
       { p: 'Imaj7 | IVmaj7 | Imaj7 | IVmaj7', roles: 'ABC', tags: 'ambient' },
       // Jazz: ii-V-I, I-vi-ii-V (rhythm changes), the circle from iii, tritone substitutes (bII7 for V7).
-      { p: 'ii7 | V7 | Imaj7 | Imaj7', roles: 'AB', tags: 'jazz', only: true },
-      { p: 'Imaj7 | vi7 | ii7 | V7', roles: 'AB', tags: 'jazz', only: true },
-      { p: 'iii7 | VI7 | ii7 | V7', roles: 'ACP', tags: 'jazz', only: true },
+      { p: 'ii7 | V7 | Imaj7 | Imaj7', roles: 'AB', tags: 'jazz bossa', only: true },
+      { p: 'Imaj7 | vi7 | ii7 | V7', roles: 'AB', tags: 'jazz bossa', only: true },
+      { p: 'iii7 | VI7 | ii7 | V7', roles: 'ACP', tags: 'jazz bossa', only: true },
       { p: 'Imaj7,vi7 | ii7,V7 | iii7,VI7 | ii7,V7', roles: 'AB', tags: 'jazz', only: true },
-      { p: 'ii7 | bII7 | Imaj7 | VI7', roles: 'B', tags: 'jazz', only: true },
-      { p: 'Imaj7 | I7 | IVmaj7 | iv7', roles: 'BC', tags: 'jazz', only: true },
-      { p: 'IVmaj7 | iv7 | iii7 | VI7', roles: 'C', tags: 'jazz', only: true },
-      { p: 'ii7 | V7 | iii7 | VI7', roles: 'P', tags: 'jazz', only: true },
-      { p: 'Imaj7 | II7 | ii7 | bII7', roles: 'A', tags: 'jazz', only: true },
+      { p: 'ii7 | bII7 | Imaj7 | VI7', roles: 'B', tags: 'jazz bossa', only: true },
+      { p: 'Imaj7 | I7 | IVmaj7 | iv7', roles: 'BC', tags: 'jazz bossa', only: true },
+      { p: 'IVmaj7 | iv7 | iii7 | VI7', roles: 'C', tags: 'jazz bossa', only: true },
+      { p: 'ii7 | V7 | iii7 | VI7', roles: 'P', tags: 'jazz bossa', only: true },
+      { p: 'Imaj7 | II7 | ii7 | bII7', roles: 'A', tags: 'jazz bossa', only: true },
+      // Bossa nova: a chord held for two bars, then the II7 (V7 of V) sliding down
+      // by half steps (ii7 - bII7 - I), the bridge up to IV with a backdoor bVII7.
+      { p: 'Imaj7 | Imaj7 | II7 | II7 | ii7 | bII7 | Imaj7 | bII7', roles: 'A', tags: 'bossa', only: true },
+      { p: 'Imaj7 | II7 | ii7,V7 | Imaj7', roles: 'AB', tags: 'bossa', only: true },
+      { p: 'IVmaj7 | IVmaj7 | bVII7 | bVII7 | iii7 | VI7 | ii7 | V7', roles: 'C', tags: 'bossa', only: true },
+      { p: 'IVmaj7 | iv7 | Imaj7 | VI7', roles: 'BP', tags: 'bossa', only: true },
       { p: 'Iadd9 | vi7 | IVmaj7 | V', roles: 'AB', tags: 'ambient pop' }
     ],
     minor: [
@@ -691,18 +710,21 @@
       { p: 'i | bIII | bVII | iv', roles: 'AB', tags: 'pop dance' },
       { p: 'i7 | bVImaj7 | i7 | bVImaj7', roles: 'ABC', tags: 'ambient' },
       // Jazz in minor: ii-V-i with the half-diminished ii and V7(b9), the minor circle, tritone substitutes.
-      { p: 'iiø7 | V7 | i7 | i7', roles: 'AB', tags: 'jazz', only: true },
-      { p: 'i7 | iv7 | iiø7 | V7', roles: 'AP', tags: 'jazz', only: true },
-      { p: 'iv7 | bVII7 | bIIImaj7 | bVImaj7', roles: 'AC', tags: 'jazz', only: true },
-      { p: 'bVImaj7 | iiø7 | V7 | i7', roles: 'B', tags: 'jazz', only: true },
+      { p: 'iiø7 | V7 | i7 | i7', roles: 'AB', tags: 'jazz bossa', only: true },
+      { p: 'i7 | iv7 | iiø7 | V7', roles: 'AP', tags: 'jazz bossa', only: true },
+      { p: 'iv7 | bVII7 | bIIImaj7 | bVImaj7', roles: 'AC', tags: 'jazz bossa', only: true },
+      { p: 'bVImaj7 | iiø7 | V7 | i7', roles: 'B', tags: 'jazz bossa', only: true },
       { p: 'i7 | bII7 | i7 | V7', roles: 'BC', tags: 'jazz', only: true },
-      { p: 'iiø7 | V7 | iiø7 | V7', roles: 'P', tags: 'jazz', only: true }
+      { p: 'iiø7 | V7 | iiø7 | V7', roles: 'P', tags: 'jazz bossa', only: true },
+      // Minor bossa: the tonic and the iv for two bars each, the relative major, a ii-V back.
+      { p: 'i7 | i7 | iv7 | iv7 | iiø7 | V7 | i7 | V7', roles: 'A', tags: 'bossa', only: true },
+      { p: 'i7 | iv7 | bIIImaj7 | bVImaj7', roles: 'BC', tags: 'bossa', only: true }
     ],
     dorian: [
-      { p: 'i7 | IV7 | i7 | IV7', roles: 'AB', tags: 'lofi pop dance ambient jazz' },
+      { p: 'i7 | IV7 | i7 | IV7', roles: 'AB', tags: 'lofi pop dance ambient jazz bossa' },
       // Modal jazz: a dorian vamp, up a half step for the bridge feel; ii-V back home.
       { p: 'i7 | i7 | i7 | i7', roles: 'AC', tags: 'jazz', only: true },
-      { p: 'ii7 | V7 | i7 | IV7', roles: 'BP', tags: 'jazz', only: true },
+      { p: 'ii7 | V7 | i7 | IV7', roles: 'BP', tags: 'jazz bossa', only: true },
       { p: 'i | bVII | IV | i', roles: 'AB', tags: 'pop dance chip' },
       { p: 'i7 | bIIImaj7 | IV7 | bVII', roles: 'BC', tags: 'lofi pop' }
     ],
@@ -763,6 +785,17 @@
         sprinkle(rng, g.snare, [2, 6, 10, 14], level >= 2 ? 2 : 1, 0.35);
         if (level >= 2 && rng.chance(0.4)) g.kick[rng.pick([6, 14])] = 0.6; // a "bomb"
         break;
+      case 'bossa':
+        // Bass drum on 1, the "and" of 2, 3 and the "and" of 4 (with the bass);
+        // the rim click plays the bossa clave across two bars (g.alt is the second);
+        // a shaker on the eighths, sixteenths in a chorus.
+        hit(g.kick, [0, 8], 0.8); hit(g.kick, [6, 14], 0.5);
+        hit(g.snare, [0, 6, 12], 0.6);
+        if (level >= 2) hats16(0.5); else hats8(0.5, 0.32);
+        g.alt = { kick: g.kick.slice(), snare: steps16(), hat: g.hat.slice(), open: steps16() };
+        hit(g.alt.snare, [4, 10], 0.6);
+        if (level === 0) { g.alt.snare = steps16(); g.alt.kick = steps16(); for (var ai = 0; ai < 16; ai++) g.alt.hat[ai] *= 0.7; }
+        break;
       case 'shuffle':
         hit(g.kick, [0], 1);
         sprinkle(rng, g.kick, [7, 8, 10, 11, 14], rng.int(1, 2), 0.85);
@@ -799,8 +832,9 @@
         if (level >= 2 && rng.chance(0.35)) hats16(0.75); else hats8(0.85, 0.55);
         if (level >= 2 && rng.chance(0.55)) { var o = rng.pick([6, 14]); g.open[o] = 0.65; g.hat[o] = 0; }
     }
-    // Ghost notes between the backbeats (not in swing, where 16ths don't belong).
-    if (ghost && level >= 1 && family !== 'swing') {
+    // Ghost notes between the backbeats (not in swing, where 16ths don't belong,
+    // nor on the bossa clave).
+    if (ghost && level >= 1 && family !== 'swing' && family !== 'bossa') {
       for (var s = 1; s < 16; s += 2) if (!g.snare[s] && rng.chance(ghost * 0.25)) g.snare[s] = 0.2;
     }
     if (level === 0) {
@@ -819,6 +853,12 @@
       // Swing: the snare kicks the band into the next phrase on swung eighths.
       v.pedal = g.pedal.slice();
       if (rng.chance(0.5)) { v.snare[10] = 0.5; v.snare[14] = 0.65; } else { v.snare[6] = 0.45; v.snare[14] = 0.6; v.kick[14] = 0.55; }
+      return v;
+    }
+    if (g.alt) {
+      // Bossa: the phrase ends on the clave's second bar, with one more rim click into the next.
+      v = { kick: g.alt.kick.slice(), snare: g.alt.snare.slice(), hat: g.alt.hat.slice(), open: g.alt.open.slice() };
+      if (v.snare[4]) v.snare[rng.pick([13, 14])] = 0.5;
       return v;
     }
     switch (rng.int(0, 3)) {
@@ -848,6 +888,11 @@
         return ev.sort(function (a, b) { return a[0] - b[0]; });
       case 'walking':
         return [[0, 4, 'r', 1], [4, 4, rng.pick(['3', '5']), 0.75], [8, 4, rng.pick(['5', 's', 'o']), 0.85], [12, 4, 'a', 0.75]];
+      case 'bossa':
+        // Root on 1 (a dotted quarter), the fifth on the "and" of 2 and on 3, and on
+        // the "and" of 4 back to the root, or already the next chord's root.
+        if (level === 0) return [[0, 8, 'r', 0.85], [8, 8, '5', 0.7]];
+        return [[0, 6, 'r', 0.95], [6, 2, '5', 0.65], [8, 6, '5', 0.85], [14, 2, rng.chance(0.5 + 0.3 * sync) ? 'p' : 'r', 0.7]];
       case 'syncopated':
         // Lock to the kick drum, then fill a little.
         var on = [];
@@ -910,6 +955,17 @@
         ev.sort(function (a, b) { return a[0] - b[0]; });
         ev.noHead = true;
         return ev;
+      case 'bossa':
+        // Keys leave the downbeat to the guitar and answer it on the offbeats, softly.
+        if (level === 0) return [[0, 16, 0.55]];
+        ev = rng.pick([
+          [[3, 3, 0.55], [10, 4, 0.5]],
+          [[6, 4, 0.55], [12, 4, 0.5]],
+          [[2, 2, 0.5], [6, 6, 0.55]],
+          [[6, 6, 0.55], [14, 2, 0.5, 'p']]
+        ]).map(function (e) { return e.slice(); });
+        ev.noHead = true;
+        return ev;
       case 'broken':
         // Broken chords (Alberti bass): low, high, middle, high, held as if pedalled.
         var al = rng.pick([[0, 3, 1, 3], [0, 2, 1, 2], [0, 3, 2, 3], [0, 1, 2, 3]]);
@@ -955,6 +1011,17 @@
         if (level >= 1 || s % 8 === 4) ev.push([s + 2, 4, 0.55, fing[s / 4]]);
       }
       if (level >= 2 && rng.chance(0.4)) ev.push([7, 3, 0.5, 5]);
+      return ev.sort(function (a, b) { return a[0] - b[0]; });
+    }
+    if (style === 'bossa') {
+      // The batida: the thumb on 1 and 3 (root, then fifth), the fingers pluck
+      // the upper strings together ('C') on a syncopated figure.
+      ev.push([0, 8, 0.8, 0], [8, 8, 0.7, 1]);
+      var fig = level === 0 ? [0, 6, 12] : rng.pick([[0, 3, 6, 10, 12], [0, 3, 6, 10, 14], [2, 6, 8, 12], [0, 4, 6, 10, 14]]);
+      fig.forEach(function (x, i) {
+        var next = i + 1 < fig.length ? fig[i + 1] : 16;
+        ev.push([x, Math.min(3, next - x), x % 4 === 0 ? 0.6 : 0.52, 'C']);
+      });
       return ev.sort(function (a, b) { return a[0] - b[0]; });
     }
     if (style === 'arpeggio') {
@@ -1239,7 +1306,7 @@
       }
       return ev;
     }
-    if (style === 'fingerpick') {
+    if (style === 'fingerpick' || style === 'bossa') {
       // Waltz fingerstyle: bass on one, the fingers pinch (or roll) beats 2 and 3.
       if (level < 2 && rng.chance(0.5)) return [[0, 12, 0.85, 0], [4, 4, 0.6, 'P'], [8, 4, 0.55, 'P']];
       var roll = rng.pick([[3, 4, 5, 4, 3], [4, 5, 3, 5, 4], [3, 5, 4, 5, 3]]);
@@ -1354,6 +1421,7 @@
    * @param {string} [options.key]           'C' ... 'B' (sharps or flats). Random if omitted.
    * @param {string} [options.mode]          'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian'
    * @param {number} [options.bars]          Length in bars (rounded to a multiple of 4, 8–256). Default 32.
+   *                                          A song that changes key gets one more chorus in the new key (8 bars).
    * @param {number} [options.duration]      Target length in seconds, including the reverb tail (used when bars is omitted).
    * @param {boolean} [options.loop]         true => seamless loop (no intro/outro, reverb tail wrapped).
    * @param {string} [options.meter]         '4/4' (default) or '3/4'.
@@ -1397,7 +1465,7 @@
       for (var i = L.length - 1; i > 0; i--) { var j = Math.floor(pr.next() * (i + 1)), x = L[i]; L[i] = L[j]; L[j] = x; }
       // Drums build up: the lightest kit in the verse, the heaviest in the chorus.
       if (k === 'drums' && L.length > 1) {
-        var W = ['none', 'brush', 'perc', 'lofi', 'chip', 'acoustic', 'electronic'];
+        var W = ['none', 'brush', 'bossa', 'perc', 'jazz', 'lofi', 'chip', 'acoustic', 'electronic'];
         L.sort(function (a, b) { return W.indexOf(a) - W.indexOf(b); });
         L = [L[0], L[L.length - 1]].concat(L.slice(1, -1));
       }
@@ -1456,7 +1524,7 @@
         S = soundCache[type] = {
           parts: q, kit: SOUND.drums[q.drums] || null, bassPatch: SOUND.bass[q.bass] || null, bassOct: q.bass === 'chip' ? 12 : 0,
           chordPatch: SOUND.chords[q.chords] || null, padPatch: SOUND.pad[q.pad] || null, leadPatch: SOUND.lead[q.lead],
-          arpPatch: SOUND.arp[q.arp] || null, guitarPatch: q.guitar === 'fingerpick' ? 'nylon' : 'guitar', swing: q.swing,
+          arpPatch: SOUND.arp[q.arp] || null, guitarPatch: q.guitar === 'fingerpick' || q.guitar === 'bossa' ? 'nylon' : 'guitar', swing: q.swing,
           snareKind: q.drums === 'electronic' || q.groove === 'fourfloor' ? 'clap' : 'snare'
         };
       }
@@ -1545,6 +1613,20 @@
       if (modAt <= chorusIdx[0]) modAt = -1;
     }
     var modShift = fr.chance(0.7) ? 2 : 1;
+    // A key change is not left for the last few bars: the new key gets at least
+    // two choruses (the last chorus once more, as in a J-POP ending) before the outro.
+    if (modAt >= 0) {
+      var bodyEnd = sections.length - (sections[sections.length - 1].type === 'outro' ? 1 : 0);
+      var finalB = sections[bodyEnd - 1];
+      if (finalB.type === 'B' && finalB.bars < LEN.B && bars + LEN.B - finalB.bars <= 256) { bars += LEN.B - finalB.bars; finalB.bars = LEN.B; }
+      var inNewKey = 0;
+      for (var mk = modAt; mk < bodyEnd; mk++) inNewKey += sections[mk].bars;
+      if (inNewKey < 16 && bars + LEN.B <= 256) {
+        sections.splice(bodyEnd, 0, { type: 'B', bars: LEN.B, drop: false });
+        bars += LEN.B;
+        chorusIdx.push(bodyEnd);
+      }
+    }
     var startBar = 0;
     sections.forEach(function (s, i) {
       s.shift = modAt >= 0 && i >= modAt ? modShift : 0;
@@ -1853,7 +1935,7 @@
     function partsOf(sec) { return sec.drop ? PARTS.drop : PARTS[sec.type]; }
     var ENERGY = { intro: 0.78, A: 0.84, P: 0.86, B: 1, C: 0.8, outro: 0.8 };
     var fl = R('fills');
-    var FILLS = { fourfloor: { roll: 6, stop: 4 }, shuffle: { synco: 5, none: 5 }, swing: { none: 6, stop: 2 }, chip: { roll: 5, synco: 4, stop: 1 }, halftime: { synco: 4, roll: 3, none: 3 } };
+    var FILLS = { fourfloor: { roll: 6, stop: 4 }, shuffle: { synco: 5, none: 5 }, swing: { none: 6, stop: 2 }, bossa: { none: 6, stop: 2 }, chip: { roll: 5, synco: 4, stop: 1 }, halftime: { synco: 4, roll: 3, none: 3 } };
     var barInfo = [];
     sections.forEach(function (sec, si) {
       var next = sections[si + 1];
@@ -2037,7 +2119,8 @@
       // Drums --------------------------------------------------------------
       if (kit && prt.drums !== undefined && P.drums) {
         var G = info.j % 4 === 3 && !info.fill && info.j < info.sec.bars - 1 ? P.drumsVar : P.drums;
-        var buildBar = prt.build && parts.groove !== 'shuffle' ? info.j - (info.sec.bars - 2) : -1;
+        if (G.alt && info.j % 2 === 1) G = G.alt; // a two-bar pattern (the bossa clave)
+        var buildBar = prt.build && parts.groove !== 'shuffle' && parts.groove !== 'bossa' ?info.j - (info.sec.bars - 2) : -1;
         for (var s = 0; s < stopAt; s++) {
           if (info.fill === 'roll' && s >= SPB - 4) {
             drum(bar, s, snareKind, 0.45 + (s - SPB + 4) * 0.18, 0);
@@ -2173,6 +2256,9 @@
             } else if (how === 'P') {
               // Fingers pinch the top strings together.
               gv.slice(-3).forEach(function (m, i) { notes.push({ t: t0 + i * 0.003, d: e[1] * stepDur, midi: m, vel: vel * 0.8, inst: 'guitar', patch: guitarPatch }); });
+            } else if (how === 'C') {
+              // Bossa: four fingers pluck the chord at once, lightly, a little short.
+              gv.slice(-4).forEach(function (m, i) { notes.push({ t: t0 + i * 0.002, d: e[1] * stepDur * 0.85, midi: m, vel: vel * 0.75, inst: 'guitar', patch: guitarPatch }); });
             } else if (how === 'M') {
               gv.slice(1, 4).forEach(function (m, i) { notes.push({ t: t0 + i * 0.004, d: stepDur * 0.6, midi: m + 12, vel: vel, inst: 'guitar', patch: 'guitarMute' }); });
             } else {
@@ -3141,7 +3227,7 @@
     var start = Math.round(n.t * sr);
     if (start >= ctx.len) return;
     var kit = n.kit, kind = n.drum, vel = n.vel;
-    if (kit === 'brush' || kit === 'perc' || kit === 'jazz') return renderHandDrum(ctx, n);
+    if (kit === 'brush' || kit === 'perc' || kit === 'jazz' || kit === 'bossa') return renderHandDrum(ctx, n);
     // The hi-hat pedal: a soft, short closed hat.
     if (kind === 'pedal') { kind = 'hat'; vel *= 0.55; }
     var boom = kit === 'elec';
@@ -3215,10 +3301,12 @@
   var HAND_LENS = {
     brush: { kick: 0.5, snare: 0.5, clap: 0.5, hat: 0.9, open: 1.8, crash: 3, pedal: 0.1 },
     jazz: { kick: 0.5, snare: 0.35, clap: 0.35, hat: 0.9, open: 1.8, crash: 3, pedal: 0.1 },
-    perc: { kick: 0.6, snare: 0.15, clap: 0.15, hat: 0.15, open: 0.5, crash: 1.5, pedal: 0.15 }
+    perc: { kick: 0.6, snare: 0.15, clap: 0.15, hat: 0.15, open: 0.5, crash: 1.5, pedal: 0.15 },
+    bossa: { kick: 0.5, snare: 0.15, clap: 0.15, hat: 0.15, open: 0.5, crash: 3, pedal: 0.15 }
   };
+  // Bossa: a soft bass drum, rim click, shaker, and a ride cymbal for the crash.
   function renderHandDrum(ctx, n) {
-    var sr = ctx.sr, start = Math.round(n.t * sr), kind = n.drum, vel = n.vel, brush = n.kit === 'brush', jazz = n.kit === 'jazz';
+    var sr = ctx.sr, start = Math.round(n.t * sr), kind = n.drum, vel = n.vel, brush = n.kit === 'brush', jazz = n.kit === 'jazz', bossa = n.kit === 'bossa';
     if (start >= ctx.len) return;
     var pan = n.pan || 0;
     var pl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, pr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
@@ -3226,7 +3314,7 @@
     var total = Math.min(Math.ceil(lenSec * sr), ctx.len - start);
     var L = ctx.drums.L, R = ctx.drums.R, rev = ctx.rev, rnd = ctx.randSigned;
     var f1 = new Svf(), f2 = new Svf(), c = [0, 0, 0, 0], c2 = [0, 0, 0, 0], ph = 0, revSend = 0.1;
-    var metal = (brush || jazz) && (kind === 'hat' || kind === 'open' || kind === 'crash');
+    var metal = ((brush || jazz) && (kind === 'hat' || kind === 'open' || kind === 'crash')) || (bossa && kind === 'crash');
     var mph = metal ? RIDE.map(function () { return ctx.rand01(); }) : null;
     if (kind === 'pedal') {
       // The hi-hat pedal: a short "chick" (a soft shaker in the percussion kit).
@@ -3253,7 +3341,7 @@
     for (var i = 0; i < total; i++) {
       var t = i / sr, s = 0, e;
       if (kind === 'kick') {
-        if (brush || jazz) {
+        if (brush || jazz || bossa) {
           ph += (52 + 55 * Math.exp(-t / 0.035)) / sr;
           s = Math.sin(TAU * ph) * Math.exp(-t / 0.16) * 0.8;
           if (jazz && t < 0.003) s += rnd() * 0.15 * (1 - t / 0.003); // the beater
