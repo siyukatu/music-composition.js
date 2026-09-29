@@ -626,6 +626,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
           WAV を保存
         </a>
+        <a class="btn btn-ghost dl" id="midi" href="#" download="music.mid" aria-disabled="true" title="楽器ごとのトラック・テンポ・拍子・調・セクションとコード名入りの MIDI ファイル" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+          MIDI
+        </a>
         <button type="button" class="btn btn-ghost" id="share-open" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>
           共有
@@ -822,6 +826,7 @@
 <audio id="audio" preload="auto"></audio>
 <script src="music-composition.js?h=37500b"></script>
 <script src="video.js?h=ccf100"></script>
+<script src="midi.js?h=b9f9b9"></script>
 <script>
 (function () {
   'use strict';
@@ -1453,6 +1458,18 @@
     dl.href = state.url;
     dl.download = fileBase() + '.wav';
     dl.removeAttribute('aria-disabled');
+    // MIDI (site/midi.js), made from the score; only on the site itself.
+    if (window.MCMidi && !window.claude) {
+      if (state.midiUrl) URL.revokeObjectURL(state.midiUrl);
+      try {
+        state.midiUrl = URL.createObjectURL(new Blob([MCMidi.fromSong(song)], { type: 'audio/midi' }));
+        var md = $('#midi');
+        md.href = state.midiUrl;
+        md.download = fileBase() + '.mid';
+        md.removeAttribute('aria-disabled');
+        md.hidden = false;
+      } catch (e) { $('#midi').hidden = true; }
+    }
     $('#play').disabled = false;
     var bytes = wav.byteLength;
     $('#stats').textContent = '生成 ' + (ms / 1000).toFixed(2) + ' 秒 · ' + ((opts.sampleRate || 44100) / 1000) + ' kHz · ' +
