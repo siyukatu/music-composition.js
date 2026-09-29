@@ -273,7 +273,7 @@
       parts3: { guitar: 'fingerpick' },
       spice: 0.55, idioms: 'jpop', functional: 0.05, form: { pre: 1, bridge: 0.8, drop: 0.7, modulate: 0.7 },
       expr: { bend: 0.15, ghost: 0.25, harmony: true },
-      melody: { slow: false, notes: 6, legato: 0.9, center: [2, 6], octave: 0, sync: 0.7, gen: 0.75 },
+      melody: { slow: false, notes: 6, legato: 0.9, center: [2, 6], octave: 0, sync: 0.7, gen: 0.85, halves: true },
       fx: { room: 0.8, damp: 0.35, wet: 1, delay: 0.9, sidechain: 0, lofi: false, tail: 3 }
     },
     dance: {
@@ -468,7 +468,8 @@
         octave: avg(function (s) { return s.melody.octave; }) >= 6 ? 12 : 0,
         sync: r2(avg(function (s) { return s.melody.sync; })),
         gen: r2(avg(function (s) { return s.melody.gen; })),
-        eighths: avg(function (s) { return s.melody.eighths ? 1 : 0; }) >= 0.5
+        eighths: avg(function (s) { return s.melody.eighths ? 1 : 0; }) >= 0.5,
+        halves: avg(function (s) { return s.melody.halves ? 1 : 0; }) >= 0.3
       },
       fx: {
         room: r2(avg(function (s) { return s.fx.room; })), damp: r2(avg(function (s) { return s.fx.damp; })),
@@ -985,6 +986,57 @@
     { c: [[1, 3]], w: 0.15, sync: 1 },
     { c: [], w: 0.25 }                        // rest
   ];
+  // J-POP melody rhythm: a bar is two half-bar figures from the way J-POP
+  // vocal lines move (runs of eighths, 3+3+2, a short 16th run, a breath and
+  // an entry on the "and"), the second half often repeating the first; the
+  // chorus sometimes anticipates beat 3 (the "食い"), tied over.
+  var HALVES = [
+    { c: [[0, 2], [2, 2], [4, 2], [6, 2]], w: 1.2 },          // o-o-o-o-
+    { c: [[0, 2], [2, 2], [4, 4]], w: 1 },                    // o-o-o---
+    { c: [[0, 4], [4, 2], [6, 2]], w: 0.7 },                  // o---o-o-
+    { c: [[0, 3], [3, 3], [6, 2]], w: 0.8, sync: 1 },         // o--o--o- (3+3+2)
+    { c: [[0, 2], [2, 1], [3, 1], [4, 2], [6, 2]], w: 0.55 }, // o-ooo-o-
+    { c: [[0, 1], [1, 1], [2, 2], [4, 4]], w: 0.35 },         // ooo-o---
+    { c: [[0, 2], [2, 2], [4, 1], [5, 1], [6, 2]], w: 0.45 }, // o-o-ooo-
+    { c: [[2, 2], [4, 2], [6, 2]], w: 0.5, breath: 1 },       // --o-o-o-
+    { c: [[0, 3], [3, 5]], w: 0.45, sync: 1 },                // o--o----
+    { c: [[0, 2], [2, 6]], w: 0.45, long: 1 },                // o-o-----
+    { c: [[0, 8]], w: 0.3, long: 1 }                          // o-------
+  ];
+  function genHalves(rng, target, sync, isAnswer) {
+    var perHalf = target / 2;
+    function pickHalf(second, first) {
+      var w = HALVES.map(function (h) {
+        var x = h.w * Math.exp(-Math.abs(h.c.length - perHalf) * 0.8);
+        if (h.sync) x *= 0.5 + sync;
+        if (h.breath) x *= second ? 1.2 : isAnswer ? 0.8 : 0.15; // a bar rarely opens with a rest
+        if (isAnswer && second) x *= h.long ? 3 : h.c.length <= 3 ? 1.3 : 0.5; // answers settle
+        if (first && first.sync && h.sync) x *= 0.3;
+        return x;
+      });
+      var sum = w.reduce(function (a, x) { return a + x; }, 0), r = rng.next() * sum;
+      for (var i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return HALVES[i]; }
+      return HALVES[0];
+    }
+    var h1 = pickHalf(false, null);
+    var h2 = !isAnswer && !h1.long && !h1.breath && rng.chance(0.4) ? h1 : pickHalf(true, h1);
+    var notes = h1.c.map(function (n) { return n.slice(); }).concat(h2.c.map(function (n) { return [n[0] + 8, n[1]]; }));
+    // Anticipate beat 3: its note comes an eighth (or a 16th) early and is held over.
+    var at8 = -1;
+    for (var i = 0; i < notes.length; i++) if (notes[i][0] === 8) at8 = i;
+    if (at8 > 0 && !isAnswer && rng.chance(0.3 * sync)) {
+      var prevN = notes[at8 - 1], early = prevN[0] <= 5 && rng.chance(0.6) ? 2 : 1;
+      if (prevN[0] < 8 - early) {
+        prevN[1] = Math.min(prevN[1], 8 - early - prevN[0]);
+        notes[at8] = [8 - early, notes[at8][1] + early];
+      }
+    }
+    // Hold the last note (answers ring longer).
+    var last = notes[notes.length - 1];
+    last[1] = Math.max(last[1], Math.min(isAnswer ? 6 : 4, 16 - last[0]));
+    return notes;
+  }
+
   // opt.eighths: keep to the eighth-note grid (swing). opt.bpm: the faster the
   // tempo, the rarer the 16th-note figures, and a note entering on the second
   // 16th of a beat (which displaces the line) is kept for slow tempos.
@@ -2696,8 +2748,12 @@
       answersL = m.slow ? M3.slowAnswer : M3.answer;
       cadL = m.slow ? M3.slowCadence : M3.halfCadence;
     }
-    var motif = gen() ? genRhythm(rng, n, sync, false, beats, rOpt) : pick(motifs, n, type === 'B');
-    var other = gen() ? genRhythm(rng, n, sync, false, beats, rOpt) : pick(motifs, n, false);
+    // J-POP (m.halves, in 4/4) builds its bars from half-bar figures.
+    var genR = m.halves && !three
+      ? function (t, sy, ans) { return genHalves(rng, t, sy, ans); }
+      : function (t, sy, ans) { return genRhythm(rng, t, sy, ans, beats, rOpt); };
+    var motif = gen() ? genR(n, sync, false) : pick(motifs, n, type === 'B');
+    var other = gen() ? genR(n, sync, false) : pick(motifs, n, false);
     // Same start, new ending: the classic way to vary a repeated motif. A note
     // held over the middle of the bar stops where the new ending comes in.
     var ending = other.filter(function (x) { return x[0] >= 8; });
@@ -2705,7 +2761,7 @@
     var motifVar = motif.filter(function (x) { return x[0] < 8; }).map(function (x) { return [x[0], Math.min(x[1], cut - x[0])]; }).concat(ending);
     if (motifVar.length < 2) motifVar = motif;
     var an = three ? n - 1.5 : n - 2;
-    var answers = [gen() ? genRhythm(rng, an, sync * 0.7, true, beats, rOpt) : pick(answersL, an), gen() ? genRhythm(rng, an, sync * 0.7, true, beats, rOpt) : pick(answersL, an)];
+    var answers = [gen() ? genR(an, sync * 0.7, true) : pick(answersL, an), gen() ? genR(an, sync * 0.7, true) : pick(answersL, an)];
     var cadences = [pick(cadL, n - 3), pick(three ? (m.slow ? MELODY_RHYTHMS_3.slowCadence : MELODY_RHYTHMS_3.fullCadence) : cadL, n - 3)];
     // A chorus hook should not sink right after its (high) entry.
     var shape = type === 'P' ? 'rise' : type === 'B' ? rng.pick(['arch', 'arch', 'valley', 'rise']) : rng.pick(['rise', 'fall', 'arch', 'arch', 'valley']);
