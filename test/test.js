@@ -280,6 +280,29 @@ test('parts.together layers the listed instruments all the way through', () => {
   assert.throws(() => MusicComposition.compose({ parts: { together: ['drums'] } }), /cannot be layered/);
 });
 
+test('parts.arrange brings layers in as the song builds; extra leads play counter-lines and harmony', () => {
+  let counters = 0, harmonies = 0, checked = 0, clash = 0, tones = 0;
+  for (let i = 0; i < 8; i++) {
+    const s = MusicComposition.compose({ seed: 'arr' + i, style: 'jpop', bars: 72, parts: { lead: ['flute', 'violin'], chords: ['piano', 'harp'], arrange: ['lead', 'chords'] } });
+    assert.deepStrictEqual(s.parts.arrange, ['lead', 'chords']);
+    const inSec = (n, x) => n.t >= x.start - 1e-6 && n.t < x.start + x.bars * s.barDuration - 1e-6;
+    const firstVerse = s.sections.find(x => x.type === 'A');
+    const extraIn = x => s.notes.filter(n => inSec(n, x) && (n.layer || n.counter || (n.harmony && n.inst === 'lead' && n.patch === 'violin')));
+    assert.strictEqual(extraIn(firstVerse).length, 0, 'the first verse is bare');
+    const chorus = s.sections.find(x => x.type === 'B' && !x.drop);
+    assert.ok(extraIn(chorus).length > 10, 'the chorus is layered');
+    // Decorations are consonant: counter-line notes are chord tones, and held harmony notes too.
+    const chordAt = t => { let c = s.chords[0]; for (const x of s.chords) if (x.time <= t + 0.03) c = x; return c.tones; };
+    for (const n of s.notes) {
+      if (n.counter) { counters++; tones++; if (!chordAt(n.t + 0.01).includes(n.midi % 12)) clash++; }
+      if (n.harmony && n.patch === 'violin') { harmonies++; if (n.d >= s.stepDuration * 3.5) { tones++; if (!chordAt(n.t + 0.01).includes(n.midi % 12)) clash++; } }
+    }
+    checked++;
+  }
+  assert.ok(counters > 50 && harmonies > 50, counters + ' counter-line notes, ' + harmonies + ' harmony notes');
+  assert.ok(clash / tones < 0.02, clash + ' of ' + tones + ' long decoration notes off the chord');
+});
+
 test('extend lengthens a song so it ends on a whole chorus', () => {
   const LEN = { A: 8, P: 4, B: 8, C: 8 };
   const ok = s => {

@@ -91,6 +91,13 @@ declare namespace MusicComposition {
     sometimes?: Array<'drums' | 'bass' | 'chords' | 'guitar' | 'pad' | 'arp'>;
     /** Parts whose listed instruments all play at once, all the way through (layered), instead of taking turns by section. */
     together?: Array<'lead' | 'bass' | 'chords' | 'pad' | 'arp'>;
+    /**
+     * Parts whose listed instruments are layered but brought in and out as the song builds
+     * (bare first verse, more in the second verse and pre-chorus, all in the choruses).
+     * On the lead the extra instruments play a counter-line, a harmony a third below,
+     * double the tune, or take the tune over in the bridge.
+     */
+    arrange?: Array<'lead' | 'bass' | 'chords' | 'pad' | 'arp'>;
   };
 
   interface ComposeOptions {
@@ -176,8 +183,10 @@ declare namespace MusicComposition {
     bendTime?: number;
     /** A harmony line under the lead (final chorus). */
     harmony?: boolean;
-    /** A second instrument doubling this part in the last chorus. */
+    /** A second instrument doubling this part (the last chorus, parts.together, parts.arrange). */
     layer?: boolean;
+    /** A counter-line under the lead (parts.arrange). */
+    counter?: boolean;
   }
 
   interface Song {
@@ -192,7 +201,7 @@ declare namespace MusicComposition {
     /** Weight of each style (1 for a single style). */
     mix: { [S in Style]?: number };
     /** The parts actually used (style defaults plus overrides); a list where the song changes them by section. */
-    parts: { [K in keyof Parts]-?: NonNullable<Parts[K]> | Array<NonNullable<Parts[K]>> } & { together?: string[] };
+    parts: { [K in keyof Parts]-?: NonNullable<Parts[K]> | Array<NonNullable<Parts[K]>> } & { together?: string[]; arrange?: string[] };
     meter: '4/4' | '3/4';
     /** 4 or 3. A bar is beatsPerBar * 4 sixteenths long. */
     beatsPerBar: number;

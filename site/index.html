@@ -820,7 +820,7 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=759f3a"></script>
+<script src="music-composition.js?h=2fc2f4"></script>
 <script src="video.js?h=a8c186"></script>
 <script>
 (function () {
@@ -1007,7 +1007,9 @@
         seg.setAttribute('role', 'group');
         seg.setAttribute('aria-label', PART_LABELS[k][0] + 'の使い方');
         seg.hidden = true;
-        seg.innerHTML = '<button type="button" data-mode="turns" aria-pressed="true">使い分ける</button><button type="button" data-mode="together" aria-pressed="false">重ねる</button>';
+        seg.innerHTML = '<button type="button" data-mode="turns" aria-pressed="true" title="Aメロ・サビ・ブリッジで楽器を替える">使い分ける</button>' +
+          '<button type="button" data-mode="together" aria-pressed="false" title="最初から最後まで同時に鳴らす">重ねる</button>' +
+          '<button type="button" data-mode="arrange" aria-pressed="false" title="重ねつつ、盛り上がりに合わせて出し入れする（メロディは対旋律・ハモリにも）">重ねて出し入れ</button>';
         seg.addEventListener('click', function (e) {
           var b = e.target.closest('button');
           if (!b) return;
@@ -1040,13 +1042,16 @@
     });
     var maybe = PART_KEYS.filter(function (k) { var m = $('#' + prefix + k).querySelector('[data-maybe]'); return m && m.checked; });
     if (maybe.length) { p.sometimes = maybe; any = true; }
-    var together = LAYERABLE.filter(function (k) { return Array.isArray(p[k]) && isLayered(prefix, k); });
-    if (together.length) p.together = together;
+    ['together', 'arrange'].forEach(function (how) {
+      var ks = LAYERABLE.filter(function (k) { return Array.isArray(p[k]) && layerMode(prefix, k) === how; });
+      if (ks.length) p[how] = ks;
+    });
     return any ? p : null;
   }
-  function isLayered(prefix, k) {
-    var b = $('#' + prefix + k).querySelector('[data-layer] [data-mode="together"]');
-    return !!b && b.getAttribute('aria-pressed') === 'true';
+  // 'turns' (by section), 'together' (layered) or 'arrange' (layered, in and out by section).
+  function layerMode(prefix, k) {
+    var b = $('#' + prefix + k).querySelector('[data-layer] [aria-pressed="true"]');
+    return b ? b.dataset.mode : 'turns';
   }
   function setPartsIn(prefix, p) {
     PART_KEYS.forEach(function (k) {
@@ -1054,8 +1059,8 @@
       $('#' + prefix + k).querySelectorAll('.pchk input').forEach(function (i) { i.checked = want.indexOf(i.value) >= 0; });
       var m = $('#' + prefix + k).querySelector('[data-maybe]');
       if (m) m.checked = !!(p && p.sometimes && p.sometimes.indexOf(k) >= 0);
-      var layered = !!(p && p.together && p.together.indexOf(k) >= 0);
-      $('#' + prefix + k).querySelectorAll('[data-layer] button').forEach(function (b) { b.setAttribute('aria-pressed', String((b.dataset.mode === 'together') === layered)); });
+      var mode = p && p.together && p.together.indexOf(k) >= 0 ? 'together' : p && p.arrange && p.arrange.indexOf(k) >= 0 ? 'arrange' : 'turns';
+      $('#' + prefix + k).querySelectorAll('[data-layer] button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === mode)); });
     });
     markParts(prefix);
   }
@@ -1070,7 +1075,8 @@
       small.classList.toggle('on', n > 0);
       var seg = f.querySelector('[data-layer]');
       if (seg) seg.hidden = n < 2;
-      small.textContent = n > 1 ? (isLayered(prefix, k) ? n + ' 種類を重ねる' : n + ' 種類を曲の中で使い分け') : n === 1 ? '指定' : dv ? 'スタイルどおり（' + dv.map(function (v) { return partLabel(k, v); }).join('・') + '）' : d.fallback;
+      var mode = layerMode(prefix, k);
+      small.textContent = n > 1 ? n + (mode === 'together' ? ' 種類を重ねる' : mode === 'arrange' ? ' 種類を重ねて出し入れ' : ' 種類を曲の中で使い分け') : n === 1 ? '指定' : dv ? 'スタイルどおり（' + dv.map(function (v) { return partLabel(k, v); }).join('・') + '）' : d.fallback;
       f.querySelectorAll('.pchk').forEach(function (l) { l.classList.toggle('is-default', !n && !!dv && dv.indexOf(l.querySelector('input').value) >= 0); });
     });
   }
@@ -2074,9 +2080,9 @@
         if (ks.length) { p.sometimes = ks; any = true; }
         return;
       }
-      if (k === 'together') {
+      if (k === 'together' || k === 'arrange') {
         var tk = kv.slice(i + 1).split('|').filter(function (x) { return LAYERABLE.indexOf(x) >= 0; });
-        if (tk.length) p.together = tk;
+        if (tk.length) p[k] = tk;
         return;
       }
       var vals = kv.slice(i + 1).split('|').map(function (val) {

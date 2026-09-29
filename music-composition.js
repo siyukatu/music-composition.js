@@ -314,9 +314,9 @@
     return p;
   }
   // Parts on top of a base. A value may be a list: the song uses all of them,
-  // section by section (see sectionParts in compose), or all at once for the
-  // parts named in parts.together. parts.sometimes lists parts that some songs
-  // leave out.
+  // section by section (see sectionParts in compose), all at once for the
+  // parts named in parts.together, or layered and arranged by section for the
+  // parts in parts.arrange. parts.sometimes lists parts that some songs leave out.
   function resolveParts(base, custom) {
     var p = {};
     for (var k in base) p[k] = base[k];
@@ -325,13 +325,13 @@
       Object.keys(custom).forEach(function (k) {
         var v = custom[k];
         if (v === undefined || v === null || v === '' || v === 'auto') return;
-        if (k === 'together') {
+        if (k === 'together' || k === 'arrange') {
           var tk = typeof v === 'string' ? v.split(/[,|\s]+/).filter(Boolean) : v;
-          if (!Array.isArray(tk)) throw new Error('music-composition.js: parts.together must list parts');
+          if (!Array.isArray(tk)) throw new Error('music-composition.js: parts.' + k + ' must list parts');
           tk.forEach(function (x) {
-            if (LAYERABLE.indexOf(x) < 0) throw new Error('music-composition.js: parts.together: "' + x + '" cannot be layered (use ' + LAYERABLE.join(', ') + ')');
+            if (LAYERABLE.indexOf(x) < 0) throw new Error('music-composition.js: parts.' + k + ': "' + x + '" cannot be layered (use ' + LAYERABLE.join(', ') + ')');
           });
-          if (tk.length) p.together = tk.filter(function (x, i) { return tk.indexOf(x) === i; });
+          if (tk.length) p[k] = tk.filter(function (x, i) { return tk.indexOf(x) === i; });
           return;
         }
         if (k === 'sometimes') {
@@ -1236,10 +1236,13 @@
     });
     (chosen.sometimes || []).forEach(function (k) { if (pr.chance(0.5)) lists[k] = ['none']; });
     // parts.together: every instrument of the list plays all the way through (layered on the first).
-    var together = {};
-    (chosen.together || []).forEach(function (k) {
-      var L = lists[k].filter(function (v) { return v !== 'none'; });
-      if (L.length > 1) { together[k] = L; lists[k] = [L[0]]; }
+    // parts.arrange: layered too, but brought in and out by section (see below).
+    var together = {}, arranged = {};
+    ['together', 'arrange'].forEach(function (how) {
+      (chosen[how] || []).forEach(function (k) {
+        var L = lists[k].filter(function (v) { return v !== 'none'; });
+        if (L.length > 1 && !together[k] && !arranged[k]) { (how === 'together' ? together : arranged)[k] = L; lists[k] = [L[0]]; }
+      });
     });
     var ROLE = { A: 0, B: 1, C: 2, P: 3, intro: 0, outro: 1, drop: 1 };
     function sectionParts(type) {
@@ -2317,15 +2320,119 @@
       var S2 = LAYER_SOUND[k], main = S2[together[k][0]];
       always[main] = together[k].slice(1).map(function (v) { return S2[v]; });
     });
+    var extra = [];
     if (lastChorus >= 0 || Object.keys(always).length) {
-      var extra = [];
       notes.forEach(function (n) {
         if (n.harmony) return;
         var tos = (always[n.patch] || []).slice();
-        if (lastChorus >= 0 && layer[n.patch] && n.t >= lc0 - 1e-6 && n.t < lc1 - 1e-6 && tos.indexOf(layer[n.patch]) < 0) tos.push(layer[n.patch]);
+        // (a part being arranged gets its own layers below)
+        if (lastChorus >= 0 && layer[n.patch] && !arrangedPatch(n.patch) && n.t >= lc0 - 1e-6 && n.t < lc1 - 1e-6 && tos.indexOf(layer[n.patch]) < 0) tos.push(layer[n.patch]);
         tos.forEach(function (to) { add(n, to); });
       });
-      notes = notes.concat(extra);
+    }
+    if (Object.keys(arranged).length) arrange();
+    notes = notes.concat(extra);
+    function arrangedPatch(p) {
+      return Object.keys(arranged).some(function (k) { return LAYER_SOUND[k][arranged[k][0]] === p; });
+    }
+
+    // parts.arrange: the extra instruments come in as the song builds. The
+    // first verse and the quiet chorus are bare; the second verse and the
+    // pre-chorus add one; choruses have them all. On the melody the extra
+    // instruments play a counter-line (long chord tones, 3rds and 7ths first,
+    // moving by step below the tune), a harmony line a third below, or double
+    // the tune; in the bridge the second instrument takes the tune over.
+    function arrange() {
+      var firstVerse = -1;
+      sections.forEach(function (x, i) { if (firstVerse < 0 && x.type === 'A') firstVerse = i; });
+      var roleOf = function (si) {
+        var x = sections[si];
+        if (x.drop) return 'bare';
+        if (si === lastChorus) return 'peak';
+        if (x.type === 'A') return si === firstVerse ? 'bare' : 'build';
+        return { intro: 'intro', P: 'build', B: 'full', C: 'bridge', outro: 'outro' }[x.type];
+      };
+      var LEAD_JOBS = {
+        intro: ['counter'], bare: [], build: ['counter'], full: ['harmony', 'unison', 'unison'],
+        peak: ['harmony', 'counter', 'unison'], bridge: ['tune', 'counter'], outro: ['counter']
+      };
+      var EXTRAS_ON = { intro: 0, bare: 0, build: 1, full: 9, peak: 9, bridge: 1, outro: 9 };
+      var inSection = function (n, x) { return n.t >= x.start - 1e-6 && n.t < x.start + x.bars * barDur - 1e-6; };
+      Object.keys(arranged).forEach(function (k) {
+        var P2 = arranged[k].map(function (v) { return LAYER_SOUND[k][v]; }), main = P2[0];
+        var own = notes.filter(function (n) { return n.patch === main && !n.layer; });
+        sections.forEach(function (x, si) {
+          var role = roleOf(si), mine = own.filter(function (n) { return inSection(n, x); });
+          if (k !== 'lead') {
+            for (var i = 1; i < P2.length && i <= EXTRAS_ON[role]; i++) mine.forEach(function (n) { add(n, P2[i]); });
+            return;
+          }
+          var tune = mine.filter(function (n) { return !n.harmony; }), harm = mine.filter(function (n) { return n.harmony; });
+          (LEAD_JOBS[role] || []).forEach(function (job, j) {
+            var p = P2[j + 1];
+            if (!p) return;
+            if (job === 'tune') tune.forEach(function (n) { n.patch = p; });
+            else if (job === 'unison') tune.forEach(function (n) { add(n, p); });
+            else if (job === 'counter') counterLine(x, p);
+            else if (harm.length) harm.forEach(function (n) { add(n, p); }); // the section already has a harmony line
+            else {
+              tune.forEach(function (n) {
+                var h = harmonyBelow(n);
+                if (h === null) return;
+                var c = {};
+                for (var key in n) c[key] = n[key];
+                c.midi = h; c.patch = p; c.vel = n.vel * 0.6; c.harmony = true;
+                extra.push(c);
+              });
+            }
+          });
+        });
+      });
+    }
+    // A third below in the scale of the chord underneath; a long note takes the
+    // nearest chord tone below instead (so held notes are consonant).
+    function harmonyBelow(n) {
+      var bar = Math.floor(n.t / barDur + 1e-6);
+      if (!barInfo[bar]) return null;
+      var step = clamp(Math.round((n.t - bar * barDur) / stepDur), 0, SPB - 1), c = chordAt(bar, step);
+      var pcs = [];
+      for (var d = 0; d < 7; d++) pcs.push(((keyPc + chordPitch(c, d)) % 12 + 12) % 12);
+      var d0 = pcs.indexOf(((n.midi % 12) + 12) % 12);
+      if (d0 < 0) return null;
+      var hd = d0 - 2;
+      if (n.d >= stepDur * 3.5) for (var k = 2; k <= 5; k++) if (isChordDeg(c, d0 - k)) { hd = d0 - k; break; }
+      var pc = pcs[((hd % 7) + 7) % 7], m = n.midi - 1;
+      while (((m % 12) + 12) % 12 !== pc) m--;
+      return m;
+    }
+    // A counter-line for a section: one long note per chord, a guide tone (3rd
+    // or 7th, else the 5th) as close as possible to the note before, kept in a
+    // band just under the tune.
+    function counterLine(x, p) {
+      var prevM = leadBase + 2;
+      for (var b = x.startBar; b < x.startBar + x.bars; b++) {
+        var info = barInfo[b];
+        if (!info || info.cont) continue;
+        var span = spanOf(b);
+        info.segs.forEach(function (sg, k) {
+          var end = k + 1 < info.segs.length ? info.segs[k + 1].s : SPB * span;
+          var c = sg.c, offs = c.tones.filter(function (t) { return t % 7 !== 0; });
+          if (!offs.length) offs = [0];
+          var best = null, bestCost = 1e9;
+          offs.forEach(function (t) {
+            var pc = ((keyPc + chordPitch(c, c.deg + t)) % 12 + 12) % 12;
+            var rank = t % 7 === 2 || t % 7 === 6 ? 0 : 1.5;
+            for (var m = leadBase - 5; m <= leadBase + 7; m++) {
+              if (((m % 12) + 12) % 12 !== pc) continue;
+              var cost = Math.abs(m - prevM) + rank;
+              if (cost < bestCost) { bestCost = cost; best = m; }
+            }
+          });
+          if (best === null) return;
+          prevM = best;
+          extra.push({ t: (b * SPB + sg.s) * stepDur, d: (end - sg.s) * stepDur * 0.95, midi: best, vel: 0.5 * info.energy, inst: 'lead', patch: p, counter: true });
+        });
+      }
     }
     function add(n, to) {
       var c = {};
@@ -2344,10 +2451,11 @@
     // What each part played: one value, or the list used across the sections.
     var outParts = {};
     PART_KEYS.forEach(function (k) {
-      var L = together[k] || lists[k];
+      var L = together[k] || arranged[k] || lists[k];
       outParts[k] = L.length === 1 ? L[0] : L.slice();
     });
     if (Object.keys(together).length) outParts.together = Object.keys(together);
+    if (Object.keys(arranged).length) outParts.arrange = Object.keys(arranged);
     return {
       version: VERSION,
       title: tr.pick(TITLE_A) + ' ' + tr.pick(TITLE_B),
