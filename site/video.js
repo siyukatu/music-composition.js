@@ -16,11 +16,11 @@
   var SIZES = { '16:9': [1280, 720], '1:1': [1080, 1080], '9:16': [720, 1280] };
   var C = {
     ground: '#111216', ground2: '#191B22', surface: '#1A1C21', line: '#2C3038', ink: '#ECEEF2', muted: '#969CA8',
-    lead: '#FF6A33', bass: '#5B8BFF', chords: '#2EC4A0', arp: '#C07BF0', drums: '#6C727E'
+    lead: '#FF6A33', bass: '#5B8BFF', chords: '#2EC4A0', guitar: '#E0A640', arp: '#C07BF0', drums: '#6C727E'
   };
   var SECTION = { intro: 'INTRO', A: 'VERSE', P: 'PRE-CHORUS', B: 'CHORUS', C: 'BRIDGE', outro: 'OUTRO' };
   var SECTION_COLOR = { intro: C.muted, A: C.bass, P: C.arp, B: C.lead, C: C.chords, outro: C.muted };
-  var STYLE = { pop: 'Pop', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient' };
+  var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient' };
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -39,7 +39,7 @@
     var lo = 127, hi = 0, maxD = 0;
     pitched.forEach(function (n) { lo = Math.min(lo, n.midi); hi = Math.max(hi, n.midi); maxD = Math.max(maxD, n.d); });
     var byStart = pitched.slice().sort(function (a, b) { return a.t - b.t; });
-    var order = { chords: 0, bass: 1, arp: 2, lead: 3 };
+    var order = { chords: 0, guitar: 1, bass: 2, arp: 3, lead: 4 };
     var drums = song.notes.filter(function (n) { return n.inst === 'drums'; });
     var U = Math.min(W, H);
     var pad = Math.round(U * 0.06);
@@ -144,7 +144,7 @@
     visible.forEach(function (n) {
       var x = X(n.t), w = Math.max(3, n.d * pxPerSec - 2), y = Y(n.midi) + (rowH - h) / 2;
       var on = n.t <= t && t < n.t + n.d;
-      var base = n.inst === 'chords' ? 0.35 : n.inst === 'arp' ? 0.6 : 0.85;
+      var base = n.inst === 'chords' ? 0.35 : n.inst === 'guitar' ? 0.45 : n.inst === 'arp' ? 0.6 : 0.85;
       g.fillStyle = C[n.inst];
       if (on) {
         // Sounding notes glow.

@@ -72,6 +72,7 @@
     --bass: #2F66F0;
     --chords: #10947A;
     --arp: #9B45D6;
+    --guitar: #B7791F;
     --drums: #8A909B;
     --roll-bg: #FFFFFF;
     --roll-band: #F2F3F6;
@@ -98,6 +99,7 @@
       --bass: #5B8BFF;
       --chords: #2EC4A0;
       --arp: #C07BF0;
+      --guitar: #E0A640;
       --drums: #6C727E;
       --roll-bg: #15171B;
       --roll-band: #1B1E24;
@@ -120,6 +122,7 @@
     --bass: #5B8BFF;
     --chords: #2EC4A0;
     --arp: #C07BF0;
+    --guitar: #E0A640;
     --drums: #6C727E;
     --roll-bg: #15171B;
     --roll-band: #1B1E24;
@@ -182,6 +185,22 @@
     border-radius: 8px; width: 40px; display: grid; place-items: center; cursor: pointer;
   }
   .icon-btn:hover { border-color: var(--muted); }
+  details.parts { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+  details.parts summary {
+    cursor: pointer; list-style: none; padding: 10px 12px; font-size: 13.5px; font-weight: 500;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  details.parts summary::-webkit-details-marker { display: none; }
+  details.parts summary::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+  details.parts[open] summary::after { transform: rotate(-135deg); }
+  details.parts summary small { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 700; }
+  .parts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; padding: 2px 12px 12px; }
+  .parts-grid .field { gap: 4px; }
+  .parts-grid select { font-size: 13px; padding: 7px 8px; }
+  .parts-grid .label { font-size: 10.5px; }
+  .parts-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .parts-foot p { margin: 0; font-size: 12px; color: var(--muted); }
+  .link-btn { appearance: none; border: none; background: none; color: var(--accent); font: 500 12.5px var(--font-body); cursor: pointer; padding: 2px 0; white-space: nowrap; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .seg button {
     appearance: none; border: none; background: transparent; color: var(--muted); cursor: pointer;
@@ -380,6 +399,10 @@
           <div class="label">スタイル</div>
           <div class="styles" id="styles" role="group" aria-label="スタイル"></div>
           <p class="style-desc" id="style-desc"></p>
+          <details class="parts" id="parts">
+            <summary>楽器と演奏 <small id="parts-count" hidden></small></summary>
+            <div class="parts-grid" id="parts-grid"></div>
+          </details>
         </div>
 
         <div class="field">
@@ -477,11 +500,16 @@
         </div>
         <p class="hint">空欄ならスタイルごとの標準のテンポから選びます。</p>
         <div class="field">
-          <label class="label" for="radio-sec-min">1 曲の長さ（秒）</label>
+          <div class="label">
+            <label for="radio-sec-min" id="radio-len-label">1 曲の長さ（秒）</label>
+            <span class="seg" role="group" aria-label="長さの単位">
+              <button type="button" id="radio-unit-sec" aria-pressed="true">秒</button><button type="button" id="radio-unit-bars" aria-pressed="false">小節</button>
+            </span>
+          </div>
           <div class="range">
-            <input type="number" id="radio-sec-min" min="20" max="600" value="60" inputmode="numeric" aria-label="長さの下限（秒）">
+            <input type="number" id="radio-sec-min" min="20" max="600" value="60" inputmode="numeric" aria-label="長さの下限">
             <span>〜</span>
-            <input type="number" id="radio-sec-max" min="20" max="600" value="120" inputmode="numeric" aria-label="長さの上限（秒）">
+            <input type="number" id="radio-sec-max" min="20" max="600" value="120" inputmode="numeric" aria-label="長さの上限">
           </div>
         </div>
         <div class="radio-actions">
@@ -492,6 +520,7 @@
           <button type="button" class="btn btn-ghost" id="radio-skip" hidden>次の曲へ</button>
           <button type="button" class="btn btn-ghost" id="radio-stop" hidden>止める</button>
         </div>
+        <p class="hint" id="radio-parts-note" hidden>「楽器と演奏」の設定も使います。</p>
         <p class="radio-status" id="radio-status" aria-live="polite"></p>
       </section>
 
@@ -534,6 +563,7 @@
       <div class="legend" aria-hidden="true">
         <span><i style="background:var(--lead)"></i>メロディ</span>
         <span><i style="background:var(--chords)"></i>コード / パッド</span>
+        <span><i style="background:var(--guitar)"></i>ギター</span>
         <span><i style="background:var(--arp)"></i>アルペジオ</span>
         <span><i style="background:var(--bass)"></i>ベース</span>
         <span><i style="background:var(--drums)"></i>ドラム</span>
@@ -652,8 +682,8 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=79f5c1"></script>
-<script src="video.js?h=ceeab4"></script>
+<script src="music-composition.js?h=c2c3e1"></script>
+<script src="video.js?h=b62d4d"></script>
 <script>
 (function () {
   'use strict';
@@ -662,6 +692,7 @@
   var STYLE_INFO = {
     auto: ['おまかせ', 'シードからスタイルも選びます。'],
     pop: ['Pop', '明るい8ビートに、鍵盤のバッキングとシンセリード。'],
+    jpop: ['J-POP', 'ピアノとギターとストリングス。王道進行や小室進行で、Bメロから上がるサビ、落ちサビや最後の転調も。'],
     dance: ['Dance', '4つ打ちとオフビートのベース。キックに合わせてパッドがうねります。'],
     lofi: ['Lo-fi', 'スウィングするビートにエレピの7thコード、レコードのノイズ。'],
     chiptune: ['Chiptune', '矩形波と三角波、ノイズドラムの8bitサウンド。'],
@@ -693,6 +724,71 @@
     state.style = name;
     stylesEl.querySelectorAll('.style-btn').forEach(function (b) { b.setAttribute('aria-pressed', String(b.id === 'style-' + name)); });
     $('#style-desc').textContent = STYLE_INFO[name] ? STYLE_INFO[name][1] : '';
+    if (typeof partsDefaults === 'function' && $('#part-drums')) partsDefaults();
+    updateSnippet();
+  }
+
+  // Parts: instruments and playing, on top of the style ------------------------
+  var PART_LABELS = {
+    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', none: 'なし' }],
+    groove: ['リズム', { eightbeat: '8ビート', sixteenbeat: '16ビート', fourfloor: '4つ打ち', halftime: 'ハーフタイム', shuffle: 'シャッフル', breakbeat: 'ブレイクビーツ', chip: 'チップチューン' }],
+    bass: ['ベース', { synth: 'シンセ', finger: '指弾き', sine: 'サイン波', chip: '三角波', none: 'なし' }],
+    bassLine: ['ベースの弾き方', { root: 'ルート', drive: '8分刻み', offbeat: '裏打ち', syncopated: 'キックに合わせる', walking: 'ウォーキング', long: '伸ばす' }],
+    chords: ['コード楽器', { piano: 'ピアノ', epiano: 'エレピ', synth: 'シンセ', organ: 'オルガン', chip: '矩形波', none: 'なし' }],
+    comping: ['コードの弾き方', { block: 'ブロック', rhythm: 'リズム', arpeggio: 'アルペジオ', sustain: '伸ばす' }],
+    guitar: ['ギター', { strum: 'ストローク', cutting: 'カッティング', arpeggio: 'アルペジオ', none: 'なし' }],
+    pad: ['パッド', { warm: 'ウォーム', wide: 'ワイド', strings: 'ストリングス', ambient: 'アンビエント', none: 'なし' }],
+    lead: ['メロディ楽器', { saw: 'ノコギリ波', pluck: 'プラック', soft: 'ソフト', square: '矩形波', flute: 'フルート', brass: 'ブラス', bell: 'ベル', piano: 'ピアノ' }],
+    arp: ['アルペジオ', { eighths: '8分', sixteenths: '16分', bells: 'ベル', none: 'なし' }],
+    swing: ['スウィング', { '0': 'なし', '0.15': '軽め', '0.3': '強め' }]
+  };
+  var PART_KEYS = Object.keys(PART_LABELS);
+  var partsGrid = $('#parts-grid');
+  PART_KEYS.forEach(function (k) {
+    var f = document.createElement('div');
+    f.className = 'field';
+    f.innerHTML = '<label class="label" for="part-' + k + '">' + PART_LABELS[k][0] + '</label><select id="part-' + k + '"></select>';
+    var sel = f.querySelector('select');
+    var values = k === 'swing' ? Object.keys(PART_LABELS.swing) : MusicComposition.parts[k];
+    sel.innerHTML = '<option value="">スタイルどおり</option>' + values.map(function (v) {
+      return '<option value="' + v + '">' + escapeHtml(PART_LABELS[k][1][v] || v) + '</option>';
+    }).join('');
+    sel.addEventListener('change', function () { partsChanged(); });
+    partsGrid.appendChild(f);
+  });
+  var partsFoot = document.createElement('div');
+  partsFoot.className = 'parts-foot';
+  partsFoot.innerHTML = '<p>パターンは曲ごとに自動で作られます。</p><button type="button" class="link-btn" id="parts-reset">すべてスタイルどおりに</button>';
+  partsGrid.appendChild(partsFoot);
+  $('#parts-reset').addEventListener('click', function () { setParts({}); });
+  function readParts() {
+    var p = {}, any = false;
+    PART_KEYS.forEach(function (k) {
+      var v = $('#part-' + k).value;
+      if (v === '') return;
+      p[k] = k === 'swing' ? parseFloat(v) : v;
+      any = true;
+    });
+    return any ? p : null;
+  }
+  function setParts(p) {
+    PART_KEYS.forEach(function (k) { $('#part-' + k).value = p && p[k] !== undefined ? String(p[k]) : ''; });
+    partsChanged();
+  }
+  // Show what "as the style" means for the selected style.
+  function partsDefaults() {
+    var def = state.style !== 'auto' ? MusicComposition.styleParts[state.style] : null;
+    PART_KEYS.forEach(function (k) {
+      var first = $('#part-' + k).options[0];
+      var v = def ? def[k] : null;
+      first.textContent = def ? 'スタイルどおり（' + (PART_LABELS[k][1][String(v)] || v) + '）' : 'スタイルどおり';
+    });
+  }
+  function partsChanged() {
+    var p = readParts(), n = p ? Object.keys(p).length : 0;
+    $('#radio-parts-note').hidden = !n;
+    $('#parts-count').hidden = !n;
+    $('#parts-count').textContent = n + ' 件変更';
     updateSnippet();
   }
 
@@ -732,6 +828,8 @@
     if (state.unit === 'sec') o.duration = Math.max(10, Math.min(600, parseInt($('#sec').value, 10) || 60));
     else o.bars = parseInt($('#bars').value, 10);
     if ($('#loop').checked) o.loop = true;
+    var parts = readParts();
+    if (parts) o.parts = parts;
     var sr = parseInt($('#rate').value, 10);
     if (sr !== 44100) o.sampleRate = sr;
     return o;
@@ -882,6 +980,8 @@
     }
     $('#loop').checked = !!o.loop;
     $('#rate').value = String(o.sampleRate || 44100);
+    setParts(o.parts || {});
+    if (o.parts) $('#parts').open = true;
   }
 
   // Transport ---------------------------------------------------------------
@@ -1019,12 +1119,12 @@
     var top = ROLL.top + 4, bottom = h - ROLL.drumLane - 6;
     var rowH = (bottom - top) / (hi - lo + 1);
     var Y = function (m) { return bottom - (m - lo + 1) * rowH; };
-    var colors = { lead: css('--lead'), bass: css('--bass'), chords: css('--chords'), arp: css('--arp') };
-    var order = { chords: 0, bass: 1, arp: 2, lead: 3 };
+    var colors = { lead: css('--lead'), bass: css('--bass'), chords: css('--chords'), guitar: css('--guitar'), arp: css('--arp') };
+    var order = { chords: 0, guitar: 1, bass: 2, arp: 3, lead: 4 };
     pitched.sort(function (a, b) { return order[a.inst] - order[b.inst]; });
     pitched.forEach(function (n) {
       if (n.t >= total) return;
-      g.globalAlpha = n.inst === 'chords' ? 0.45 : n.inst === 'arp' ? 0.7 : 0.95;
+      g.globalAlpha = n.inst === 'chords' ? 0.45 : n.inst === 'guitar' ? 0.55 : n.inst === 'arp' ? 0.7 : 0.95;
       g.fillStyle = colors[n.inst];
       var x = X(n.t), wd = Math.max(1.5, X(Math.min(n.d, total - n.t)) - 0.5);
       g.fillRect(x, Y(n.midi), wd, Math.max(1.5, rowH - 0.5));
@@ -1109,6 +1209,9 @@
     if (o.bars && o.bars !== 32) parts.push('bars: <span class="n">' + o.bars + '</span>');
     if (o.duration) parts.push('duration: <span class="n">' + o.duration + '</span>');
     if (o.loop) parts.push('loop: <span class="k">true</span>');
+    if (o.parts) parts.push('parts: { ' + Object.keys(o.parts).map(function (k) {
+      return k + ': ' + (typeof o.parts[k] === 'number' ? '<span class="n">' + o.parts[k] + '</span>' : s(o.parts[k]));
+    }).join(', ') + ' }');
     if (o.sampleRate) parts.push('sampleRate: <span class="n">' + o.sampleRate + '</span>');
     var html =
       '&lt;<span class="k">script</span> src=<span class="s">"https://cdn.jsdelivr.net/npm/music-composition.js@beta"</span>&gt;&lt;/<span class="k">script</span>&gt;\n' +
@@ -1173,12 +1276,35 @@
     x = Math.max(lo, Math.min(hi, x)); y = Math.max(lo, Math.min(hi, y));
     return x <= y ? [x, y] : [y, x];
   }
+  // Length in seconds or in bars (the same two inputs, different units).
+  var radioUnit = 'sec';
+  var RADIO_UNITS = {
+    sec: { label: '1 曲の長さ（秒）', min: 20, max: 600, def: [60, 120] },
+    bars: { label: '1 曲の長さ（小節）', min: 8, max: 128, def: [16, 32] }
+  };
+  function setRadioUnit(unit, values) {
+    var u = RADIO_UNITS[unit];
+    radioUnit = unit;
+    $('#radio-unit-sec').setAttribute('aria-pressed', String(unit === 'sec'));
+    $('#radio-unit-bars').setAttribute('aria-pressed', String(unit === 'bars'));
+    $('#radio-len-label').textContent = u.label;
+    ['#radio-sec-min', '#radio-sec-max'].forEach(function (id, i) {
+      var el = $(id);
+      el.min = u.min; el.max = u.max; el.step = unit === 'bars' ? 4 : 1;
+      el.value = values ? values[i] : u.def[i];
+    });
+  }
+  $('#radio-unit-sec').addEventListener('click', function () { if (radioUnit !== 'sec') { setRadioUnit('sec'); radioRulesChanged(); } });
+  $('#radio-unit-bars').addEventListener('click', function () { if (radioUnit !== 'bars') { setRadioUnit('bars'); radioRulesChanged(); } });
   function radioRules() {
+    var u = RADIO_UNITS[radioUnit];
+    var len = numRange('#radio-sec-min', '#radio-sec-max', u.min, u.max) || u.def;
     return {
       styles: pressedValues($('#radio-styles')),
       modes: pressedValues($('#radio-modes')),
       bpm: numRange('#radio-bpm-min', '#radio-bpm-max', 40, 240),
-      sec: numRange('#radio-sec-min', '#radio-sec-max', 20, 600) || [60, 120]
+      unit: radioUnit,
+      len: len
     };
   }
   function radioQuery(r) {
@@ -1187,7 +1313,7 @@
     if (r.styles.length !== RADIO_STYLES.length) q.set('styles', r.styles.join(','));
     if (r.modes.length) q.set('modes', r.modes.join(','));
     if (r.bpm) q.set('bpm', r.bpm.join('-'));
-    q.set('sec', r.sec.join('-'));
+    q.set(r.unit, r.len.join('-'));
     return q.toString().replace(/%2C/g, ',');
   }
   // /?radio=1&styles=lofi,ambient&modes=dorian&bpm=70-90&sec=60-120
@@ -1201,9 +1327,10 @@
     set($('#radio-styles'), styles.length ? styles : RADIO_STYLES);
     set($('#radio-modes'), (p.get('modes') || '').split(',').filter(function (v) { return RADIO_MODES.indexOf(v) >= 0; }));
     var pair = function (v) { var m = /^(\d+)(?:-(\d+))?$/.exec(v || ''); return m ? [m[1], m[2] || m[1]] : null; };
-    var bpm = pair(p.get('bpm')), sec = pair(p.get('sec'));
+    var bpm = pair(p.get('bpm')), sec = pair(p.get('sec')), barsR = pair(p.get('bars'));
     if (bpm) { $('#radio-bpm-min').value = bpm[0]; $('#radio-bpm-max').value = bpm[1]; }
-    if (sec) { $('#radio-sec-min').value = sec[0]; $('#radio-sec-max').value = sec[1]; }
+    if (barsR) setRadioUnit('bars', barsR);
+    else if (sec) setRadioUnit('sec', sec);
     return true;
   }
   function radioRulesChanged() {
@@ -1217,7 +1344,11 @@
   }
   function between(r) { return r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1)); }
   function radioOptions(r) {
-    var o = { seed: newSeed(), style: r.styles[Math.floor(Math.random() * r.styles.length)], duration: between(r.sec) };
+    var o = { seed: newSeed(), style: r.styles[Math.floor(Math.random() * r.styles.length)] };
+    if (r.unit === 'bars') o.bars = Math.max(8, Math.round(between(r.len) / 4) * 4);
+    else o.duration = between(r.len);
+    var parts = readParts();
+    if (parts) o.parts = parts;
     if (r.modes.length) o.mode = r.modes[Math.floor(Math.random() * r.modes.length)];
     if (r.bpm) o.bpm = between(r.bpm);
     var sr = parseInt($('#rate').value, 10);
@@ -1337,7 +1468,18 @@
     if (o.bars && o.bars !== 32) q.set('bars', String(o.bars)); // 32 is the default
     else if (!o.bars && o.duration) q.set('sec', String(o.duration));
     if (o.loop) q.set('loop', '1');
-    return q.toString();
+    // parts=drums:lofi,guitar:strum,swing:0.3
+    if (o.parts) q.set('parts', Object.keys(o.parts).map(function (k) { return k + ':' + o.parts[k]; }).join(','));
+    return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':');
+  }
+  function partsFromParam(v) {
+    var p = {}, any = false;
+    (v || '').split(',').forEach(function (kv) {
+      var i = kv.indexOf(':'), k = kv.slice(0, i), val = kv.slice(i + 1);
+      if (k === 'swing') { var n = parseFloat(val); if (n >= 0 && n <= 0.5) { p.swing = n; any = true; } }
+      else if (MusicComposition.parts[k] && MusicComposition.parts[k].indexOf(val) >= 0) { p[k] = val; any = true; }
+    });
+    return any ? p : null;
   }
   function optionsFromUrl() {
     var p = new URLSearchParams(location.search);
@@ -1355,6 +1497,8 @@
     if (bars > 0) o.bars = bars;
     else if (sec > 0) o.duration = Math.max(10, Math.min(600, sec));
     if (p.get('loop') === '1') o.loop = true;
+    var parts = partsFromParam(p.get('parts'));
+    if (parts) o.parts = parts;
     return o;
   }
   function shareUrl() { return location.origin + location.pathname + '?' + shareQuery(state.opts); }
@@ -1506,7 +1650,7 @@
   });
   // Share card: 1200×630 PNG of the song, drawn here in the page.
   var CARD_COLORS = { ground: '#111216', surface: '#1A1C21', line: '#2C3038', ink: '#ECEEF2', muted: '#969CA8',
-    lead: '#FF6A33', bass: '#5B8BFF', chords: '#2EC4A0', arp: '#C07BF0', drums: '#6C727E' };
+    lead: '#FF6A33', bass: '#5B8BFF', chords: '#2EC4A0', guitar: '#E0A640', arp: '#C07BF0', drums: '#6C727E' };
   function drawCard(song) {
     var C = CARD_COLORS, W = 1200, H = 630;
     var display = css('--font-display'), mono = css('--font-mono');
@@ -1545,7 +1689,7 @@
       var X = function (t) { return R.x + (t / total) * R.w; };
       g.fillStyle = C.line;
       for (var b = 1; b < song.bars; b++) g.fillRect(Math.round(X(b * song.barDuration)), R.y, 1, R.h - R.drumH);
-      var order = { chords: 0, bass: 1, arp: 2, lead: 3 };
+      var order = { chords: 0, guitar: 1, bass: 2, arp: 3, lead: 4 };
       var pitched = song.notes.filter(function (n) { return n.inst !== 'drums' && n.t < total; })
         .sort(function (a, b) { return order[a.inst] - order[b.inst]; });
       var lo = 127, hi = 0;
@@ -1553,7 +1697,7 @@
       lo -= 1; hi += 1;
       var bottom = R.y + R.h - R.drumH - 8, rowH = (bottom - R.y) / (hi - lo + 1);
       pitched.forEach(function (n) {
-        g.globalAlpha = n.inst === 'chords' ? 0.5 : n.inst === 'arp' ? 0.75 : 1;
+        g.globalAlpha = n.inst === 'chords' ? 0.5 : n.inst === 'guitar' ? 0.6 : n.inst === 'arp' ? 0.75 : 1;
         g.fillStyle = C[n.inst];
         g.fillRect(X(n.t), bottom - (n.midi - lo + 1) * rowH, Math.max(2, X(Math.min(n.d, total - n.t)) - X(0) - 1), Math.max(2, rowH - 1));
       });
