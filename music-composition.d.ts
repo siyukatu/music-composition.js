@@ -9,36 +9,90 @@ declare namespace MusicComposition {
   type Instrument = 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums';
   type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'open' | 'crash';
 
-  /** What plays and how. Every field is optional; the style supplies the rest. */
+  /**
+   * What plays and how. Every field is optional; the style supplies the rest.
+   * Any field may also be a list of choices (e.g. lead: ['violin', 'flute']): the seed picks one.
+   */
   interface Parts {
     /** Drum kit. */
-    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'none';
+    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'brush' | 'perc' | 'none';
     /** Drum pattern family (each song generates its own pattern within it). */
     groove?: 'eightbeat' | 'sixteenbeat' | 'fourfloor' | 'halftime' | 'shuffle' | 'breakbeat' | 'chip';
-    bass?: 'synth' | 'finger' | 'sine' | 'chip' | 'none';
+    bass?: 'synth' | 'finger' | 'sine' | 'chip' | 'upright' | 'fm' | 'tuba' | 'none';
     /** How the bass plays: 'syncopated' locks to the kick drum, 'walking' in quarter notes. */
     bassLine?: 'root' | 'drive' | 'offbeat' | 'syncopated' | 'walking' | 'long';
-    /** Chord instrument. */
-    chords?: 'piano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'none';
-    /** How the chords play. 'rhythm' is a generated syncopated pattern. */
-    comping?: 'block' | 'rhythm' | 'arpeggio' | 'sustain';
-    /** Guitar (plucked string synthesis): strumming, 16th-note cutting, or arpeggios. */
-    guitar?: 'strum' | 'cutting' | 'arpeggio' | 'none';
-    pad?: 'warm' | 'wide' | 'strings' | 'ambient' | 'none';
-    /** Melody instrument. */
-    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'flute' | 'brass' | 'bell' | 'piano';
-    arp?: 'eighths' | 'sixteenths' | 'bells' | 'none';
+    /** Chord instrument. 'cutpiano' = a piano whose notes are cut short (release cut). */
+    chords?: 'piano' | 'cutpiano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'harp' | 'marimba' | 'accordion' | 'pizzicato' | 'musicbox' | 'none';
+    /** How the chords play. 'rhythm' is a generated syncopated pattern, 'stab' short offbeat chords, 'broken' broken chords (Alberti). */
+    comping?: 'block' | 'rhythm' | 'arpeggio' | 'sustain' | 'stab' | 'broken';
+    /** Guitar (plucked string synthesis): strumming, 16th-note cutting, arpeggios, or nylon-string fingerpicking. */
+    guitar?: 'strum' | 'cutting' | 'arpeggio' | 'fingerpick' | 'none';
+    pad?: 'warm' | 'wide' | 'strings' | 'ambient' | 'choir' | 'none';
+    /** Melody instrument. 'pwm', 'fm' and 'robot' (ring modulation, bit-crushed) are machine sounds. */
+    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'pwm' | 'fm' | 'robot' | 'flute' | 'whistle' | 'brass' | 'violin' | 'voice' | 'bell' | 'piano' | 'harp' | 'marimba' | 'musicbox' | 'accordion';
+    arp?: 'eighths' | 'sixteenths' | 'bells' | 'harp' | 'marimba' | 'musicbox' | 'digital' | 'none';
     /** 0 (straight) – 0.5. */
     swing?: number;
   }
 
+  /**
+   * A mix of styles: 'jpop+lofi' (equal parts), 'jpop:2+lofi' (weighted; ',' also
+   * separates), an array of styles, or weights by style.
+   */
+  type StyleMix = string | Style[] | { [S in Style]?: number };
+
+  /** A style of your own: a base style (or mix) with its settings changed. */
+  interface CustomStyle {
+    /** Shown as the song's styleLabel. */
+    name?: string;
+    /** Default 'pop'. */
+    base?: Style | StyleMix;
+    /** Tempo range [min, max] (or one tempo), 40–240. */
+    bpm?: number | [number, number];
+    /** Modes to choose from. */
+    modes?: Mode[];
+    /** Instruments and playing (compose's `parts` option still overrides these). */
+    parts?: PartChoices;
+    /** 0–1: chromatic colour (secondary dominants, borrowed chords, appoggiaturas). */
+    spice?: number;
+    /** 0–1: chance of seventh chords. */
+    sevenths?: number;
+    /** 0–1: chance of a free walk through functional harmony instead of a stock progression. */
+    functional?: number;
+    /** 0–1: how much the melody likes syncopation. */
+    sync?: number;
+    /** 1.5–8: melody notes per bar (below 3 = slow, long notes). */
+    notes?: number;
+    /** 0–1: timing and velocity looseness. */
+    humanize?: number;
+    /** 1 or 2: bars per chord. */
+    chordBars?: number;
+    /** 0–1 chances: pre-chorus, bridge, quiet drop chorus, last-chorus key change. */
+    form?: { pre?: number; bridge?: number; drop?: number; modulate?: number };
+    /** A harmony line in the last chorus. */
+    harmony?: boolean;
+    /** 0–1: pitch scoops on melody notes. */
+    bend?: number;
+    /** 0–1 */
+    reverb?: number;
+    /** 0–1 */
+    delay?: number;
+    /** 0–1: ducking on the kick drum. */
+    sidechain?: number;
+    /** Tape: low-pass, hiss and crackle. */
+    lofi?: boolean;
+  }
+
+  /** Parts where each field may be one value or a list to pick from. */
+  type PartChoices = { [K in keyof Parts]?: Parts[K] | Array<NonNullable<Parts[K]>> };
+
   interface ComposeOptions {
     /** Same seed + options => same song. Random if omitted. */
     seed?: string | number;
-    /** Default 'auto' (picked from the seed). */
-    style?: Style | 'auto';
+    /** A style, a mix of styles, or a custom style. Default 'auto' (picked from the seed). */
+    style?: Style | 'auto' | StyleMix | CustomStyle;
     /** Override the style's instruments and playing. */
-    parts?: Parts;
+    parts?: PartChoices;
     /** 40–240. Chosen from the style if omitted. */
     bpm?: number;
     /** 'C' … 'B', sharps or flats ('F#', 'Bb'), or a pitch class 0–11. Picked from the seed if omitted. */
@@ -51,7 +105,7 @@ declare namespace MusicComposition {
     duration?: number;
     /** true => seamless loop: no intro/outro, reverb tail folded onto the start. */
     loop?: boolean;
-    /** '4/4' (default) or '3/4' (triple meter: waltz patterns, downbeat-led phrasing). */
+    /** '4/4' (default) or '3/4' (triple meter: waltz patterns, downbeat-led phrasing, and instruments that suit it). */
     meter?: '4/4' | '3/4';
   }
 
@@ -116,7 +170,12 @@ declare namespace MusicComposition {
     /** Generated from the seed, e.g. 'Crystal Drift'. */
     title: string;
     seed: string;
-    style: Style;
+    /** The style, a mix ('jpop+lofi'), or 'custom'. */
+    style: Style | string;
+    /** e.g. 'J-POP', 'J-POP × Lo-fi', or a custom style's name. */
+    styleLabel: string;
+    /** Weight of each style (1 for a single style). */
+    mix: { [S in Style]?: number };
     /** The parts actually used (style defaults plus overrides). */
     parts: Required<Parts>;
     meter: '4/4' | '3/4';
@@ -136,6 +195,8 @@ declare namespace MusicComposition {
     sections: Section[];
     chords: Chord[];
     notes: Note[];
+    /** Mix settings used by render() (reverb, delay, sidechain, tape). */
+    fx: { room: number; damp: number; wet: number; delay: number; sidechain: number; lofi: boolean; tail: number };
   }
 }
 
@@ -161,6 +222,8 @@ interface MusicCompositionStatic {
   readonly parts: { [K in keyof MusicComposition.Parts]-?: string[] };
   /** Each style's default parts. */
   readonly styleParts: { [S in MusicComposition.Style]: Required<MusicComposition.Parts> };
+  /** Each style's settings in the terms of a custom style; parts3 = what changes in 3/4. */
+  readonly styleSettings: { [S in MusicComposition.Style]: Required<Omit<MusicComposition.CustomStyle, 'name' | 'base'>> & { parts3: MusicComposition.Parts } };
   readonly modes: MusicComposition.Mode[];
   readonly keys: string[];
 }

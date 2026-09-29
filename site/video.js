@@ -116,7 +116,7 @@
     fitText(g, song.title, P.display, Math.round(U * 0.075), W - L.pad * 2);
     g.fillText(song.title, L.pad, L.titleY);
     g.fillStyle = C.muted;
-    var meta = [STYLE[song.style] || song.style, sec.key + ' ' + song.mode, song.bpm + ' BPM'].join('  ·  ');
+    var meta = [song.styleLabel || STYLE[song.style] || song.style, sec.key + ' ' + song.mode, song.bpm + ' BPM'].join('  ·  ');
     fitText(g, meta, P.mono, Math.round(U * 0.028), W - L.pad * 2);
     g.fillText(meta, L.pad, L.metaY);
 

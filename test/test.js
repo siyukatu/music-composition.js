@@ -190,11 +190,92 @@ test('4/4 remains the default and is unchanged by the meter option', () => {
   assert.deepStrictEqual(a.notes, b.notes);
 });
 
+test('3/4 brings in instruments that suit it, unless the parts say otherwise', () => {
+  const w = MusicComposition.compose({ seed: 'w', style: 'lofi', meter: '3/4', bars: 16 });
+  assert.strictEqual(w.parts.drums, 'brush');
+  assert.strictEqual(w.parts.bass, 'upright');
+  assert.strictEqual(MusicComposition.compose({ seed: 'w', style: 'lofi', bars: 16 }).parts.drums, 'lofi');
+  assert.strictEqual(MusicComposition.compose({ seed: 'w', style: 'lofi', meter: '3/4', bars: 16, parts: { drums: 'lofi' } }).parts.drums, 'lofi');
+});
+
+test('styles mix: any spelling of the same mix gives the same song', () => {
+  const a = MusicComposition.compose({ seed: 'mix', style: 'jpop+lofi', bars: 16 });
+  assert.strictEqual(a.style, 'jpop+lofi');
+  assert.deepStrictEqual(a.mix, { jpop: 0.5, lofi: 0.5 });
+  assert.strictEqual(a.styleLabel, 'J-POP × Lo-fi');
+  for (const spec of ['jpop,lofi', 'jpop lofi', ['jpop', 'lofi'], { jpop: 1, lofi: 1 }, 'JPOP+lofi:1']) {
+    assert.deepStrictEqual(MusicComposition.compose({ seed: 'mix', style: spec, bars: 16 }).notes, a.notes, JSON.stringify(spec));
+  }
+  const groups = [['drums', 'groove', 'swing'], ['bass', 'bassLine'], ['chords', 'comping'], ['guitar'], ['pad'], ['lead'], ['arp']];
+  const from = { jpop: 0, lofi: 0 };
+  for (let i = 0; i < 30; i++) {
+    const s = MusicComposition.compose({ seed: 'mix' + i, style: 'jpop:3+lofi', bars: 8 });
+    assert.strictEqual(s.style, 'jpop:3+lofi:1');
+    assert.ok(s.bpm >= 113 && s.bpm <= 151, 'bpm ' + s.bpm);
+    for (const g of groups) {
+      const src = ['jpop', 'lofi'].filter(st => g.every(k => s.parts[k] === MusicComposition.styleParts[st][k]));
+      assert.ok(src.length, g.join('+') + ' comes from one of the styles');
+      from[src[0]]++;
+    }
+  }
+  assert.ok(from.jpop > from.lofi * 1.8 && from.lofi > 0, JSON.stringify(from));
+  assert.throws(() => MusicComposition.compose({ style: 'jpop+polka' }), /unknown style/);
+});
+
+test('custom styles change the base style and render on their own', () => {
+  const def = {
+    name: 'Night Walk', base: 'lofi+ambient', bpm: [90, 96], modes: ['minor'], parts: { lead: 'violin', drums: 'brush' },
+    form: { pre: 1, bridge: 0, drop: 0 }, spice: 0.2, reverb: 0.2, lofi: false
+  };
+  for (let i = 0; i < 6; i++) {
+    const s = MusicComposition.compose({ seed: 'c' + i, style: def, bars: 48 });
+    assert.strictEqual(s.style, 'custom');
+    assert.strictEqual(s.styleLabel, 'Night Walk');
+    assert.ok(s.bpm >= 90 && s.bpm <= 96);
+    assert.strictEqual(s.mode, 'minor');
+    assert.strictEqual(s.parts.lead, 'violin');
+    assert.ok(s.sections.some(x => x.type === 'P') && !s.sections.some(x => x.type === 'C'));
+    assert.ok(Math.abs(s.fx.wet - 0.28) < 1e-9 && s.fx.lofi === false);
+  }
+  const over = MusicComposition.compose({ seed: 'c', style: def, bars: 8, parts: { lead: 'harp' } });
+  assert.strictEqual(over.parts.lead, 'harp');
+  assert.deepStrictEqual(MusicComposition.compose({ seed: 'c', style: def, bars: 8 }).notes, MusicComposition.compose({ seed: 'c', style: JSON.parse(JSON.stringify(def)), bars: 8 }).notes);
+  const w = readWav(MusicComposition.render(JSON.parse(JSON.stringify(over)), { sampleRate: 16000 }));
+  assert.ok(w.samples.some(x => Math.abs(x) > 3000));
+  assert.throws(() => MusicComposition.compose({ style: { base: 'pop', tempo: 100 } }), /unknown style setting/);
+  assert.throws(() => MusicComposition.compose({ style: { base: 'pop', spice: 3 } }), /spice/);
+  assert.throws(() => MusicComposition.compose({ style: { modes: ['phrygian'] } }), /unknown mode/);
+});
+
+test('parts may list choices: the seed picks one, reproducibly', () => {
+  const seen = {};
+  for (let i = 0; i < 30; i++) {
+    const o = { seed: 'ch' + i, style: 'pop', bars: 8, parts: { lead: ['violin', 'flute', 'harp'], drums: ['brush'], guitar: [] } };
+    const s = MusicComposition.compose(o);
+    assert.ok(['violin', 'flute', 'harp'].includes(s.parts.lead));
+    assert.strictEqual(s.parts.drums, 'brush');
+    assert.strictEqual(s.parts.guitar, MusicComposition.styleParts.pop.guitar);
+    assert.deepStrictEqual(MusicComposition.compose(o).notes, s.notes);
+    seen[s.parts.lead] = 1;
+  }
+  assert.strictEqual(Object.keys(seen).length, 3);
+  assert.throws(() => MusicComposition.compose({ parts: { lead: ['violin', 'kazoo'] } }), /unknown lead/);
+});
+
+test('release-cut piano stops short; stabs sit on the offbeats', () => {
+  const s = MusicComposition.compose({ seed: 'cut', style: 'dance', bars: 16, parts: { chords: 'cutpiano', comping: 'stab' } });
+  const ch = s.notes.filter(n => n.patch === 'cutPiano');
+  assert.ok(ch.length > 20);
+  assert.ok(ch.every(n => n.d <= s.stepDuration * 1.6 + 1e-9));
+  const off = ch.filter(n => Math.round(n.t / s.stepDuration) % 4 === 2).length;
+  assert.ok(off / ch.length > 0.6, off + ' of ' + ch.length + ' on the offbeat');
+});
+
 // Strict voice-leading and harmony checks, in both meters.
 for (const meter of ['4/4', '3/4']) {
   test(meter + ': strong-beat melody notes are chord tones, outer voices avoid parallel 5ths/8ves', () => {
     let strong = 0, off = 0, downbeats = 0, parallels = 0;
-    for (const style of ['pop', 'jpop', 'dance', 'lofi']) {
+    for (const style of ['pop', 'jpop', 'dance', 'lofi', 'jpop+lofi', 'pop:2+chiptune']) {
       for (let i = 0; i < 12; i++) {
         const song = MusicComposition.compose({ seed: 'rules' + i, style, meter, bars: 48 });
         const spb = song.beatsPerBar * 4, sd = song.stepDuration, bd = song.barDuration;

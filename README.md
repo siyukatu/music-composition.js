@@ -19,6 +19,8 @@
 - **伴奏**: ドラム・ベース・コードのパターンを、リズムの種類（8 ビート、4 つ打ち、シャッフル…）のルールに沿って曲ごとに生成します。4 小節ごとのフレーズ終わりのバリエーション、キックに合わせたベース、次のコードを先取りする「食い」も入ります
 - **拍子**: 4/4 と 3/4。3/4 は強・弱・弱の拍節に合わせて、キックは 1 拍目、ワルツの伴奏はベースが 1 拍目・コードが 2・3 拍目（ブン・チャッ・チャッ）、コードの変わり目は 1 拍目（または 2+1 の 3 拍目）、メロディのフレーズは 1 拍目か 3 拍目の弱起から始まり、終止は 1 拍目に着地します
 - **理論のチェック**: 強拍のメロディはコードトーン（解決する倚音を除く）、メロディとベースの連続 5 度・8 度（と跳躍で入る並達 5 度・8 度）を避けます。テストで両方の拍子を確認しています
+- **スタイルのミックス**: `style: 'jpop+lofi'` のように複数のスタイルを混ぜられます。テンポ・和声の彩り・構成などの数値は重み付きの平均、モードと進行は重みに応じてそれぞれのスタイルから、楽器は「ドラムとリズム」「ベースと弾き方」「コード楽器と弾き方」などのまとまりごとにどれかのスタイルから選びます
+- **カスタムスタイル**: 元になるスタイル（ミックスも可）のテンポの範囲・モード・楽器・和声の彩り・メロディの密度・構成・残響などを変えた、自分のスタイルを渡せます
 - **表現**: 3 連符、しゃくり（ピッチベンド）、ゴーストノート、フィル・ブレイク、プレコーラスのビルドアップ、ブリッジのハーフタイム、最後のサビのハモり
 
 ## インストール
@@ -88,8 +90,8 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | オプション | 値 | 既定値 |
 |---|---|---|
 | `seed` | 文字列 / 数値 | ランダム |
-| `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `auto` | `auto`（シードで決定） |
-| `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き | スタイルどおり |
+| `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `auto`、ミックス（`'jpop+lofi'`）、カスタムスタイル（オブジェクト） | `auto`（シードで決定） |
+| `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き。値を配列にすると、その中からシードで 1 つ選ぶ | スタイルどおり |
 | `key` | `C`〜`B`（`F#`, `Bb` なども可） | シードで決定 |
 | `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイルに合わせて決定 |
 | `bpm` | 40〜240 | スタイルに合わせて決定 |
@@ -103,23 +105,54 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 
 | キー | 値 |
 |---|---|
-| `drums` | `acoustic` `electronic` `lofi` `chip` `none` |
+| `drums` | `acoustic` `electronic` `lofi` `chip` `brush`（ブラシとライド）`perc`（コンガ・リム・シェイカー・タンバリン）`none` |
 | `groove` | `eightbeat` `sixteenbeat` `fourfloor` `halftime` `shuffle` `breakbeat` `chip` |
-| `bass` | `synth` `finger` `sine` `chip` `none` |
+| `bass` | `synth` `finger` `sine` `chip` `upright`（ウッドベース）`fm` `tuba` `none` |
 | `bassLine` | `root` `drive` `offbeat` `syncopated`（キックに合わせる）`walking` `long` |
-| `chords` | `piano` `epiano` `synth` `organ` `chip` `none` |
-| `comping` | `block` `rhythm` `arpeggio` `sustain` |
-| `guitar` | `strum` `cutting` `arpeggio` `none` |
-| `pad` | `warm` `wide` `strings` `ambient` `none` |
-| `lead` | `saw` `pluck` `soft` `square` `flute` `brass` `bell` `piano` |
-| `arp` | `eighths` `sixteenths` `bells` `none` |
+| `chords` | `piano` `cutpiano`（リリースカットピアノ）`epiano` `synth` `organ` `chip` `harp` `marimba` `accordion` `pizzicato` `musicbox`（オルゴール）`none` |
+| `comping` | `block` `rhythm` `arpeggio` `sustain` `stab`（裏拍の短いコード）`broken`（分散和音／アルベルティ・バス） |
+| `guitar` | `strum` `cutting` `arpeggio` `fingerpick`（ナイロン弦の指弾き）`none` |
+| `pad` | `warm` `wide` `strings` `ambient` `choir` `none` |
+| `lead` | `saw` `pluck` `soft` `square` `pwm` `fm` `robot`（リング変調＋ビットクラッシュ）`flute` `whistle` `brass` `violin` `voice` `bell` `piano` `harp` `marimba` `musicbox` `accordion` |
+| `arp` | `eighths` `sixteenths` `bells` `harp` `marimba` `musicbox` `digital` `none` |
 | `swing` | 0〜0.5 |
+
+3/4 では、スタイルによって三拍子に合う楽器に替わります（Lo-fi はブラシとウッドベースのジャズワルツ、J-POP はナイロンギターの指弾き、Pop はハープのアルペジオ、Ambient はオルゴール）。`parts` で指定すればそちらが優先です。
 
 ```js
 MusicComposition.generate({ style: 'lofi', seed: 'rain', parts: { chords: 'piano', guitar: 'arpeggio', bassLine: 'walking' } });
+MusicComposition.generate({ seed: 'rain', parts: { lead: ['violin', 'flute', 'harp'] } }); // 候補からシードで選ぶ
 MusicComposition.parts        // 選べる値の一覧
 MusicComposition.styleParts   // 各スタイルの既定値
 ```
+
+### スタイルのミックスとカスタムスタイル
+
+```js
+// ミックス: 'jpop+lofi'（等分）、'jpop:2+lofi'（重み付き）、['jpop', 'lofi']、{ jpop: 2, lofi: 1 }
+MusicComposition.generate({ style: 'jpop+lofi', seed: 'rain' });
+
+// カスタムスタイル: base（スタイルかミックス）の設定を変える。指定しなかった項目は base のまま
+MusicComposition.generate({
+  seed: 'rain',
+  style: {
+    name: 'Night Waltz',
+    base: 'lofi+ambient',
+    bpm: [84, 96],                 // テンポの範囲
+    modes: ['minor', 'dorian'],
+    parts: { lead: 'violin', chords: 'harp', drums: 'brush' },
+    spice: 0.7,                    // 和声の彩り（セカンダリードミナント・借用和音・倚音）0〜1
+    sevenths: 0.8,                 // 7th コードの割合 0〜1
+    sync: 0.4,                     // メロディのシンコペーション 0〜1
+    notes: 4,                      // メロディの 1 小節あたりの音数 1.5〜8
+    form: { pre: 1, bridge: 0.5, drop: 0, modulate: 1 },  // Bメロ・ブリッジ・落ちサビ・転調の確率
+    reverb: 0.7, delay: 0.3, sidechain: 0, lofi: true
+  }
+});
+MusicComposition.styleSettings.lofi  // 各スタイルの設定（カスタムスタイルの出発点に）
+```
+
+ほかに `functional`（決まった進行ではなく機能和声で進む確率）、`humanize`（タイミングと強弱の揺れ）、`chordBars`（1 コードの小節数 1 / 2）、`harmony`（最後のサビのハモり）、`bend`（しゃくり）を指定できます。
 
 パターン（ドラムの叩き方、ベースライン、コードのリズム）はどの設定でも曲ごとに自動で作られます。
 
@@ -130,7 +163,9 @@ MusicComposition.styleParts   // 各スタイルの既定値
 ```js
 const song = MusicComposition.compose({ seed: 'sakura-2026', style: 'lofi' });
 song.title     // 'Crystal Drift'（シードから生成される曲名）
-song.style     // 'lofi'
+song.style     // 'lofi'（ミックスなら 'jpop+lofi'、カスタムスタイルなら 'custom'）
+song.styleLabel // 'Lo-fi'（'J-POP × Lo-fi'、カスタムスタイルの name）
+song.mix       // { lofi: 1 }（ミックスの重み）
 song.key       // 'A'
 song.mode      // 'dorian'
 song.bpm       // 70
@@ -157,6 +192,12 @@ npm run dev
 
 http://localhost:8765 を開きます。
 
+### スタイルと楽器の選び方
+
+- **ミックス**: スタイル欄の「ミックス」で、スタイルごとの割合（0〜3）をスライダーで決めます
+- **カスタムスタイル**: 「＋ カスタム」で、元にするスタイル（ミックスも可）・BPM の範囲・モード・和声（彩り、7th、自由な進行、コードの長さ）・メロディ（音の数、シンコペーション、しゃくり、ハモり）・構成（Bメロ、ブリッジ、落ちサビ、転調の確率）・揺らぎと音づくり（残響、ディレイ、サイドチェイン、テープ）・楽器と演奏を決めて保存します。保存先はブラウザ（localStorage）で、変えた項目だけを保存します。共有 URL に入るので、開いた人のブラウザにも追加されます。連続再生でも選べます
+- **楽器と演奏**: パートごとに、使ってよい楽器・弾き方をチェックボックスで選びます。何も選ばなければスタイルどおり（点線で表示）、1 つならそれ、複数なら曲ごとにシードで 1 つ選びます。「なし」を選ぶとそのパートを鳴らしません
+
 ### 曲の共有
 
 曲はオプションだけで決まるので、URL がそのまま曲になります。
@@ -168,11 +209,12 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 | パラメータ | 内容 |
 |---|---|
 | `seed` | シード（必須） |
-| `style` `key` `mode` `bpm` | 省略するとシードから決まる |
+| `style` `key` `mode` `bpm` | 省略するとシードから決まる。ミックスは `style=jpop,lofi`（重みは `jpop:2,lofi`） |
+| `cs` | カスタムスタイル（設定を JSON にして Base64URL にしたもの） |
 | `bars` / `sec` | 長さ（小節 / 秒）。どちらもなければ 32 小節 |
 | `loop=1` | ループ用 |
 | `meter=3/4` | 三拍子 |
-| `parts` | 楽器と演奏。`parts=guitar:strum,lead:brass,swing:0.15` |
+| `parts` | 楽器と演奏。`parts=guitar:strum,lead:brass|violin,swing:0.15`（`|` で区切った候補からシードで選ぶ） |
 
 共有ダイアログの「ほかのアプリで共有…」（`navigator.share`）では、ブラウザで描いたカード画像（1200×630 の PNG）も一緒に渡します。
 
@@ -180,7 +222,7 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 
 サイドバーの「連続再生」で、スタイル（複数選択）・モード・BPM の範囲・1 曲の長さ（秒または小節）を決めると、その範囲からランダムに選んだ新しい曲を止めるまで流し続けます。再生中に次の曲を Worker で作っておくので、曲の切り替わりで待ちません。「次の曲へ」やロック画面の「次のトラック」（Media Session）で飛ばせます。
 
-拍子（4/4・3/4）も選べます。「楽器と演奏」を変えていれば、その設定も使います。ルールは URL に入るので、ブックマークや共有もできます（再生はボタンを押してから始まります）。長さを小節で決めるときは `bars=16-32` です。
+拍子（4/4・3/4）と保存したカスタムスタイルも選べます。「ときどきスタイルを混ぜる」をオンにすると、選んだスタイルから 2 つを混ぜた曲も流します（URL では `mix=1`）。「楽器と演奏」を変えていれば、その設定も使います。ルールは URL に入るので、ブックマークや共有もできます（再生はボタンを押してから始まります）。長さを小節で決めるときは `bars=16-32` です。
 
 ```
 https://mcj.siyukatu.me/?radio=1&styles=lofi,ambient&modes=dorian&bpm=70-90&sec=60-120
