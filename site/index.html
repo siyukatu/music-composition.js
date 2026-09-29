@@ -453,6 +453,15 @@
         </div>
         <p class="hint" id="len-hint" hidden>BPM を変えても長さは変わりません。4 小節単位で、いちばん近い長さにします。</p>
 
+        <div class="field meter-field">
+          <div class="label">
+            <span id="meter-label">拍子</span>
+            <span class="seg" role="group" aria-labelledby="meter-label">
+              <button type="button" id="meter-4" aria-pressed="true">4/4</button><button type="button" id="meter-3" aria-pressed="false">3/4（ワルツ）</button>
+            </span>
+          </div>
+        </div>
+
         <label class="switch" for="loop">
           <span class="switch-text">ループ用に書き出す<small>イントロ・アウトロなし。末尾の残響を先頭に折り返し、継ぎ目なくループします</small></span>
           <input type="checkbox" id="loop">
@@ -485,6 +494,10 @@
         <div class="field">
           <div class="label">スタイル</div>
           <div class="chipset" id="radio-styles" role="group" aria-label="連続再生のスタイル（複数選択）"></div>
+        </div>
+        <div class="field">
+          <div class="label">拍子</div>
+          <div class="chipset" id="radio-meters" role="group" aria-label="連続再生の拍子（複数選択）"></div>
         </div>
         <div class="field">
           <div class="label">モード <small>選ばなければおまかせ</small></div>
@@ -682,7 +695,7 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=765880"></script>
+<script src="music-composition.js?h=e2423b"></script>
 <script src="video.js?h=b62d4d"></script>
 <script>
 (function () {
@@ -701,7 +714,7 @@
   var MODE_JA = { major: 'メジャー', minor: 'マイナー', dorian: 'ドリアン', mixolydian: 'ミクソリディアン', lydian: 'リディアン' };
   var SECTION_JA = { intro: 'INTRO', A: 'A', P: 'PRE', B: 'B', C: 'BRIDGE', outro: 'OUTRO' };
 
-  var state = { style: 'lofi', unit: 'bars', song: null, opts: null, url: null, busy: false, history: [], raf: 0, syncUrl: false, gen: 0 };
+  var state = { style: 'lofi', unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, history: [], raf: 0, syncUrl: false, gen: 0 };
   var audio = $('#audio');
   var canvas = $('#roll');
   var staticLayer = document.createElement('canvas');
@@ -805,6 +818,16 @@
   $('#dice').addEventListener('click', function () { $('#seed').value = newSeed(); updateSnippet(); });
 
   // Length in bars, or in seconds (then the tempo doesn't change it).
+  // Meter: 4/4 or 3/4.
+  function setMeter(m) {
+    state.meter = m === '3/4' ? '3/4' : '4/4';
+    $('#meter-4').setAttribute('aria-pressed', String(state.meter === '4/4'));
+    $('#meter-3').setAttribute('aria-pressed', String(state.meter === '3/4'));
+    updateSnippet();
+  }
+  $('#meter-4').addEventListener('click', function () { setMeter('4/4'); });
+  $('#meter-3').addEventListener('click', function () { setMeter('3/4'); });
+
   function setUnit(unit) {
     state.unit = unit;
     $('#unit-bars').setAttribute('aria-pressed', String(unit === 'bars'));
@@ -827,6 +850,7 @@
     if (bpm >= 40 && bpm <= 240) o.bpm = bpm;
     if (state.unit === 'sec') o.duration = Math.max(10, Math.min(600, parseInt($('#sec').value, 10) || 60));
     else o.bars = parseInt($('#bars').value, 10);
+    if (state.meter === '3/4') o.meter = '3/4';
     if ($('#loop').checked) o.loop = true;
     var parts = readParts();
     if (parts) o.parts = parts;
@@ -899,6 +923,7 @@
       ['style', info ? info[0] : song.style],
       ['key', song.key + ' ' + (MODE_JA[song.mode] || song.mode)],
       ['bpm', song.bpm],
+      ['meter', song.meter],
       ['bars', song.bars],
       ['seed', song.seed]
     ].map(function (c) { return '<span class="chip"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
@@ -937,7 +962,7 @@
 
   // History ---------------------------------------------------------------
   function addHistory(song, opts) {
-    state.history.unshift({ title: song.title, style: song.style, key: song.key, mode: song.mode, bpm: song.bpm, seed: song.seed, opts: opts });
+    state.history.unshift({ title: song.title, style: song.style, key: song.key, mode: song.mode, bpm: song.bpm, meter: song.meter, seed: song.seed, opts: opts });
     state.history = state.history.slice(0, 8);
     renderHistory();
   }
@@ -952,7 +977,7 @@
       b.innerHTML = '<span class="h-title"></span><span class="h-seed"></span><span class="h-meta"></span>';
       b.querySelector('.h-title').textContent = h.title;
       b.querySelector('.h-seed').textContent = h.seed;
-      b.querySelector('.h-meta').textContent = (STYLE_INFO[h.style] ? STYLE_INFO[h.style][0] : h.style) + ' · ' + h.key + ' ' + (MODE_JA[h.mode] || h.mode) + ' · ' + h.bpm + ' BPM';
+      b.querySelector('.h-meta').textContent = (STYLE_INFO[h.style] ? STYLE_INFO[h.style][0] : h.style) + ' · ' + h.key + ' ' + (MODE_JA[h.mode] || h.mode) + ' · ' + h.bpm + ' BPM' + (h.meter === '3/4' ? ' · 3/4' : '');
       b.title = '同じシードから再生成';
       b.addEventListener('click', function () { applyOptions(h.opts); make(h.opts, true); });
       li.appendChild(b);
@@ -979,6 +1004,7 @@
       setUnit('bars');
     }
     $('#loop').checked = !!o.loop;
+    setMeter(o.meter || '4/4');
     $('#rate').value = String(o.sampleRate || 44100);
     setParts(o.parts || {});
     if (o.parts) $('#parts').open = true;
@@ -1208,6 +1234,7 @@
     if (o.bpm) parts.push('bpm: <span class="n">' + o.bpm + '</span>');
     if (o.bars && o.bars !== 32) parts.push('bars: <span class="n">' + o.bars + '</span>');
     if (o.duration) parts.push('duration: <span class="n">' + o.duration + '</span>');
+    if (o.meter) parts.push('meter: ' + s(o.meter));
     if (o.loop) parts.push('loop: <span class="k">true</span>');
     if (o.parts) parts.push('parts: { ' + Object.keys(o.parts).map(function (k) {
       return k + ': ' + (typeof o.parts[k] === 'number' ? '<span class="n">' + o.parts[k] + '</span>' : s(o.parts[k]));
@@ -1262,6 +1289,8 @@
   }
   chipButtons($('#radio-styles'), RADIO_STYLES, function (v) { return STYLE_INFO[v] ? STYLE_INFO[v][0] : v; }, RADIO_STYLES);
   chipButtons($('#radio-modes'), RADIO_MODES, function (v) { return MODE_JA[v] || v; }, []);
+  var RADIO_METERS = ['4/4', '3/4'];
+  chipButtons($('#radio-meters'), RADIO_METERS, function (v) { return v; }, ['4/4']);
   ['#radio-bpm-min', '#radio-bpm-max', '#radio-sec-min', '#radio-sec-max'].forEach(function (id) {
     $(id).addEventListener('change', radioRulesChanged);
   });
@@ -1302,6 +1331,7 @@
     return {
       styles: pressedValues($('#radio-styles')),
       modes: pressedValues($('#radio-modes')),
+      meters: pressedValues($('#radio-meters')),
       bpm: numRange('#radio-bpm-min', '#radio-bpm-max', 40, 240),
       unit: radioUnit,
       len: len
@@ -1312,9 +1342,10 @@
     q.set('radio', '1');
     if (r.styles.length !== RADIO_STYLES.length) q.set('styles', r.styles.join(','));
     if (r.modes.length) q.set('modes', r.modes.join(','));
+    if (r.meters.length && r.meters.join() !== '4/4') q.set('meters', r.meters.join(','));
     if (r.bpm) q.set('bpm', r.bpm.join('-'));
     q.set(r.unit, r.len.join('-'));
-    return q.toString().replace(/%2C/g, ',');
+    return q.toString().replace(/%2C/g, ',').replace(/%2F/g, '/');
   }
   // /?radio=1&styles=lofi,ambient&modes=dorian&bpm=70-90&sec=60-120
   function radioRulesFromUrl() {
@@ -1326,6 +1357,8 @@
     var styles = (p.get('styles') || '').split(',').filter(function (v) { return RADIO_STYLES.indexOf(v) >= 0; });
     set($('#radio-styles'), styles.length ? styles : RADIO_STYLES);
     set($('#radio-modes'), (p.get('modes') || '').split(',').filter(function (v) { return RADIO_MODES.indexOf(v) >= 0; }));
+    var meters = (p.get('meters') || '').split(',').filter(function (v) { return RADIO_METERS.indexOf(v) >= 0; });
+    set($('#radio-meters'), meters.length ? meters : ['4/4']);
     var pair = function (v) { var m = /^(\d+)(?:-(\d+))?$/.exec(v || ''); return m ? [m[1], m[2] || m[1]] : null; };
     var bpm = pair(p.get('bpm')), sec = pair(p.get('sec')), barsR = pair(p.get('bars'));
     if (bpm) { $('#radio-bpm-min').value = bpm[0]; $('#radio-bpm-max').value = bpm[1]; }
@@ -1350,6 +1383,8 @@
     var parts = readParts();
     if (parts) o.parts = parts;
     if (r.modes.length) o.mode = r.modes[Math.floor(Math.random() * r.modes.length)];
+    var meter = r.meters.length ? r.meters[Math.floor(Math.random() * r.meters.length)] : '4/4';
+    if (meter === '3/4') o.meter = '3/4';
     if (r.bpm) o.bpm = between(r.bpm);
     var sr = parseInt($('#rate').value, 10);
     if (sr !== 44100) o.sampleRate = sr;
@@ -1467,10 +1502,11 @@
     if (o.bpm) q.set('bpm', String(o.bpm));
     if (o.bars && o.bars !== 32) q.set('bars', String(o.bars)); // 32 is the default
     else if (!o.bars && o.duration) q.set('sec', String(o.duration));
+    if (o.meter === '3/4') q.set('meter', '3/4');
     if (o.loop) q.set('loop', '1');
     // parts=drums:lofi,guitar:strum,swing:0.3
     if (o.parts) q.set('parts', Object.keys(o.parts).map(function (k) { return k + ':' + o.parts[k]; }).join(','));
-    return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':');
+    return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%2F/g, '/');
   }
   function partsFromParam(v) {
     var p = {}, any = false;
@@ -1496,6 +1532,7 @@
     var bars = parseInt(p.get('bars'), 10), sec = parseInt(p.get('sec'), 10);
     if (bars > 0) o.bars = bars;
     else if (sec > 0) o.duration = Math.max(10, Math.min(600, sec));
+    if (p.get('meter') === '3/4' || p.get('meter') === '3') o.meter = '3/4';
     if (p.get('loop') === '1') o.loop = true;
     var parts = partsFromParam(p.get('parts'));
     if (parts) o.parts = parts;
