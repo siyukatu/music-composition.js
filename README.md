@@ -124,6 +124,7 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 ```js
 MusicComposition.generate({ style: 'lofi', seed: 'rain', parts: { chords: 'piano', guitar: 'arpeggio', bassLine: 'walking' } });
 // 配列: 1 曲の中で使い分ける（Aメロ・サビ・ブリッジ・Bメロの順に割り当て、最後のサビは 2 つを重ねる）
+// 次のセクションへつなぐ弱起（アウフタクト）や、ベース・コードの食いは、つながる先のセクションの楽器で鳴らす
 // 'none' を混ぜると、そのパートが入らないセクションができる。sometimes: 曲によっては使わないパート
 MusicComposition.generate({ seed: 'rain', parts: { lead: ['flute', 'violin'], guitar: ['arpeggio', 'none'], sometimes: ['arp'] } });
 // together: 挙げたパートは、配列の楽器を最初から最後まで重ねて同時に鳴らす（lead・bass・chords・pad・arp）

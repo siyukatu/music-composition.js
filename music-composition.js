@@ -1385,7 +1385,7 @@
     // The sounds of the section being written (useSounds switches them).
     var kit, bassPatch, bassOct, chordPatch, padPatch, leadPatch, arpPatch, guitarPatch, swing, snareKind;
     var soundCache = {};
-    function useSounds(type) {
+    function soundsOf(type) {
       var S = soundCache[type];
       if (!S) {
         var q = sectionParts(type);
@@ -1396,6 +1396,14 @@
           snareKind: q.drums === 'electronic' || q.groove === 'fourfloor' ? 'clap' : 'snare'
         };
       }
+      return S;
+    }
+    // The sounds of the section a bar belongs to (for notes that lead into it).
+    function intoSounds(bar) {
+      return barInfo[bar] ? soundsOf(barInfo[bar].patKey) : null;
+    }
+    function useSounds(type) {
+      var S = soundsOf(type);
       parts = S.parts; kit = S.kit; bassPatch = S.bassPatch; bassOct = S.bassOct; chordPatch = S.chordPatch; padPatch = S.padPatch;
       leadPatch = S.leadPatch; arpPatch = S.arpPatch; guitarPatch = S.guitarPatch; swing = S.swing; snareKind = S.snareKind;
     }
@@ -1989,18 +1997,21 @@
             if (pushedIn && e[0] === 0) return; // tied over from the anticipation
             var len = Math.min(e[1], stopAt - e[0]);
             if (lastOfSong) len = Math.max(len, SPB);
-            var tone = e[2], m;
+            var tone = e[2], m, bPatch = bassPatch;
             var lastNote = ei === evs.length - 1 && k === segs.length - 1;
             if (tone === 'p' && lastNote && nextC && !sameChord(nextC, sg.c) && e[0] >= SPB - 4 && stopAt === SPB) {
               m = bassNote(nextC, 'r');
               len += 4;
               bassPushed = true;
+              // The push belongs to the next bar: played by the next section's bass.
+              var nbS = intoSounds(bar + span);
+              if (nbS && nbS.bassPatch) { bPatch = nbS.bassPatch; m += nbS.bassOct - bassOct; }
             } else if ((tone === 'a' || tone === 'p') && ei === evs.length - 1 && ei > 0 && nextC && !sameChord(nextC, sg.c)) {
               m = approachNote(bassNote(sg.c, 'r'), bassNote(nextC, 'r'), nextC);
             } else {
               m = bassNote(sg.c, tone === 'a' || tone === 'p' ? '5' : tone);
             }
-            notes.push({ t: T(bar, e[0]), d: len * stepDur * 0.92, midi: m, vel: V(Math.min(1, e[3] * E)), inst: 'bass', patch: bassPatch });
+            notes.push({ t: T(bar, e[0]), d: len * stepDur * 0.92, midi: m, vel: V(Math.min(1, e[3] * E)), inst: 'bass', patch: bPatch });
           });
         });
       }
@@ -2029,30 +2040,33 @@
           if (arpRate) for (var cs = sg.s, ci = 0; cs < end; cs++, ci++) evs.push([cs, 1, cs % 4 === 0 ? 0.85 : 0.65, ci % Math.min(3, vc.length)]);
           evs.forEach(function (e, ei) {
             if (compIn && e[0] === 0) return;
-            var chord = vc, len = e[1];
+            var chord = vc, len = e[1], cPatch = chordPatch, spec = chordSpec;
             if (e[3] === 'p' && ei === evs.length - 1 && k === segs.length - 1 && nextSeg && !sameChord(nextSeg.c, sg.c) && stopAt === SPB) {
               chord = voicing(nextSeg);
               len += 4;
               compPushed = true;
+              // The push belongs to the next bar: played by the next section's chord instrument.
+              var ncS = intoSounds(bar + span);
+              if (ncS && ncS.chordPatch) { cPatch = ncS.chordPatch; spec = PATCHES[cPatch]; }
             }
             var t0 = T(bar, e[0]), vel = V(Math.min(1, e[2] * E));
             // Release-cut: the chord stops short, however long the pattern holds it.
-            var dur = function (x) { return chordSpec.gate ? Math.min(x, chordSpec.gate * stepDur) : x; };
+            var dur = function (x) { return spec.gate ? Math.min(x, spec.gate * stepDur) : x; };
             if (typeof e[3] === 'number') {
               var m = chord[e[3] % chord.length] + (e[3] >= chord.length ? 12 : 0);
-              notes.push({ t: t0, d: dur(len * stepDur * 0.9), midi: m, vel: vel, inst: 'chords', patch: chordPatch });
+              notes.push({ t: t0, d: dur(len * stepDur * 0.9), midi: m, vel: vel, inst: 'chords', patch: cPatch });
               return;
             }
-            var roll = chordSpec.roll || 0;
+            var roll = spec.roll || 0;
             chord.forEach(function (m, i) {
-              notes.push({ t: t0 + i * roll, d: dur(len * stepDur * 0.92), midi: m, vel: vel * (chordPatch === 'epiano' ? 0.85 : 1), inst: 'chords', patch: chordPatch });
+              notes.push({ t: t0 + i * roll, d: dur(len * stepDur * 0.92), midi: m, vel: vel * (cPatch === 'epiano' ? 0.85 : 1), inst: 'chords', patch: cPatch });
             });
             // Left hand (piano, harp): the bass note an octave below on the chord change.
-            if (chordSpec.lh && !st.rootless && (e[0] === sg.s || chord !== vc)) {
+            if (spec.lh && !st.rootless && (e[0] === sg.s || chord !== vc)) {
               var lh = 48 + ((keyPc + chordPitch(sg.c, sg.c.deg + sg.c.bass)) % 12 + 12) % 12;
               if (chord !== vc) lh = 48 + ((keyPc + chordPitch(nextSeg.c, nextSeg.c.deg + nextSeg.c.bass)) % 12 + 12) % 12;
               if (lh > 55) lh -= 12;
-              notes.push({ t: t0, d: Math.max(len, 8) * stepDur, midi: lh, vel: vel * 0.8, inst: 'chords', patch: chordPatch });
+              notes.push({ t: t0, d: Math.max(len, 8) * stepDur, midi: lh, vel: vel * 0.8, inst: 'chords', patch: cPatch });
             }
           });
         });
@@ -2296,6 +2310,9 @@
           pending.forEach(function (p, pi) {
             var dist = pending.length - pi;
             p.midi = leadBase + chordPitch(p.chord, into + (fromAbove ? dist : -dist));
+            // A pickup belongs to what it leads into: the next section's instrument plays it.
+            p.patch = leadPatch;
+            p.into = si;
             if (Math.abs(firstP - p.after) > 4 && !(j === 0 && entry !== null)) dropped.push(p);
           });
           pending = [];
@@ -2469,12 +2486,14 @@
         if (n.harmony) return;
         var tos = (always[n.patch] || []).slice();
         // (a part being arranged gets its own layers below)
-        if (lastChorus >= 0 && layer[n.patch] && !arrangedPatch(n.patch) && n.t >= lc0 - 1e-6 && n.t < lc1 - 1e-6 && tos.indexOf(layer[n.patch]) < 0) tos.push(layer[n.patch]);
+        var inLast = n.into !== undefined ? n.into === lastChorus : n.t >= lc0 - 1e-6 && n.t < lc1 - 1e-6;
+        if (lastChorus >= 0 && layer[n.patch] && !arrangedPatch(n.patch) && inLast && tos.indexOf(layer[n.patch]) < 0) tos.push(layer[n.patch]);
         tos.forEach(function (to) { add(n, to); });
       });
     }
     if (Object.keys(arranged).length) arrange();
     notes = notes.concat(extra);
+    notes.forEach(function (n) { delete n.into; });
     function arrangedPatch(p) {
       return Object.keys(arranged).some(function (k) { return LAYER_SOUND[k][arranged[k][0]] === p; });
     }
@@ -2500,7 +2519,10 @@
         peak: ['harmony', 'counter', 'unison'], bridge: ['tune', 'counter'], outro: ['counter']
       };
       var EXTRAS_ON = { intro: 0, bare: 0, build: 1, full: 9, peak: 9, bridge: 1, outro: 9 };
-      var inSection = function (n, x) { return n.t >= x.start - 1e-6 && n.t < x.start + x.bars * barDur - 1e-6; };
+      var inSection = function (n, x) {
+        if (n.into !== undefined) return sections[n.into] === x; // a pickup counts with the section it leads into
+        return n.t >= x.start - 1e-6 && n.t < x.start + x.bars * barDur - 1e-6;
+      };
       Object.keys(arranged).forEach(function (k) {
         var P2 = arranged[k].map(function (v) { return LAYER_SOUND[k][v]; }), main = P2[0];
         var own = notes.filter(function (n) { return n.patch === main && !n.layer; });

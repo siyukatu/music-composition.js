@@ -248,22 +248,35 @@ test('custom styles change the base style and render on their own', () => {
 });
 
 test('a list of parts is used across the song: verse, chorus, bridge; the last chorus layers them', () => {
-  let layered = 0;
+  let layered = 0, pickups = 0;
   for (let i = 0; i < 12; i++) {
     const o = { seed: 'ch' + i, style: 'jpop', bars: 64, parts: { lead: ['violin', 'flute'], chords: ['piano', 'harp', 'none'] } };
     const s = MusicComposition.compose(o);
     assert.deepStrictEqual(MusicComposition.compose(o).notes, s.notes);
     assert.deepStrictEqual(s.parts.lead.slice().sort(), ['flute', 'violin']);
-    const leadIn = type => new Set(s.notes.filter(n => n.inst === 'lead' && !n.layer && s.sections.some(x => x.type === type && n.t >= x.start && n.t < x.start + x.bars * s.barDuration)).map(n => n.patch));
+    // (Pickups at the end of a section lead into the next one: leave the last bar out here.)
+    const lead = s.notes.filter(n => n.inst === 'lead' && !n.layer);
+    const leadIn = type => new Set(lead.filter(n => s.sections.some(x => x.type === type && n.t >= x.start && n.t < x.start + (x.bars - 1) * s.barDuration)).map(n => n.patch));
     const a = leadIn('A'), b = leadIn('B');
     assert.strictEqual(a.size, 1);
     assert.strictEqual(b.size, 1);
     assert.notDeepStrictEqual([...a], [...b], 'verse and chorus use different leads');
+    // A pickup that runs from a section into the next one is played by the next one's instrument.
+    s.sections.forEach((x, k) => {
+      const nx = s.sections[k + 1];
+      if (!nx || x.type === 'intro') return;
+      const end = x.start + x.bars * s.barDuration;
+      const into = lead.filter(n => n.t >= end - s.barDuration / 2 && n.t < end - 1e-6 && Math.abs(n.d - 2 * s.stepDuration * 0.9) < 1e-6);
+      const nextPatch = lead.find(n => n.t >= end - 1e-6);
+      if (!into.length || !nextPatch) return;
+      into.forEach(n => { pickups++; assert.strictEqual(n.patch, nextPatch.patch, x.type + ' -> ' + nx.type); });
+    });
     // 'none' among others: some sections go without chords, the chorus keeps them.
     assert.notStrictEqual(s.parts.chords[1], 'none');
     if (s.notes.some(n => n.layer)) layered++;
   }
   assert.ok(layered >= 10, layered + ' songs layered the last chorus');
+  assert.ok(pickups >= 10, pickups + ' pickups checked');
   assert.throws(() => MusicComposition.compose({ parts: { lead: ['violin', 'kazoo'] } }), /unknown lead/);
 });
 
