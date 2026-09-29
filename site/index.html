@@ -305,11 +305,75 @@
   .transport .spacer { flex: 1; }
   .dl { text-decoration: none; }
 
-  .roll-wrap { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--roll-bg); }
-  canvas#roll { display: block; width: 100%; height: 300px; cursor: pointer; touch-action: manipulation; }
+  .roll-wrap { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--roll-bg); --roll-h: 300px; }
+  .roll-scroll {
+    height: calc(var(--roll-h) + 10px); overflow-x: auto; overflow-y: hidden; cursor: pointer; scrollbar-width: thin;
+    touch-action: pan-x; overscroll-behavior-x: contain;
+  }
+  .roll-scroll.dragging { cursor: grabbing; }
+  .roll-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .roll-space { height: var(--roll-h); }
+  canvas#roll { position: absolute; left: 0; top: 0; width: 100%; height: var(--roll-h); pointer-events: none; }
   .busy-veil {
-    position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--roll-bg) 70%, transparent);
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px;
+    background: color-mix(in srgb, var(--roll-bg) 78%, transparent); backdrop-filter: blur(2px);
     font-family: var(--font-mono); font-size: 13px; color: var(--muted);
+    animation: veil-in .25s ease-out;
+  }
+  .busy-veil[hidden] { display: none !important; }
+  /* Composing: an equalizer of little note blocks rising and falling in turn. */
+  .composing { display: flex; align-items: flex-end; gap: 5px; height: 56px; }
+  .composing i {
+    width: 8px; border-radius: 3px; background: var(--accent); height: 100%; transform-origin: bottom;
+    animation: eq 1.1s cubic-bezier(.45, 0, .55, 1) infinite; animation-delay: calc(var(--i) * -0.09s);
+    opacity: .85;
+  }
+  .composing i:nth-child(3n) { background: var(--chords); }
+  .composing i:nth-child(4n) { background: var(--bass); }
+  .composing-text { margin: 0; letter-spacing: .04em; animation: fade-swap .35s ease-out; }
+  @keyframes eq { 0%, 100% { transform: scaleY(.15); } 50% { transform: scaleY(1); } }
+  @keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fade-swap { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* A new song: the title and its facts arrive in turn. */
+  .song-title .ch { display: inline-block; animation: rise .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i) * 18ms); white-space: pre; }
+  .chips.enter .chip { animation: rise .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(120ms + var(--i) * 45ms); }
+  .progression .c.enter { animation: rise .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(200ms + var(--i) * 22ms); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+
+  /* Buttons respond to the press. */
+  .btn, .style-btn, .chip-btn, .np-btn, .np-play, .play, .icon-btn, .pchk span { transition: transform .12s ease, background .15s, border-color .15s, color .15s; }
+  .btn:active, .style-btn:active, .chip-btn:active, .np-btn:active, .np-play:active, .play:active, .icon-btn:active { transform: scale(.94); }
+  .play[disabled]:active { transform: none; }
+
+  /* Dialogs open with a lift. */
+  dialog[open] { animation: dialog-in .28s cubic-bezier(.2, .9, .25, 1.05); }
+  dialog[open]::backdrop { animation: veil-in .25s ease-out; }
+  dialog.closing { animation: dialog-out .18s ease-in forwards; }
+  dialog.closing::backdrop { animation: veil-out .18s ease-in forwards; }
+  @keyframes dialog-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+  @keyframes dialog-out { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+  @keyframes veil-out { to { opacity: 0; } }
+
+  /* Toast: short news above the player bar. */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 30; transform: translate(-50%, 16px);
+    background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 99px; font-size: 13.5px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .25s, transform .3s cubic-bezier(.2, .9, .25, 1.1);
+    max-width: calc(100vw - 32px); text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 640px) { .toast { bottom: calc(136px + env(safe-area-inset-bottom)); } }
+
+  /* Site modal (instead of the browser's confirm). */
+  dialog.modal { width: min(420px, calc(100vw - 32px)); }
+  .modal p { margin: 0; color: var(--muted); font-size: 14px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .modal-actions .btn { padding: 10px 16px; font-size: 14px; }
+  .btn-danger { background: var(--error); color: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .composing i, .song-title .ch, .chips.enter .chip, .progression .c.enter, dialog[open], dialog[open]::backdrop, .busy-veil, .composing-text { animation: none !important; }
   }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -415,7 +479,24 @@
   }
   .np-btn:hover { background: var(--surface-2); }
   .np-btn[aria-pressed="true"] { color: var(--accent); }
+  .np-btn[disabled] { opacity: .35; cursor: default; background: none; }
   #np-like[aria-pressed="true"] svg { fill: currentColor; }
+  .np-btn.busy svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* The heart pops when a song is liked. */
+  .pop svg { animation: pop .42s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
+  /* A new track slides into the bar. */
+  .np.swap .np-meta, .np.swap .np-art { animation: np-in .45s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes np-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  .np { transform: translateY(0); transition: transform .45s cubic-bezier(.2, .9, .25, 1); }
+  .np.hide { transform: translateY(110%); }
+  /* While playing, a ring breathes around the play button on the beat. */
+  .np-play { position: relative; }
+  .np-play::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; pointer-events: none; }
+  .np.playing .np-play::after { animation: beat var(--beat, .5s) ease-out infinite; }
+  @keyframes beat { 0% { opacity: .55; transform: scale(.92); } 100% { opacity: 0; transform: scale(1.18); } }
+  @media (prefers-reduced-motion: reduce) { .np.playing .np-play::after, .pop svg, .np.swap .np-meta, .np.swap .np-art, .np-btn.busy svg { animation: none; } }
   .np-play { appearance: none; border: none; width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: var(--surface); display: grid; place-items: center; cursor: pointer; }
   .np-play:hover { background: var(--accent); color: var(--accent-ink); }
   .np-time { font: 12px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 4px; white-space: nowrap; }
@@ -440,6 +521,8 @@
   .history li { display: flex; align-items: center; gap: 2px; }
   .history li > .h-main { flex: 1; min-width: 0; }
   .history li.playing .h-title { color: var(--accent); }
+  .history li.enter { animation: rise .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i) * 30ms); }
+  @media (prefers-reduced-motion: reduce) { .history li.enter { animation: none; } }
   .h-like { appearance: none; border: none; background: none; color: var(--muted); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; flex: none; }
   .h-like:hover { background: var(--surface-2); color: var(--ink); }
   .h-like[aria-pressed="true"] { color: var(--accent); }
@@ -490,7 +573,7 @@
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   @media (max-width: 480px) {
     .wrap { padding-inline: 16px; }
-    canvas#roll { height: 240px; }
+    .roll-wrap { --roll-h: 240px; }
   }
 </style>
 </head>
@@ -718,8 +801,17 @@
       </div>
 
       <div class="roll-wrap">
-        <canvas id="roll" aria-label="ピアノロール。クリックでその位置へ移動"></canvas>
-        <div class="busy-veil" id="veil">作曲中…</div>
+        <!-- The roll scrolls sideways at a fixed scale; the canvas draws the visible part. -->
+        <div class="roll-scroll" id="roll-scroll" tabindex="0" aria-label="ピアノロール。クリックでその位置へ移動、横にスクロールできます">
+          <div class="roll-space" id="roll-space"></div>
+        </div>
+        <canvas id="roll" aria-hidden="true"></canvas>
+        <div class="busy-veil" id="veil">
+          <div class="composing" aria-hidden="true">
+            <i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i>
+          </div>
+          <p class="composing-text" id="veil-text">作曲中…</p>
+        </div>
       </div>
       <div class="legend" aria-hidden="true">
         <span><i style="background:var(--lead)"></i>メロディ</span>
@@ -926,6 +1018,12 @@
     </div>
     <div class="np-extra">
       <span class="np-time" id="np-time">0:00 / 0:00</span>
+      <button type="button" class="np-btn" id="np-extend" aria-label="この曲を延長" title="この曲を延長（+16 小節、E）">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12h10M9 7l5 5-5 5"/><path d="M18 8v8M14 12h8" stroke-width="1.8"/></svg>
+      </button>
+      <button type="button" class="np-btn" id="np-endless" aria-pressed="false" aria-label="エンドレス再生" title="エンドレス再生：終わりに近づくと延長し続ける（∞）">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 8.5c-2 0-3.5 1.6-3.5 3.5s1.5 3.5 3.5 3.5c3.5 0 7.5-7 11-7 2 0 3.5 1.6 3.5 3.5s-1.5 3.5-3.5 3.5c-3.5 0-7.5-7-11-7z"/></svg>
+      </button>
       <button type="button" class="np-btn" id="np-repeat" aria-pressed="false" aria-label="この曲をくり返す" title="この曲をくり返す（R）">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3l3 3-3 3"/><path d="M4 11V9a3 3 0 0 1 3-3h13"/><path d="M7 21l-3-3 3-3"/><path d="M20 13v2a3 3 0 0 1-3 3H4"/></svg>
       </button>
@@ -935,6 +1033,19 @@
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog class="share modal" id="modal" aria-labelledby="modal-h">
+  <form method="dialog" class="share-body">
+    <div class="share-head"><h2 id="modal-h"></h2></div>
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="modal-cancel">キャンセル</button>
+      <button type="button" class="btn btn-primary" id="modal-ok">OK</button>
+    </div>
+  </form>
+</dialog>
 
 <audio id="audio" preload="auto"></audio>
 <script src="music-composition.js?h=e74dd0"></script>
@@ -961,10 +1072,11 @@
   var SECTION_JA = { intro: 'INTRO', A: 'A', P: 'PRE', B: 'B', C: 'BRIDGE', outro: 'OUTRO' };
   var STYLES = MusicComposition.styles;
 
-  var state = { style: 'lofi', mix: { jpop: 1, lofi: 1 }, unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, raf: 0, syncUrl: false, gen: 0, repeat: false, context: null };
+  var state = { style: 'lofi', mix: { jpop: 1, lofi: 1 }, unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, raf: 0, syncUrl: false, gen: 0, repeat: false, context: null,
+    endless: false, extending: false, reveal: null };
   var audio = $('#audio');
   var canvas = $('#roll');
-  var staticLayer = document.createElement('canvas');
+  var rollScroll = $('#roll-scroll');
 
   $('#version').textContent = 'music-composition.js v' + MusicComposition.version + ' · GitHub';
 
@@ -1404,20 +1516,64 @@
     else { c = { id: 'c' + Date.now().toString(36), def: def }; customs.push(c); }
     saveCustoms();
     renderRadioStyles();
-    $('#cs').close();
+    closeDialog($('#cs'));
     setStyle('custom:' + c.id);
+    toast('「' + (def.name || 'Custom') + '」を保存しました');
   });
-  $('#cs-cancel').addEventListener('click', function () { $('#cs').close(); });
-  $('#cs-close').addEventListener('click', function () { $('#cs').close(); });
+  $('#cs-cancel').addEventListener('click', function () { closeDialog($('#cs')); });
+  $('#cs-close').addEventListener('click', function () { closeDialog($('#cs')); });
   $('#cs-delete').addEventListener('click', function () {
     var c = cs.editing;
-    if (!c || !confirm('「' + (c.def.name || 'Custom') + '」を削除しますか？')) return;
-    customs = customs.filter(function (x) { return x !== c; });
-    saveCustoms();
-    renderRadioStyles();
-    $('#cs').close();
-    setStyle(state.style === 'custom:' + c.id ? 'auto' : state.style);
+    if (!c) return;
+    var name = c.def.name || 'Custom';
+    askModal({ title: 'スタイルを削除', text: '「' + name + '」を削除しますか？ この操作は元に戻せません。', ok: '削除', danger: true }).then(function (yes) {
+      if (!yes) return;
+      customs = customs.filter(function (x) { return x !== c; });
+      saveCustoms();
+      renderRadioStyles();
+      closeDialog($('#cs'));
+      setStyle(state.style === 'custom:' + c.id ? 'auto' : state.style);
+      toast('「' + name + '」を削除しました');
+    });
   });
+
+  // Site dialogs: close with a little motion; a modal instead of confirm(); toasts.
+  function closeDialog(d) {
+    if (!d.open || d.classList.contains('closing')) return;
+    if (reduceMotion.matches) { d.close(); return; }
+    d.classList.add('closing');
+    var done = function () { d.removeEventListener('animationend', done); d.classList.remove('closing'); d.close(); };
+    d.addEventListener('animationend', done);
+    setTimeout(done, 260); // in case the animation never runs
+  }
+  var modal = $('#modal'), modalAnswer = null;
+  function askModal(o) {
+    if (modalAnswer) modalAnswer(false);
+    $('#modal-h').textContent = o.title;
+    $('#modal-text').textContent = o.text;
+    var ok = $('#modal-ok');
+    ok.textContent = o.ok || 'OK';
+    ok.className = 'btn ' + (o.danger ? 'btn-danger' : 'btn-primary');
+    return new Promise(function (resolve) {
+      modalAnswer = function (v) { modalAnswer = null; closeDialog(modal); resolve(v); };
+      modal.showModal();
+      (o.danger ? $('#modal-cancel') : ok).focus();
+    });
+  }
+  $('#modal-ok').addEventListener('click', function () { if (modalAnswer) modalAnswer(true); });
+  $('#modal-cancel').addEventListener('click', function () { if (modalAnswer) modalAnswer(false); });
+  modal.addEventListener('cancel', function (e) { e.preventDefault(); if (modalAnswer) modalAnswer(false); });
+  modal.addEventListener('click', function (e) { if (e.target === modal && modalAnswer) modalAnswer(false); });
+  var toastTimer = 0;
+  function toast(text) {
+    var el = $('#toast');
+    el.textContent = text;
+    el.classList.remove('show');
+    void el.offsetWidth; // restart the transition
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2600);
+  }
 
   var keySel = $('#key');
   keySel.innerHTML = '<option value="">おまかせ</option>' + MusicComposition.keys.map(function (k) { return '<option value="' + k + '">' + k + '</option>'; }).join('');
@@ -1547,17 +1703,23 @@
     setTimeout(go, 50);
   }
 
-  function load(song, wav, opts, ms) {
-    var wasPlaying = !audio.paused;
-    audio.pause();
-    if (state.url) URL.revokeObjectURL(state.url);
+  // longer: the same song made longer (extend / endless) — playback carries on
+  // from where it is instead of starting over.
+  function load(song, wav, opts, ms, longer) {
+    var wasPlaying = !audio.paused, oldUrl = state.url, oldEnd = playLength();
     state.song = song;
     state.opts = opts;
+    if (!longer) state.baseOpts = opts; // "next" makes a new song of the original length
     $('#share-open').disabled = false;
     state.url = MusicComposition.toURL(wav);
-    audio.src = state.url;
-    audio.loop = song.loop || state.repeat;
-    $('#title').textContent = song.title;
+    if (longer) handover(state.url, oldUrl);
+    else {
+      audio.pause();
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      audio.src = state.url;
+      audio.loop = song.loop || state.repeat;
+    }
+    if (!longer) setTitle(song.title);
     var chips = [
       ['style', styleName(song)],
       ['key', song.key + ' ' + (MODE_JA[song.mode] || song.mode)],
@@ -1565,11 +1727,13 @@
       ['meter', song.meter],
       ['bars', song.bars],
       ['seed', song.seed]
-    ].map(function (c) { return '<span class="chip"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
-    if (song.loop) chips += '<span class="chip loop"><b>loop</b>' + fmt(song.loopEnd) + '</span>';
+    ].map(function (c, i) { return '<span class="chip" style="--i:' + i + '"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
+    if (song.loop) chips += '<span class="chip loop" style="--i:6"><b>loop</b>' + fmt(song.loopEnd) + '</span>';
     $('#chips').innerHTML = chips;
+    $('#chips').classList.remove('enter');
+    if (!longer) { void $('#chips').offsetWidth; $('#chips').classList.add('enter'); }
     $('#t-dur').textContent = fmt(playLength());
-    $('#t-cur').textContent = '0:00';
+    if (!longer) $('#t-cur').textContent = '0:00';
     var dl = $('#download');
     dl.href = state.url;
     dl.download = fileBase() + '.wav';
@@ -1590,21 +1754,50 @@
     var bytes = wav.byteLength;
     $('#stats').textContent = '生成 ' + (ms / 1000).toFixed(2) + ' 秒 · ' + ((opts.sampleRate || 44100) / 1000) + ' kHz · ' +
       (bytes / 1048576).toFixed(1) + ' MB · 音符 ' + song.notes.length + ' 個';
-    renderProgression(song);
-    drawStatic();
+    renderProgression(song, longer);
+    drawStatic(longer);
+    // The notes sweep in: over the view for a new song, over the added bars for a longer one.
+    state.reveal = reduceMotion.matches ? null : { at: performance.now(), from: longer ? oldEnd : 0, to: longer ? playLength() : viewEnd() };
     drawFrame();
+    wake();
     updateSnippet(opts);
-    nowPlaying(song);
-    if (wasPlaying) audio.play().catch(function () {});
+    nowPlaying(song, longer);
+    if (wasPlaying && !longer) audio.play().catch(function () {});
   }
 
   function playLength() { return state.song ? (state.song.loop ? state.song.loopEnd : state.song.duration) : 0; }
 
+  // The title arrives letter by letter.
+  function setTitle(text) {
+    var el = $('#title');
+    el.setAttribute('aria-label', text);
+    if (reduceMotion.matches) { el.textContent = text; return; }
+    el.innerHTML = Array.from(text).map(function (ch, i) {
+      return '<span class="ch" aria-hidden="true" style="--i:' + Math.min(i, 40) + '">' + escapeHtml(ch) + '</span>';
+    }).join('');
+  }
+
+  // While composing: what the composer is "doing", in turn.
+  var VEIL_STEPS = ['コード進行を組み立てています…', 'メロディを書いています…', '楽器を選んでいます…', '演奏を録音しています…', 'ミックスしています…'];
+  var veilTimer = 0;
   function setBusy(b) {
     state.busy = b;
     $('#veil').hidden = !b;
     $('#gen-new').disabled = b;
     $('#gen-same').disabled = b;
+    $('#np-next').classList.toggle('busy', b);
+    clearInterval(veilTimer);
+    if (!b) return;
+    var step = 0, text = $('#veil-text');
+    text.textContent = VEIL_STEPS[0];
+    veilTimer = setInterval(function () {
+      step = Math.min(step + 1, VEIL_STEPS.length - 1);
+      var p = document.createElement('p');
+      p.className = 'composing-text'; p.id = 'veil-text'; p.textContent = VEIL_STEPS[step];
+      text.replaceWith(p);
+      text = p;
+      if (step === VEIL_STEPS.length - 1) clearInterval(veilTimer);
+    }, 700);
   }
   function showError(err) {
     var el = $('#error');
@@ -1637,21 +1830,36 @@
   function isFav(id) { return lib.fav.some(function (x) { return x.id === id; }); }
   function toggleFav(e) {
     if (!e) return;
-    if (isFav(e.id)) lib.fav = lib.fav.filter(function (x) { return x.id !== e.id; });
+    var liked = !isFav(e.id);
+    if (!liked) lib.fav = lib.fav.filter(function (x) { return x.id !== e.id; });
     else lib.fav.unshift(e);
+    if (liked && e.id === currentId()) popIt($('#np-like'));
+    toast(liked ? '「' + e.title + '」をお気に入りに追加しました' : 'お気に入りから外しました');
     saveLib();
     renderHistory();
     nowPlaying(state.song);
   }
+  function popIt(btn) {
+    btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop');
+  }
   var HEART = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
-  function renderHistory() {
+  // animate: the rows come in one after another (a new tab, the first view);
+  // otherwise only a row that was not there before.
+  function renderHistory(animate) {
     var ol = $('#history'), list = libTab === 'fav' ? lib.fav : lib.recent, cur = currentId();
+    var had = {};
+    Array.prototype.forEach.call(ol.children, function (li) { had[li.dataset.id] = true; });
     ol.innerHTML = '';
     $('#history-empty').hidden = list.length > 0;
     $('#history-empty').textContent = libTab === 'fav' ? 'お気に入りはまだありません（♡ で追加できます）' : 'まだありません';
-    list.forEach(function (h) {
+    list.forEach(function (h, i) {
       var li = document.createElement('li');
+      li.dataset.id = h.id;
       if (h.id === cur) li.className = 'playing';
+      if ((animate && i < 20) || (!animate && ol.dataset.tab === libTab && !had[h.id])) {
+        li.classList.add('enter');
+        li.style.setProperty('--i', animate ? i : 0);
+      }
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'h-main';
@@ -1672,15 +1880,17 @@
       li.appendChild(like);
       ol.appendChild(li);
     });
+    ol.dataset.tab = libTab;
   }
   function setLibTab(tab) {
+    var changed = tab !== libTab;
     libTab = tab;
     ['recent', 'fav'].forEach(function (t) {
       var b = $('#lib-' + t);
       b.setAttribute('aria-selected', String(t === tab));
       b.setAttribute('aria-pressed', String(t === tab));
     });
-    renderHistory();
+    renderHistory(changed);
   }
   $('#lib-recent').addEventListener('click', function () { setLibTab('recent'); });
   $('#lib-fav').addEventListener('click', function () { setLibTab('fav'); });
@@ -1702,7 +1912,7 @@
       var i = lib.fav.findIndex(function (x) { return x.id === id; });
       if (i >= 0 && i + 1 < lib.fav.length) { playEntry(lib.fav[i + 1], 'fav'); return; }
     }
-    var o = JSON.parse(JSON.stringify(state.opts));
+    var o = JSON.parse(JSON.stringify(state.baseOpts || state.opts));
     o.seed = newSeed();
     state.context = null;
     applyOptions(o);
@@ -1710,12 +1920,12 @@
   }
   function prevTrack() {
     if (!state.opts) return;
-    if (audio.currentTime > 3 || state.busy) { audio.currentTime = 0; drawFrame(); return; }
+    if (audio.currentTime > 3 || state.busy) { seekTo(0); return; }
     var fav = state.context && state.context.tab === 'fav', list = fav ? lib.fav : lib.recent, id = currentId();
     var i = list.findIndex(function (x) { return x.id === id; });
     var target = i < 0 ? list[0] : fav ? list[i - 1] : list[i + 1];
     if (target) playEntry(target, fav ? 'fav' : 'recent');
-    else { audio.currentTime = 0; drawFrame(); }
+    else seekTo(0);
   }
   function applyOptions(o) {
     $('#seed').value = o.seed;
@@ -1806,27 +2016,81 @@
     if (!state.song) return;
     if (audio.paused) audio.play().catch(showError); else audio.pause();
   }
-  audio.addEventListener('play', function () {
-    $('#play-icon').innerHTML = pauseIcon; $('#play').setAttribute('aria-label', '一時停止');
-    npPlaying(true);
-    loopFrame();
-  });
-  audio.addEventListener('pause', function () {
-    $('#play-icon').innerHTML = playIcon; $('#play').setAttribute('aria-label', '再生');
-    npPlaying(false);
-    cancelAnimationFrame(state.raf); drawFrame();
-  });
-  audio.addEventListener('playing', function () {
-    if (radio.blocked) { radio.blocked = false; radioStatus(); }
-  });
-  // (rAF stops in a background tab; the bar and the lock screen still follow the time.)
-  audio.addEventListener('timeupdate', function () { npTime(); });
-  audio.addEventListener('ended', function () {
-    drawFrame();
-    if (radio.on) radioAdvance();
-    else if (state.context && state.context.tab === 'fav') nextTrack(); // a favourites playlist plays on
-  });
-  // Keys: Space play/pause, ←/→ 5 seconds, N next, P previous, L favourite, R repeat.
+  // The player's events. A longer version of the song plays on a fresh <audio>
+  // (see handover), so the listeners are kept here and moved over to it.
+  var audioEvents = {
+    play: function () {
+      $('#play-icon').innerHTML = pauseIcon; $('#play').setAttribute('aria-label', '一時停止');
+      npPlaying(true);
+      wake();
+    },
+    pause: function () {
+      $('#play-icon').innerHTML = playIcon; $('#play').setAttribute('aria-label', '再生');
+      npPlaying(false);
+      wake();
+    },
+    playing: function () {
+      if (radio.blocked) { radio.blocked = false; radioStatus(); }
+    },
+    // (rAF stops in a background tab; the bar and the lock screen still follow the time.)
+    timeupdate: function () { npTime(); endlessCheck(); },
+    ended: function () {
+      drawFrame();
+      if (radio.on) radioAdvance();
+      else if (state.endless || (state.context && state.context.tab === 'fav')) nextTrack(); // a playlist plays on
+    }
+  };
+  function bindAudio(el, on) {
+    for (var k in audioEvents) el[on ? 'addEventListener' : 'removeEventListener'](k, audioEvents[k]);
+  }
+  bindAudio(audio, true);
+
+  // Hand playback over to the longer version: it starts silently at the same
+  // moment, then the two cross-fade (the music up to here is the same).
+  function handover(url, oldUrl) {
+    var old = audio, next = document.createElement('audio');
+    next.preload = 'auto';
+    next.id = 'audio';
+    var playing = !old.paused, released = false;
+    var release = function () {
+      if (released) return;
+      released = true;
+      old.pause();
+      old.removeAttribute('src');
+      try { old.load(); } catch (e) {}
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+    };
+    next.addEventListener('loadedmetadata', function ready() {
+      next.removeEventListener('loadedmetadata', ready);
+      if (audio !== old) { URL.revokeObjectURL(url); return; } // something else took over meanwhile
+      next.currentTime = Math.min(old.currentTime, next.duration - 0.05);
+      next.loop = !!(state.song && state.song.loop) || state.repeat;
+      bindAudio(old, false);
+      bindAudio(next, true);
+      old.replaceWith(next);
+      audio = next;
+      if (!playing) { release(); drawFrame(); return; }
+      next.volume = 0;
+      next.play().then(function () {
+        var t0 = performance.now(), FADE = 240;
+        next.currentTime = old.currentTime; // line the two up again after the start
+        (function fade() {
+          var p = Math.min(1, (performance.now() - t0) / FADE);
+          next.volume = p;
+          old.volume = 1 - p;
+          if (p < 1) setTimeout(fade, 16); else release();
+        })();
+      }).catch(function () {
+        // The browser would not start the new one on its own: stop there, the play button resumes.
+        next.volume = 1;
+        next.currentTime = old.currentTime;
+        release();
+        audioEvents.pause();
+      });
+    });
+    next.src = url;
+  }
+  // Keys: Space play/pause, ←/→ 5 seconds, N next, P previous, L favourite, R repeat, E extend.
   document.addEventListener('keydown', function (e) {
     var tag = (e.target && e.target.tagName) || '';
     if (/INPUT|SELECT|TEXTAREA|BUTTON|A/.test(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -1839,24 +2103,43 @@
     else if (k === 'p') prevTrack();
     else if (k === 'l' && state.song) toggleFav(entryOf(state.song, state.opts));
     else if (k === 'r') toggleRepeat();
+    else if (k === 'e') extendSong(false);
   });
   function seekBy(sec) {
-    audio.currentTime = Math.max(0, Math.min(playLength() - 0.05, audio.currentTime + sec));
+    seekTo(audio.currentTime + sec);
+  }
+  function seekTo(t) {
+    audio.currentTime = Math.max(0, Math.min(playLength() - 0.05, t));
+    state.userScrollAt = 0; // the roll follows the new position
+    showPlayhead();
     drawFrame();
   }
 
   // Now playing bar -------------------------------------------------------------
   var np = $('#np');
-  function nowPlaying(song) {
+  function nowPlaying(song, longer) {
     if (!song) return;
+    var first = np.hidden;
     np.hidden = false;
     document.body.classList.add('has-np');
+    if (first && !reduceMotion.matches) {
+      // Rise in from below the screen.
+      np.classList.add('hide');
+      void np.offsetWidth;
+      np.classList.remove('hide');
+    } else if (!longer) {
+      np.classList.remove('swap'); void np.offsetWidth; np.classList.add('swap');
+    }
     $('#np-title').textContent = song.title;
     $('#np-sub').textContent = styleName(song) + ' · ' + song.key + ' ' + (MODE_JA[song.mode] || song.mode) + ' · ' + song.bpm + ' BPM';
+    np.style.setProperty('--beat', (60 / song.bpm).toFixed(3) + 's');
     var liked = isFav(currentId());
     $('#np-like').setAttribute('aria-pressed', String(liked));
     $('#np-like').setAttribute('aria-label', liked ? 'お気に入りから外す' : 'お気に入りに追加');
     $('#np-repeat').setAttribute('aria-pressed', String(!!state.repeat));
+    $('#np-endless').setAttribute('aria-pressed', String(!!state.endless));
+    $('#np-extend').disabled = !!song.loop || song.bars >= 256;
+    $('#np-endless').disabled = !!song.loop;
     drawArt(song, $('#np-art'));
     npTime();
     mediaMetadata(song);
@@ -1864,6 +2147,7 @@
   function npPlaying(on) {
     $('#np-play-icon').innerHTML = on ? pauseIcon : playIcon;
     $('#np-play').setAttribute('aria-label', on ? '一時停止' : '再生');
+    np.classList.toggle('playing', on);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   }
   var seeking = false;
@@ -1883,8 +2167,7 @@
   $('#np-seek').addEventListener('input', function () {
     seeking = true;
     this.style.setProperty('--p', (this.value / 10) + '%');
-    audio.currentTime = this.value / 1000 * playLength();
-    drawFrame();
+    seekTo(this.value / 1000 * playLength());
   });
   $('#np-seek').addEventListener('change', function () { seeking = false; npTime(); });
   $('#np-play').addEventListener('click', togglePlay);
@@ -1894,8 +2177,66 @@
   $('#np-repeat').addEventListener('click', toggleRepeat);
   function toggleRepeat() {
     state.repeat = !state.repeat;
+    if (state.repeat && state.endless) setEndless(false);
     audio.loop = !!(state.song && state.song.loop) || state.repeat;
     $('#np-repeat').setAttribute('aria-pressed', String(state.repeat));
+    toast(state.repeat ? 'この曲をくり返します' : 'くり返しを止めました');
+  }
+
+  // Extend and endless play -------------------------------------------------------
+  // The same options with more bars make the same song, only longer (the music
+  // is the same until the last few sections), so playback goes on seamlessly.
+  $('#np-extend').addEventListener('click', function () { extendSong(false); });
+  $('#np-endless').addEventListener('click', function () { setEndless(!state.endless); });
+  function setEndless(on) {
+    state.endless = on;
+    if (on && state.repeat) toggleRepeat();
+    $('#np-endless').setAttribute('aria-pressed', String(on));
+    if (on) popIt($('#np-endless'));
+    toast(on ? 'エンドレス再生：終わりが近づくと曲を延長し続けます' : 'エンドレス再生を止めました');
+    endlessCheck();
+  }
+  function endlessCheck() {
+    var song = state.song;
+    if (!state.endless || !song || song.loop || song.bars >= 256 || state.extending || state.busy || audio.paused) return;
+    if (state.extendFailed === song) return;
+    // Leave time to compose and render the longer version before the end.
+    if (playLength() - audio.currentTime < 45) extendSong(true);
+  }
+  function extendSong(auto) {
+    var song = state.song;
+    if (!song || state.busy || state.extending) return;
+    if (song.loop) { toast('ループ用の曲は延長できません'); return; }
+    if (song.bars >= 256) { if (!auto) toast('これ以上は延長できません（256 小節まで）'); return; }
+    var o = JSON.parse(JSON.stringify(state.opts));
+    delete o.duration;
+    o.bars = Math.min(256, song.bars + (auto ? 32 : 16));
+    var t0 = performance.now(), gen = state.gen, longer;
+    var fail = function (err) {
+      state.extending = false;
+      state.extendFailed = song;
+      $('#np-extend').classList.remove('busy');
+      toast('延長できませんでした: ' + (err && err.message ? err.message : err));
+    };
+    try { longer = MusicComposition.compose(o); } catch (err) { fail(err); return; }
+    if (longer.bars <= song.bars) { fail('これ以上長くできません'); return; }
+    state.extending = true;
+    $('#np-extend').classList.add('busy');
+    if (!auto) toast('延長しています…');
+    MusicComposition.renderAsync(longer, { sampleRate: o.sampleRate }).then(function (wav) {
+      state.extending = false;
+      $('#np-extend').classList.remove('busy');
+      if (gen !== state.gen || state.song !== song) return; // another song meanwhile
+      var oldId = currentId(), oldLen = playLength();
+      load(longer, wav, o, performance.now() - t0, true);
+      lib.recent = lib.recent.filter(function (x) { return x.id !== oldId; });
+      addHistory(longer, o);
+      if (!radio.on) {
+        try { history.replaceState(null, '', '?' + shareQuery(o)); } catch (e) {}
+        state.syncUrl = true;
+      }
+      toast('+' + (longer.bars - song.bars) + ' 小節延長しました（' + fmt(oldLen) + ' → ' + fmt(playLength()) + '）');
+    }).catch(fail);
   }
 
   // Cover art: the song's piano roll on its style's colour (bar, lock screen).
@@ -1941,100 +2282,147 @@
     [['play', function () { audio.play().catch(function () {}); }], ['pause', function () { audio.pause(); }],
       ['previoustrack', prevTrack], ['nexttrack', nextTrack],
       ['seekbackward', function (d) { seekBy(-((d && d.seekOffset) || 10)); }], ['seekforward', function (d) { seekBy((d && d.seekOffset) || 10); }],
-      ['seekto', function (d) { if (d && d.seekTime !== undefined) { audio.currentTime = d.seekTime; drawFrame(); } }]
+      ['seekto', function (d) { if (d && d.seekTime !== undefined) seekTo(d.seekTime); }]
     ].forEach(function (h) { try { navigator.mediaSession.setActionHandler(h[0], h[1]); } catch (e) {} });
   }
-  canvas.addEventListener('click', function (e) {
-    if (!state.song) return;
-    var r = canvas.getBoundingClientRect();
-    var x = (e.clientX - r.left) / r.width;
-    audio.currentTime = Math.max(0, Math.min(playLength() - 0.01, x * playLength()));
-    drawFrame();
-  });
+  // One animation loop: runs while playing or while the notes sweep in.
   function loopFrame() {
+    state.raf = 0;
     drawFrame();
-    if (!audio.paused) state.raf = requestAnimationFrame(loopFrame);
+    if (!audio.paused || state.reveal) state.raf = requestAnimationFrame(loopFrame);
   }
+  function wake() { if (!state.raf) state.raf = requestAnimationFrame(loopFrame); }
 
   // Piano roll ------------------------------------------------------------
-  var ROLL = { top: 24, chordLane: 0, drumLane: 34 };
+  // A fixed width per bar, so long songs are not squeezed: the roll scrolls
+  // sideways like the chord strip, and the canvas draws only what is in view.
+  var ROLL = { top: 24, drumLane: 34 };
+  var roll = null; // the song on screen, measured for drawing
   function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function barPx() { return rollScroll.clientWidth < 600 ? 64 : 88; }
+  function viewEnd() { return roll ? (rollScroll.scrollLeft + roll.w) / roll.pps : playLength(); }
 
-  function drawStatic() {
+  function drawStatic(keepScroll) {
     var song = state.song; if (!song) return;
     var dpr = window.devicePixelRatio || 1;
-    var w = canvas.clientWidth, h = canvas.clientHeight;
+    var w = rollScroll.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-    staticLayer.width = canvas.width; staticLayer.height = canvas.height;
-    var g = staticLayer.getContext('2d');
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
     var total = playLength();
-    var X = function (t) { return (t / total) * w; };
+    var pps = Math.max(barPx() / song.barDuration, w / total); // a short song fills the width
+    $('#roll-space').style.width = Math.ceil(total * pps) + 'px';
+    if (!keepScroll) rollScroll.scrollLeft = 0;
 
-    g.fillStyle = css('--roll-bg'); g.fillRect(0, 0, w, h);
-
-    // Section bands
-    var fontMono = '600 10px ' + css('--font-mono');
-    song.sections.forEach(function (s, i) {
-      var x0 = X(s.start), x1 = X(s.start + s.bars * song.barDuration);
-      if (i % 2 === 1) { g.fillStyle = css('--roll-band'); g.fillRect(x0, 0, x1 - x0, h); }
-      g.fillStyle = css('--muted'); g.font = fontMono; g.textBaseline = 'middle';
-      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '');
-      if (x1 - x0 > 28) g.fillText(label, x0 + 6, 12);
-    });
-    // Bar grid
-    g.strokeStyle = css('--roll-grid'); g.lineWidth = 1;
-    for (var b = 1; b < song.bars; b++) {
-      var bx = Math.round(X(b * song.barDuration)) + 0.5;
-      g.beginPath(); g.moveTo(bx, ROLL.top); g.lineTo(bx, h - ROLL.drumLane); g.stroke();
-    }
-
-    var pitched = song.notes.filter(function (n) { return n.inst !== 'drums'; });
+    var pitched = song.notes.filter(function (n) { return n.inst !== 'drums' && n.t < total; });
     var lo = 127, hi = 0;
     pitched.forEach(function (n) { if (n.midi < lo) lo = n.midi; if (n.midi > hi) hi = n.midi; });
     lo -= 1; hi += 1;
-    var top = ROLL.top + 4, bottom = h - ROLL.drumLane - 6;
-    var rowH = (bottom - top) / (hi - lo + 1);
-    var Y = function (m) { return bottom - (m - lo + 1) * rowH; };
-    var colors = { lead: css('--lead'), bass: css('--bass'), chords: css('--chords'), guitar: css('--guitar'), arp: css('--arp') };
     var order = { chords: 0, guitar: 1, bass: 2, arp: 3, lead: 4 };
-    pitched.sort(function (a, b) { return order[a.inst] - order[b.inst]; });
-    pitched.forEach(function (n) {
-      if (n.t >= total) return;
-      g.globalAlpha = n.inst === 'chords' ? 0.45 : n.inst === 'guitar' ? 0.55 : n.inst === 'arp' ? 0.7 : 0.95;
-      g.fillStyle = colors[n.inst];
-      var x = X(n.t), wd = Math.max(1.5, X(Math.min(n.d, total - n.t)) - 0.5);
-      g.fillRect(x, Y(n.midi), wd, Math.max(1.5, rowH - 0.5));
+    pitched.sort(function (a, b) { return order[a.inst] - order[b.inst] || a.t - b.t; });
+    var top = ROLL.top + 4, bottom = h - ROLL.drumLane - 6, starts = {};
+    song.sections.forEach(function (s) { starts[Math.round(s.start / song.barDuration)] = true; });
+    roll = {
+      starts: starts,
+      w: w, h: h, dpr: dpr, pps: pps, total: total, lo: lo, bottom: bottom, rowH: (bottom - top) / (hi - lo + 1),
+      pitched: pitched, drums: song.notes.filter(function (n) { return n.inst === 'drums' && n.t < total; }),
+      font: '600 10px ' + css('--font-mono'), small: '500 9px ' + css('--font-mono'),
+      c: {
+        lead: css('--lead'), bass: css('--bass'), chords: css('--chords'), guitar: css('--guitar'), arp: css('--arp'), drums: css('--drums'),
+        bg: css('--roll-bg'), band: css('--roll-band'), grid: css('--roll-grid'), muted: css('--muted'), line: css('--line'), accent: css('--accent')
+      }
+    };
+  }
+
+  var ALPHA = { chords: 0.45, guitar: 0.55, arp: 0.7, bass: 0.95, lead: 0.95 };
+  var DRUM_ROW = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
+  function drawFrame() {
+    var song = state.song; if (!song || !roll) return;
+    var R = roll, C = R.c, g = canvas.getContext('2d');
+    var t = audio.currentTime || 0, playing = !audio.paused;
+    followPlayhead(t);
+    var sl = rollScroll.scrollLeft, w = R.w, h = R.h, pps = R.pps, bd = song.barDuration;
+    var t0 = sl / pps, t1 = (sl + w) / pps;
+    var X = function (tt) { return tt * pps - sl; };
+    var Y = function (m) { return R.bottom - (m - R.lo + 1) * R.rowH; };
+    g.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
+    g.globalAlpha = 1;
+    g.fillStyle = C.bg; g.fillRect(0, 0, w, h);
+
+    // A new song (or the added bars) sweeps in from the left.
+    var until = Infinity;
+    if (state.reveal) {
+      var p = (performance.now() - state.reveal.at) / 900;
+      if (p >= 1) state.reveal = null;
+      else until = state.reveal.from + (1 - Math.pow(1 - p, 3)) * (state.reveal.to - state.reveal.from);
+    }
+
+    // Sections: shaded bands; the name stays in view while its section is.
+    g.textBaseline = 'middle';
+    var labels = [];
+    song.sections.forEach(function (s, i) {
+      var s0 = s.start, s1 = s.start + s.bars * bd;
+      if (s1 < t0 || s0 > t1) return;
+      var x0 = X(s0), x1 = X(s1);
+      if (i % 2 === 1) { g.fillStyle = C.band; g.fillRect(x0, 0, x1 - x0, h); }
+      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '');
+      g.font = R.font;
+      var lw = g.measureText(label).width, lx = Math.max(x0 + 6, 6);
+      if (lx + lw > x1 - 6) lx = x1 - 6 - lw;
+      if (lx >= x0 + 6 - 0.5) { g.fillStyle = C.muted; g.fillText(label, lx, 12); labels.push([lx - 16, lx + lw + 4]); }
+    });
+    // Bar lines, with bar numbers in the header (where no section name is).
+    g.strokeStyle = C.grid; g.lineWidth = 1; g.font = R.small;
+    for (var b = Math.max(1, Math.floor(t0 / bd)); b <= Math.min(song.bars - 1, Math.ceil(t1 / bd)); b++) {
+      var bx = Math.round(X(b * bd)) + 0.5;
+      g.beginPath(); g.moveTo(bx, ROLL.top); g.lineTo(bx, h - ROLL.drumLane); g.stroke();
+      var free = !R.starts[b] && !labels.some(function (l) { return bx + 4 < l[1] && bx + 20 > l[0]; });
+      if (bd * pps >= 40 && free) { g.fillStyle = C.muted; g.globalAlpha = 0.5; g.fillText(String(b + 1), bx + 4, 12); g.globalAlpha = 1; }
+    }
+
+    // Notes; the ones sounding now glow.
+    var glow = [];
+    R.pitched.forEach(function (n) {
+      if (n.t > t1 || n.t + n.d < t0 || n.t > until) return;
+      var x = X(n.t), wd = Math.max(1.5, Math.min(n.d, R.total - n.t) * pps - 0.5), y = Y(n.midi), ht = Math.max(1.5, R.rowH - 0.5);
+      if (playing && n.t <= t && t < n.t + n.d && n.inst !== 'chords') { glow.push([n, x, y, wd, ht]); return; }
+      g.globalAlpha = ALPHA[n.inst] || 0.9;
+      g.fillStyle = C[n.inst];
+      g.fillRect(x, y, wd, ht);
     });
     g.globalAlpha = 1;
+    if (glow.length) {
+      g.shadowBlur = 10;
+      glow.forEach(function (q) { g.fillStyle = g.shadowColor = C[q[0].inst]; g.fillRect(q[1], q[2] - 0.5, q[3], q[4] + 1); });
+      g.shadowBlur = 0; g.shadowColor = 'transparent';
+    }
 
     // Drum lane
     var laneTop = h - ROLL.drumLane;
-    g.fillStyle = css('--roll-band'); g.fillRect(0, laneTop, w, ROLL.drumLane);
-    g.strokeStyle = css('--line'); g.beginPath(); g.moveTo(0, laneTop + 0.5); g.lineTo(w, laneTop + 0.5); g.stroke();
-    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
-    g.fillStyle = css('--drums');
-    song.notes.forEach(function (n) {
-      if (n.inst !== 'drums' || n.t >= total) return;
-      var r = rows[n.drum];
-      g.globalAlpha = 0.35 + 0.65 * n.vel;
-      g.fillRect(X(n.t), laneTop + 6 + r * 8, n.drum === 'crash' ? 3 : 1.5, 6);
+    g.fillStyle = C.band; g.fillRect(0, laneTop, w, ROLL.drumLane);
+    g.strokeStyle = C.line; g.beginPath(); g.moveTo(0, laneTop + 0.5); g.lineTo(w, laneTop + 0.5); g.stroke();
+    g.fillStyle = C.drums;
+    R.drums.forEach(function (n) {
+      if (n.t < t0 - 0.05 || n.t > t1 || n.t > until) return;
+      var hit = playing && n.t <= t && t < n.t + 0.12;
+      g.globalAlpha = hit ? 1 : 0.35 + 0.65 * n.vel;
+      g.fillRect(X(n.t), laneTop + 6 + DRUM_ROW[n.drum] * 8 - (hit ? 1 : 0), n.drum === 'crash' ? 3 : hit ? 2.5 : 1.5, hit ? 8 : 6);
     });
     g.globalAlpha = 1;
-  }
 
-  function drawFrame() {
-    var song = state.song; if (!song) return;
-    var g = canvas.getContext('2d');
-    var dpr = window.devicePixelRatio || 1;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.drawImage(staticLayer, 0, 0);
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    var w = canvas.clientWidth, h = canvas.clientHeight;
-    var t = audio.currentTime || 0;
-    var x = (t / playLength()) * w;
-    g.fillStyle = css('--accent');
-    g.fillRect(Math.round(x) - 1, 0, 2, h);
+    // The edge of the sweep
+    if (until !== Infinity) {
+      var ux = X(until);
+      var grad = g.createLinearGradient(ux - 40, 0, ux, 0);
+      grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, C.accent);
+      g.globalAlpha = 0.35; g.fillStyle = grad; g.fillRect(ux - 40, 0, 40, h); g.globalAlpha = 1;
+    }
+    // Playhead
+    var px = Math.round(X(t));
+    if (px > -4 && px < w + 4) {
+      g.fillStyle = C.accent;
+      g.fillRect(px - 1, 0, 2, h);
+      g.beginPath(); g.moveTo(px - 5, 0); g.lineTo(px + 5, 0); g.lineTo(px, 6); g.closePath(); g.fill();
+    }
     $('#t-cur').textContent = fmt(t);
     // Highlight current chord
     var idx = -1;
@@ -2054,25 +2442,83 @@
   }
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  function renderProgression(song) {
-    var box = $('#progression');
+  // While playing, the roll keeps the playhead about a third of the way in —
+  // unless the listener has just scrolled it themselves.
+  function followPlayhead(t) {
+    if (audio.paused || !roll || drag) return;
+    if (performance.now() - (state.userScrollAt || 0) < 2500) return;
+    var max = rollScroll.scrollWidth - roll.w;
+    var target = Math.max(0, Math.min(max, t * roll.pps - roll.w * 0.3)), cur = rollScroll.scrollLeft;
+    if (Math.abs(target - cur) < 0.5) return;
+    rollScroll.scrollLeft = Math.abs(target - cur) < 2 || reduceMotion.matches ? target : cur + (target - cur) * 0.14;
+  }
+  // After a seek: bring the playhead into view if it is out of it.
+  function showPlayhead() {
+    if (!roll) return;
+    var x = (audio.currentTime || 0) * roll.pps, sl = rollScroll.scrollLeft;
+    if (x < sl + 16 || x > sl + roll.w - 16) {
+      rollScroll.scrollTo({ left: Math.max(0, x - roll.w * 0.3), behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    }
+  }
+  // Click (or tap) to move there; drag with the mouse to scroll. Touch scrolls natively.
+  var drag = null;
+  rollScroll.addEventListener('pointerdown', function (e) {
+    if (!state.song || !roll || e.button !== 0) return;
+    if (e.clientY - rollScroll.getBoundingClientRect().top > roll.h) return; // the scrollbar
+    drag = { x: e.clientX, sl: rollScroll.scrollLeft, moved: false, id: e.pointerId, mouse: e.pointerType === 'mouse' };
+  });
+  window.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 4) {
+      drag.moved = true;
+      if (drag.mouse) rollScroll.classList.add('dragging');
+    }
+    if (drag.moved) {
+      state.userScrollAt = performance.now();
+      if (drag.mouse) rollScroll.scrollLeft = drag.sl - dx;
+    }
+  });
+  window.addEventListener('pointerup', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var d = drag;
+    drag = null;
+    rollScroll.classList.remove('dragging');
+    if (d.moved || !roll) return;
+    var r = rollScroll.getBoundingClientRect();
+    seekTo((e.clientX - r.left + rollScroll.scrollLeft) / roll.pps);
+  });
+  window.addEventListener('pointercancel', function () {
+    if (!drag) return;
+    drag = null;
+    rollScroll.classList.remove('dragging');
+    state.userScrollAt = performance.now();
+  });
+  ['wheel', 'touchstart'].forEach(function (ev) {
+    rollScroll.addEventListener(ev, function () { state.userScrollAt = performance.now(); }, { passive: true });
+  });
+  rollScroll.addEventListener('scroll', wake, { passive: true });
+
+  // longer: the chords of the added bars pop in; the strip stays where it is.
+  function renderProgression(song, longer) {
+    var box = $('#progression'), had = longer ? box.children.length : 0;
     box.innerHTML = song.chords.map(function (c, i) {
-      return '<button type="button" class="c" data-i="' + i + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
+      var enter = !reduceMotion.matches && (longer ? i >= had : i < 24);
+      return '<button type="button" class="c' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(i - had, 24) : i) + '" data-i="' + i + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
     }).join('');
-    box.scrollLeft = 0;
+    if (!longer) box.scrollLeft = 0;
     state.chordIdx = null;
   }
   $('#progression').addEventListener('click', function (e) {
     var b = e.target.closest('.c');
     if (!b || !state.song) return;
-    audio.currentTime = state.song.chords[+b.dataset.i].time;
-    drawFrame();
+    seekTo(state.song.chords[+b.dataset.i].time);
   });
 
-  if (window.ResizeObserver) new ResizeObserver(function () { drawStatic(); drawFrame(); }).observe(canvas);
+  if (window.ResizeObserver) new ResizeObserver(function () { drawStatic(true); drawFrame(); }).observe(rollScroll);
   var mq = window.matchMedia('(prefers-color-scheme: dark)');
-  if (mq.addEventListener) mq.addEventListener('change', function () { drawStatic(); drawFrame(); });
-  new MutationObserver(function () { drawStatic(); drawFrame(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (mq.addEventListener) mq.addEventListener('change', function () { drawStatic(true); drawFrame(); });
+  new MutationObserver(function () { drawStatic(true); drawFrame(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   // Snippet -----------------------------------------------------------------
   function updateSnippet(optsIn) {
@@ -2477,8 +2923,8 @@
   var shareDialog = $('#share');
   var cardFile = null;
   $('#share-open').addEventListener('click', openShare);
-  $('#share-close').addEventListener('click', function () { shareDialog.close(); });
-  shareDialog.addEventListener('click', function (e) { if (e.target === shareDialog) shareDialog.close(); });
+  $('#share-close').addEventListener('click', function () { closeDialog(shareDialog); });
+  shareDialog.addEventListener('click', function (e) { if (e.target === shareDialog) closeDialog(shareDialog); });
 
   function openShare() {
     if (!state.song) return;
@@ -2688,7 +3134,7 @@
   // Start with a real song on screen (playback waits for a click): the shared
   // song if the URL has one, otherwise the demo seed.
   setStyle(state.style);
-  renderHistory();
+  renderHistory(true);
   if (radioRulesFromUrl()) radioStatus('「連続再生を始める」で、このルールの曲を流し続けます');
 
   // App: offline support (sw.js: the network first, the cache when offline),
