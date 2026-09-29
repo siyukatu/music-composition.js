@@ -165,6 +165,71 @@ test('pre-choruses end on a dominant chord', () => {
   }
 });
 
+test('3/4: 12-step bars, downbeat kick, chords change on beat 1 or 3, melody phrases start on beats', () => {
+  for (const style of MusicComposition.styles) {
+    const song = MusicComposition.compose({ seed: 'waltz', style, meter: '3/4', bars: 32 });
+    assert.strictEqual(song.meter, '3/4');
+    assert.strictEqual(song.beatsPerBar, 3);
+    assert.ok(Math.abs(song.barDuration - song.stepDuration * 12) < 1e-9);
+    const step = t => Math.round((t % song.barDuration) / song.stepDuration) % 12;
+    for (const c of song.chords) assert.ok([0, 8].includes(step(c.time)), style + ': chord ' + c.name + ' at step ' + step(c.time));
+    for (const n of song.notes.filter(x => x.drum === 'kick')) {
+      const bar = Math.floor(n.t / song.barDuration + 0.02); // humanized timing may land a hair early
+      assert.ok(song.notes.some(k => k.drum === 'kick' && Math.abs(k.t - bar * song.barDuration) < 0.03), style + ': bar ' + bar + ' has no downbeat kick');
+    }
+    const w = readWav(MusicComposition.render(song, { sampleRate: 16000 }));
+    assert.ok(Math.abs(w.samples.length / 2 - Math.round(song.duration * 16000)) <= 2);
+  }
+  assert.throws(() => MusicComposition.compose({ meter: '5/4' }), /unknown meter/);
+});
+
+test('4/4 remains the default and is unchanged by the meter option', () => {
+  const a = MusicComposition.compose({ seed: 'm', style: 'pop' });
+  const b = MusicComposition.compose({ seed: 'm', style: 'pop', meter: '4/4' });
+  assert.strictEqual(a.meter, '4/4');
+  assert.deepStrictEqual(a.notes, b.notes);
+});
+
+// Strict voice-leading and harmony checks, in both meters.
+for (const meter of ['4/4', '3/4']) {
+  test(meter + ': strong-beat melody notes are chord tones, outer voices avoid parallel 5ths/8ves', () => {
+    let strong = 0, off = 0, downbeats = 0, parallels = 0;
+    for (const style of ['pop', 'jpop', 'dance', 'lofi']) {
+      for (let i = 0; i < 12; i++) {
+        const song = MusicComposition.compose({ seed: 'rules' + i, style, meter, bars: 48 });
+        const spb = song.beatsPerBar * 4, sd = song.stepDuration, bd = song.barDuration;
+        const lead = song.notes.filter(n => n.inst === 'lead' && !n.harmony);
+        const chordAt = t => { let c = song.chords[0]; for (const x of song.chords) if (x.time <= t + 0.03) c = x; return c.tones; };
+        const pos = n => Math.floor((n.t / sd) % spb + 0.25) % spb;
+        lead.forEach((n, k) => {
+          const p = pos(n), len = n.d / sd;
+          const isStrong = spb === 12 ? p === 0 || len >= 5.5 : p % 8 === 0 || len >= 3.8 || (p % 4 === 0 && len >= 2.8);
+          if (!isStrong) return;
+          strong++;
+          if (chordAt(n.t).includes(n.midi % 12)) return;
+          const nx = lead[k + 1]; // an appoggiatura resolving down by step is allowed
+          if (nx && n.midi - nx.midi >= 1 && n.midi - nx.midi <= 2 && chordAt(nx.t).includes(nx.midi % 12)) return;
+          off++;
+        });
+        const bass = song.notes.filter(n => n.inst === 'bass');
+        let prev = null;
+        for (let b = 0; b < song.bars; b++) {
+          const t = b * bd + 0.02;
+          const m = lead.find(n => n.t <= t && n.t + n.d > t), bs = bass.find(n => n.t <= t && n.t + n.d > t);
+          if (!m || !bs) { prev = null; continue; }
+          downbeats++;
+          const iv = ((m.midi - bs.midi) % 12 + 12) % 12;
+          if (prev && (iv === 0 || iv === 7) && prev.iv === iv && m.midi !== prev.m && bs.midi !== prev.b &&
+              Math.sign(m.midi - prev.m) === Math.sign(bs.midi - prev.b)) parallels++;
+          prev = { iv, m: m.midi, b: bs.midi };
+        }
+      }
+    }
+    assert.ok(off / strong < 0.01, off + ' strong-beat non-chord tones in ' + strong);
+    assert.ok(parallels / downbeats < 0.04, parallels + ' parallel 5ths/8ves in ' + downbeats + ' downbeats');
+  });
+}
+
 test('invalid options throw readable errors', () => {
   assert.throws(() => MusicComposition.compose({ parts: { drums: 'tabla' } }), /unknown drums/);
   assert.throws(() => MusicComposition.compose({ parts: { kazoo: 'loud' } }), /unknown part/);

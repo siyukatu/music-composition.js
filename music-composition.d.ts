@@ -51,6 +51,8 @@ declare namespace MusicComposition {
     duration?: number;
     /** true => seamless loop: no intro/outro, reverb tail folded onto the start. */
     loop?: boolean;
+    /** '4/4' (default) or '3/4' (triple meter: waltz patterns, downbeat-led phrasing). */
+    meter?: '4/4' | '3/4';
   }
 
   interface RenderOptions {
@@ -82,6 +84,8 @@ declare namespace MusicComposition {
     name: string;
     /** 0-based scale degree. */
     degree: number;
+    /** Pitch classes of the chord (0 = C), root first. */
+    tones: number[];
   }
 
   interface Note {
@@ -115,6 +119,9 @@ declare namespace MusicComposition {
     style: Style;
     /** The parts actually used (style defaults plus overrides). */
     parts: Required<Parts>;
+    meter: '4/4' | '3/4';
+    /** 4 or 3. A bar is beatsPerBar * 4 sixteenths long. */
+    beatsPerBar: number;
     bpm: number;
     key: string;
     mode: Mode;
