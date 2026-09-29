@@ -985,24 +985,35 @@
     { c: [[1, 3]], w: 0.15, sync: 1 },
     { c: [], w: 0.25 }                        // rest
   ];
-  function genRhythm(rng, target, sync, isAnswer, beats, eighths) {
+  // opt.eighths: keep to the eighth-note grid (swing). opt.bpm: the faster the
+  // tempo, the rarer the 16th-note figures, and a note entering on the second
+  // 16th of a beat (which displaces the line) is kept for slow tempos.
+  function genRhythm(rng, target, sync, isAnswer, beats, opt) {
     beats = beats || 4;
+    opt = opt || {};
+    var bpm = opt.bpm || 110;
     for (var attempt = 0; attempt < 10; attempt++) {
       var notes = [];
       var perBeat = target / beats;
+      var prev = null;
       for (var b = 0; b < beats; b++) {
         var w = BEAT_CELLS.map(function (cell) {
-          // eighths: swing lines stay on the eighth-note grid.
-          if (eighths && cell.c.some(function (n) { return n[0] % 2 || n[1] % 2; })) return 0;
+          if (opt.eighths && cell.c.some(function (n) { return n[0] % 2 || n[1] % 2; })) return 0;
           var x = cell.w * Math.exp(-Math.abs(cell.c.length - perBeat) * 1.1);
           if (cell.sync) x *= 0.4 + sync * 1.6;
           if (b === 0 && !cell.c.length) x *= 0.2;
           if (isAnswer && b >= 2) x *= cell.c.length <= 1 ? 2 : 0.5; // answers settle down
+          var sixteenths = cell.c.some(function (n) { return n[0] % 2 || n[1] % 2; });
+          if (cell.c.length && cell.c[0][0] === 1) x *= bpm >= 100 ? 0.08 : 0.5;  // enters on the "e"
+          else if (sixteenths && bpm >= 130) x *= cell.sync ? 0.35 : 0.6;
+          // One syncopated beat at a time: two in a row lose the beat.
+          if (cell.sync && prev && prev.sync) x *= 0.25;
           return x;
         });
         var sum = w.reduce(function (a, x) { return a + x; }, 0), r = rng.next() * sum, pick = BEAT_CELLS[0];
         for (var i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) { pick = BEAT_CELLS[i]; break; } }
         pick.c.forEach(function (n) { notes.push([b * 4 + n[0], n[1]]); });
+        prev = pick;
       }
       // Ties across beats: a note that ends on a beat swallows the note there.
       for (i = 0; i + 1 < notes.length; i++) {
@@ -2157,7 +2168,7 @@
       useSounds(sec.drop ? 'drop' : sec.type);
       if (!prt.lead) return;
       var key = sec.type;
-      if (!themes[key]) themes[key] = makeTheme(R('motif-' + key), st.melody, key, BEATS);
+      if (!themes[key]) themes[key] = makeTheme(R('motif-' + key), st.melody, key, BEATS, bpm);
       var th = themes[key];
       var mr = R('melody-' + key);
       var base = BASE[key];
@@ -2652,7 +2663,7 @@
   // The fixed material of a section: rhythms for each phrase role, the
   // motif's melodic shape (in scale steps) and how it is developed. Rhythms
   // are generated from beat cells, or taken from a stock of proven ones.
-  function makeTheme(rng, m, type, beats) {
+  function makeTheme(rng, m, type, beats, bpm) {
     var MR = MELODY_RHYTHMS;
     var three = beats === 3;
     function pick(list, target, preferSync) {
@@ -2674,6 +2685,7 @@
     var n = m.notes + (type === 'P' ? 1 : type === 'C' ? -1 : 0);
     var sync = m.sync + (type === 'B' ? 0.15 : 0);
     var gen = function () { return !m.slow && rng.chance(m.gen); };
+    var rOpt = { eighths: m.eighths, bpm: bpm || 110 };
     var motifs = m.slow ? MR.slowMotif : MR.motif, answersL = m.slow ? MR.slowAnswer : MR.answer, cadL = m.slow ? MR.slowCadence : MR.cadence;
     if (three) {
       // Three beats hold three quarters of the notes; half and full closes
@@ -2684,13 +2696,16 @@
       answersL = m.slow ? M3.slowAnswer : M3.answer;
       cadL = m.slow ? M3.slowCadence : M3.halfCadence;
     }
-    var motif = gen() ? genRhythm(rng, n, sync, false, beats, m.eighths) : pick(motifs, n, type === 'B');
-    var other = gen() ? genRhythm(rng, n, sync, false, beats, m.eighths) : pick(motifs, n, false);
-    // Same start, new ending: the classic way to vary a repeated motif.
-    var motifVar = motif.filter(function (x) { return x[0] < 8; }).concat(other.filter(function (x) { return x[0] >= 8; }));
+    var motif = gen() ? genRhythm(rng, n, sync, false, beats, rOpt) : pick(motifs, n, type === 'B');
+    var other = gen() ? genRhythm(rng, n, sync, false, beats, rOpt) : pick(motifs, n, false);
+    // Same start, new ending: the classic way to vary a repeated motif. A note
+    // held over the middle of the bar stops where the new ending comes in.
+    var ending = other.filter(function (x) { return x[0] >= 8; });
+    var cut = ending.length ? ending[0][0] : beats * 4;
+    var motifVar = motif.filter(function (x) { return x[0] < 8; }).map(function (x) { return [x[0], Math.min(x[1], cut - x[0])]; }).concat(ending);
     if (motifVar.length < 2) motifVar = motif;
     var an = three ? n - 1.5 : n - 2;
-    var answers = [gen() ? genRhythm(rng, an, sync * 0.7, true, beats, m.eighths) : pick(answersL, an), gen() ? genRhythm(rng, an, sync * 0.7, true, beats, m.eighths) : pick(answersL, an)];
+    var answers = [gen() ? genRhythm(rng, an, sync * 0.7, true, beats, rOpt) : pick(answersL, an), gen() ? genRhythm(rng, an, sync * 0.7, true, beats, rOpt) : pick(answersL, an)];
     var cadences = [pick(cadL, n - 3), pick(three ? (m.slow ? MELODY_RHYTHMS_3.slowCadence : MELODY_RHYTHMS_3.fullCadence) : cadL, n - 3)];
     // A chorus hook should not sink right after its (high) entry.
     var shape = type === 'P' ? 'rise' : type === 'B' ? rng.pick(['arch', 'arch', 'valley', 'rise']) : rng.pick(['rise', 'fall', 'arch', 'arch', 'valley']);
