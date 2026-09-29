@@ -3,3 +3,4 @@
 node_modules/
 *.wav
 site/music-composition.js
+dist/

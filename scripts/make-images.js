@@ -1,7 +1,8 @@
 'use strict';
 // Generates the social preview image and icons for site/.
 // Needs rsvg-convert (brew install librsvg) and Python 3 with Pillow for favicon.ico.
-//   node scripts/make-images.js
+//   node scripts/make-images.js          (everything)
+//   node scripts/make-images.js icons    (only the app icons)
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -70,10 +71,31 @@ function iconSvg(size) {
 </svg>`;
 }
 
+// Maskable app icon: full-bleed orange, the mark inside the central safe zone
+// (launchers crop it to a circle or a squircle).
+function maskableSvg(size) {
+  const notes = [[5, 19, 7], [13, 13, 6], [20, 8, 7], [12, 23, 14]];
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="${C.lead}"/>
+  <g transform="translate(16 16) scale(0.62) translate(-16 -16)">
+  ${notes.map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="4" rx="1.2" fill="#1A0B04"/>`).join('')}
+  </g>
+</svg>`;
+}
+
 function png(svg, out, width) {
   const src = path.join(TMP, path.basename(out) + '.svg');
   fs.writeFileSync(src, svg);
   execFileSync('rsvg-convert', ['-w', String(width), '-o', out, src]);
+}
+
+// App icons for the web app manifest (PWA).
+png(iconSvg(192), path.join(SITE, 'icon-192.png'), 192);
+png(iconSvg(512), path.join(SITE, 'icon-512.png'), 512);
+png(maskableSvg(512), path.join(SITE, 'icon-maskable-512.png'), 512);
+if (process.argv[2] === 'icons') {
+  console.log('wrote icon-192.png, icon-512.png, icon-maskable-512.png');
+  process.exit(0);
 }
 
 png(ogSvg(), path.join(SITE, 'og.png'), 1200);

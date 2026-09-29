@@ -13,6 +13,11 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MCJ">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="music-composition.js">
@@ -155,7 +160,8 @@
   .badge { font-family: var(--font-mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
 
   .app { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
-  @media (max-width: 880px) { .app { grid-template-columns: minmax(0, 1fr); } }
+  /* One column: the player comes first, as in a music app; the settings follow. */
+  @media (max-width: 880px) { .app { grid-template-columns: minmax(0, 1fr); } .app > .player { order: -1; } }
 
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 
@@ -376,15 +382,77 @@
   .radio-status.err { color: var(--error); }
   .eyebrow.live { color: var(--accent); }
 
+  /* Header actions (install, offline) */
+  .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .install { padding: 7px 11px; font-size: 13px; border-radius: 99px; }
+  .badge.offline { color: var(--error); border-color: currentColor; }
+
+  /* Now playing bar */
+  .np {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .np-seek {
+    display: block; width: 100%; margin: 0; height: 14px; margin-top: -7px; background: transparent; accent-color: var(--accent);
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+  }
+  .np-seek::-webkit-slider-runnable-track { height: 3px; background: linear-gradient(to right, var(--accent) var(--p, 0%), var(--line) var(--p, 0%)); }
+  .np-seek::-moz-range-track { height: 3px; background: var(--line); }
+  .np-seek::-moz-range-progress { height: 3px; background: var(--accent); }
+  .np-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); margin-top: -4.5px; }
+  .np-seek::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: var(--accent); }
+  .np-inner { max-width: 1180px; margin: 0 auto; padding: 6px 20px 10px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; align-items: center; gap: 12px; }
+  .np-art { width: 48px; height: 48px; border-radius: 8px; display: block; background: var(--surface-2); }
+  .np-meta { min-width: 0; display: grid; }
+  .np-meta strong { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-meta span { font: 12px var(--font-mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-ctrl, .np-extra { display: flex; align-items: center; gap: 4px; }
+  .np-btn {
+    appearance: none; border: none; background: none; color: var(--ink); width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .np-btn:hover { background: var(--surface-2); }
+  .np-btn[aria-pressed="true"] { color: var(--accent); }
+  #np-like[aria-pressed="true"] svg { fill: currentColor; }
+  .np-play { appearance: none; border: none; width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: var(--surface); display: grid; place-items: center; cursor: pointer; }
+  .np-play:hover { background: var(--accent); color: var(--accent-ink); }
+  .np-time { font: 12px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 4px; white-space: nowrap; }
+  body.has-np { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  @media (max-width: 640px) {
+    .np-inner { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; padding: 6px 12px 8px; }
+    .np-art { width: 40px; height: 40px; }
+    .np-extra { grid-column: 1 / -1; justify-content: space-between; order: 3; }
+    .np-extra .np-time { margin-right: auto; }
+    body.has-np { padding-bottom: calc(118px + env(safe-area-inset-bottom)); }
+  }
+
+  /* Installed as an app: the page is the player; the developer docs step back. */
+  @media (display-mode: standalone) {
+    .api, footer { display: none; }
+    header.top { padding-top: env(safe-area-inset-top); }
+  }
+
+  /* Library (history and favourites) */
+  .lib-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .lib-head h2 { margin: 0 !important; }
+  .history li { display: flex; align-items: center; gap: 2px; }
+  .history li > .h-main { flex: 1; min-width: 0; }
+  .history li.playing .h-title { color: var(--accent); }
+  .h-like { appearance: none; border: none; background: none; color: var(--muted); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; flex: none; }
+  .h-like:hover { background: var(--surface-2); color: var(--ink); }
+  .h-like[aria-pressed="true"] { color: var(--accent); }
+  .h-like[aria-pressed="true"] svg { fill: currentColor; }
+
   /* History */
   .history { padding: 14px 18px 16px; margin-top: 20px; }
   .history h2 { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
   .history ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
-  .history button {
+  .history .h-main {
     appearance: none; width: 100%; text-align: left; background: none; border: none; color: var(--ink); cursor: pointer;
     padding: 7px 8px; border-radius: 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font: inherit;
   }
-  .history button:hover { background: var(--surface-2); }
+  .history .h-main:hover { background: var(--surface-2); }
   .history .h-title { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .history .h-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); grid-column: 1 / -1; }
   .history .h-seed { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
@@ -432,7 +500,14 @@
       <h1 class="wordmark">music-composition<span>.js</span></h1>
       <p class="tagline">シードから作曲して WAV を書き出す。すべてブラウザの中で。</p>
     </div>
-    <a class="badge" id="version" href="https://github.com/siyukatu/music-composition.js">music-composition.js</a>
+    <div class="top-actions">
+      <span class="badge offline" id="offline" hidden title="ネットワークにつながっていません。保存済みのアプリで動いています">オフライン</span>
+      <button type="button" class="btn btn-ghost install" id="install" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><rect x="4" y="17" width="16" height="4" rx="1.5"/></svg>
+        アプリとしてインストール
+      </button>
+      <a class="badge" id="version" href="https://github.com/siyukatu/music-composition.js">music-composition.js</a>
+    </div>
   </header>
 
   <div class="app">
@@ -601,7 +676,12 @@
       </section>
 
       <section class="panel history" aria-labelledby="history-h">
-        <h2 id="history-h">作った曲</h2>
+        <div class="lib-head">
+          <h2 id="history-h">ライブラリ</h2>
+          <span class="seg" role="tablist" aria-label="ライブラリの表示">
+            <button type="button" role="tab" id="lib-recent" aria-selected="true" aria-pressed="true">履歴</button><button type="button" role="tab" id="lib-fav" aria-selected="false" aria-pressed="false">お気に入り</button>
+          </span>
+        </div>
         <ol id="history"></ol>
         <p class="empty" id="history-empty">まだありません</p>
       </section>
@@ -823,8 +903,40 @@
   </form>
 </dialog>
 
+<!-- Now playing: stays at the bottom of the screen, like a music app -->
+<div class="np" id="np" hidden>
+  <input type="range" class="np-seek" id="np-seek" min="0" max="1000" step="1" value="0" aria-label="再生位置">
+  <div class="np-inner">
+    <canvas class="np-art" id="np-art" width="96" height="96" aria-hidden="true"></canvas>
+    <div class="np-meta">
+      <strong id="np-title">…</strong>
+      <span id="np-sub"></span>
+    </div>
+    <div class="np-ctrl">
+      <button type="button" class="np-btn" id="np-prev" aria-label="前の曲" title="前の曲（P）">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2.2v14H6zM19 5.5v13L9.5 12z"/></svg>
+      </button>
+      <button type="button" class="np-play" id="np-play" aria-label="再生" title="再生 / 一時停止（Space）">
+        <svg id="np-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+      </button>
+      <button type="button" class="np-btn" id="np-next" aria-label="次の曲" title="次の曲（N）">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.8 5H18v14h-2.2zM5 5.5v13l9.5-6.5z"/></svg>
+      </button>
+    </div>
+    <div class="np-extra">
+      <span class="np-time" id="np-time">0:00 / 0:00</span>
+      <button type="button" class="np-btn" id="np-repeat" aria-pressed="false" aria-label="この曲をくり返す" title="この曲をくり返す（R）">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3l3 3-3 3"/><path d="M4 11V9a3 3 0 0 1 3-3h13"/><path d="M7 21l-3-3 3-3"/><path d="M20 13v2a3 3 0 0 1-3 3H4"/></svg>
+      </button>
+      <button type="button" class="np-btn" id="np-like" aria-pressed="false" aria-label="お気に入りに追加" title="お気に入り（L）">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=37500b"></script>
+<script src="music-composition.js?h=a9386b"></script>
 <script src="video.js?h=ccf100"></script>
 <script src="midi.js?h=b9f9b9"></script>
 <script>
@@ -848,7 +960,7 @@
   var SECTION_JA = { intro: 'INTRO', A: 'A', P: 'PRE', B: 'B', C: 'BRIDGE', outro: 'OUTRO' };
   var STYLES = MusicComposition.styles;
 
-  var state = { style: 'lofi', mix: { jpop: 1, lofi: 1 }, unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, history: [], raf: 0, syncUrl: false, gen: 0 };
+  var state = { style: 'lofi', mix: { jpop: 1, lofi: 1 }, unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, raf: 0, syncUrl: false, gen: 0, repeat: false, context: null };
   var audio = $('#audio');
   var canvas = $('#roll');
   var staticLayer = document.createElement('canvas');
@@ -1396,7 +1508,8 @@
   $('#gen-same').addEventListener('click', function () { make(readOptions()); });
 
   // Generation ------------------------------------------------------------
-  function make(opts, fromHistory) {
+  // autoplay: start playing when ready (next / previous track, the library).
+  function make(opts, fromHistory, autoplay) {
     if (state.busy) return;
     if (radio.on) radioStop(true); // making a song by hand ends continuous play
     setBusy(true);
@@ -1419,7 +1532,9 @@
         if (gen !== state.gen) return;
         var ms = performance.now() - t0;
         load(song, wav, opts, ms);
+        if (autoplay) audio.play().catch(function () {});
         if (!fromHistory) addHistory(song, opts);
+        renderHistory();
         // The address bar always points at the song on screen (except the demo song on a bare visit).
         if (state.syncUrl) {
           try { history.replaceState(null, '', '?' + shareQuery(opts)); } catch (e) {}
@@ -1440,7 +1555,7 @@
     $('#share-open').disabled = false;
     state.url = MusicComposition.toURL(wav);
     audio.src = state.url;
-    audio.loop = song.loop;
+    audio.loop = song.loop || state.repeat;
     $('#title').textContent = song.title;
     var chips = [
       ['style', styleName(song)],
@@ -1478,6 +1593,7 @@
     drawStatic();
     drawFrame();
     updateSnippet(opts);
+    nowPlaying(song);
     if (wasPlaying) audio.play().catch(function () {});
   }
 
@@ -1495,29 +1611,110 @@
     el.hidden = false;
   }
 
-  // History ---------------------------------------------------------------
+  // Library: recently made songs and favourites, kept in this browser -----------
+  // An entry is the song's options (the song is made again from them).
+  var LIB_KEY = 'mcj.library';
+  var lib = { recent: [], fav: [] }, libTab = 'recent';
+  try {
+    var savedLib = JSON.parse(localStorage.getItem(LIB_KEY) || 'null');
+    if (savedLib && Array.isArray(savedLib.recent)) lib = { recent: savedLib.recent.slice(0, 50), fav: Array.isArray(savedLib.fav) ? savedLib.fav : [] };
+  } catch (e) {}
+  function saveLib() { try { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); } catch (e) {} }
+  function entryOf(song, opts) {
+    return {
+      id: shareQuery(opts), title: song.title, style: styleName(song), key: song.key, mode: song.mode, bpm: song.bpm,
+      meter: song.meter, seed: song.seed, opts: JSON.parse(JSON.stringify(opts))
+    };
+  }
+  function currentId() { return state.opts ? shareQuery(state.opts) : null; }
   function addHistory(song, opts) {
-    state.history.unshift({ title: song.title, style: styleName(song), key: song.key, mode: song.mode, bpm: song.bpm, meter: song.meter, seed: song.seed, opts: opts });
-    state.history = state.history.slice(0, 8);
+    var e = entryOf(song, opts);
+    lib.recent = [e].concat(lib.recent.filter(function (x) { return x.id !== e.id; })).slice(0, 50);
+    saveLib();
     renderHistory();
   }
+  function isFav(id) { return lib.fav.some(function (x) { return x.id === id; }); }
+  function toggleFav(e) {
+    if (!e) return;
+    if (isFav(e.id)) lib.fav = lib.fav.filter(function (x) { return x.id !== e.id; });
+    else lib.fav.unshift(e);
+    saveLib();
+    renderHistory();
+    nowPlaying(state.song);
+  }
+  var HEART = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
   function renderHistory() {
-    var ol = $('#history');
+    var ol = $('#history'), list = libTab === 'fav' ? lib.fav : lib.recent, cur = currentId();
     ol.innerHTML = '';
-    $('#history-empty').hidden = state.history.length > 0;
-    state.history.forEach(function (h) {
+    $('#history-empty').hidden = list.length > 0;
+    $('#history-empty').textContent = libTab === 'fav' ? 'お気に入りはまだありません（♡ で追加できます）' : 'まだありません';
+    list.forEach(function (h) {
       var li = document.createElement('li');
+      if (h.id === cur) li.className = 'playing';
       var b = document.createElement('button');
       b.type = 'button';
+      b.className = 'h-main';
       b.innerHTML = '<span class="h-title"></span><span class="h-seed"></span><span class="h-meta"></span>';
       b.querySelector('.h-title').textContent = h.title;
       b.querySelector('.h-seed').textContent = h.seed;
       b.querySelector('.h-meta').textContent = h.style + ' · ' + h.key + ' ' + (MODE_JA[h.mode] || h.mode) + ' · ' + h.bpm + ' BPM' + (h.meter === '3/4' ? ' · 3/4' : '');
-      b.title = '同じシードから再生成';
-      b.addEventListener('click', function () { applyOptions(h.opts); make(h.opts, true); });
+      b.title = '再生する';
+      b.addEventListener('click', function () { playEntry(h, libTab); });
+      var like = document.createElement('button');
+      like.type = 'button';
+      like.className = 'h-like';
+      like.innerHTML = HEART;
+      like.setAttribute('aria-pressed', String(isFav(h.id)));
+      like.setAttribute('aria-label', isFav(h.id) ? 'お気に入りから外す' : 'お気に入りに追加');
+      like.addEventListener('click', function () { toggleFav(h); });
       li.appendChild(b);
+      li.appendChild(like);
       ol.appendChild(li);
     });
+  }
+  function setLibTab(tab) {
+    libTab = tab;
+    ['recent', 'fav'].forEach(function (t) {
+      var b = $('#lib-' + t);
+      b.setAttribute('aria-selected', String(t === tab));
+      b.setAttribute('aria-pressed', String(t === tab));
+    });
+    renderHistory();
+  }
+  $('#lib-recent').addEventListener('click', function () { setLibTab('recent'); });
+  $('#lib-fav').addEventListener('click', function () { setLibTab('fav'); });
+  // Play a library entry; next / previous then move through the same list.
+  function playEntry(e, tab) {
+    state.context = { tab: tab };
+    applyOptions(e.opts);
+    make(e.opts, true, true);
+  }
+
+  // Next and previous track -----------------------------------------------------
+  // Next: continuous play's next song, the next favourite, or else a new song
+  // with the same settings. Previous: back to the start, or the song before.
+  function nextTrack() {
+    if (radio.on) { radioAdvance(); return; }
+    if (!state.opts || state.busy) return;
+    var ctx = state.context, id = currentId();
+    if (ctx && ctx.tab === 'fav') {
+      var i = lib.fav.findIndex(function (x) { return x.id === id; });
+      if (i >= 0 && i + 1 < lib.fav.length) { playEntry(lib.fav[i + 1], 'fav'); return; }
+    }
+    var o = JSON.parse(JSON.stringify(state.opts));
+    o.seed = newSeed();
+    state.context = null;
+    applyOptions(o);
+    make(o, false, true);
+  }
+  function prevTrack() {
+    if (!state.opts) return;
+    if (audio.currentTime > 3 || state.busy) { audio.currentTime = 0; drawFrame(); return; }
+    var fav = state.context && state.context.tab === 'fav', list = fav ? lib.fav : lib.recent, id = currentId();
+    var i = list.findIndex(function (x) { return x.id === id; });
+    var target = i < 0 ? list[0] : fav ? list[i - 1] : list[i + 1];
+    if (target) playEntry(target, fav ? 'fav' : 'recent');
+    else { audio.currentTime = 0; drawFrame(); }
   }
   function applyOptions(o) {
     $('#seed').value = o.seed;
@@ -1610,25 +1807,142 @@
   }
   audio.addEventListener('play', function () {
     $('#play-icon').innerHTML = pauseIcon; $('#play').setAttribute('aria-label', '一時停止');
+    npPlaying(true);
     loopFrame();
   });
   audio.addEventListener('pause', function () {
     $('#play-icon').innerHTML = playIcon; $('#play').setAttribute('aria-label', '再生');
+    npPlaying(false);
     cancelAnimationFrame(state.raf); drawFrame();
   });
   audio.addEventListener('playing', function () {
     if (radio.blocked) { radio.blocked = false; radioStatus(); }
   });
+  // (rAF stops in a background tab; the bar and the lock screen still follow the time.)
+  audio.addEventListener('timeupdate', function () { npTime(); });
   audio.addEventListener('ended', function () {
     drawFrame();
     if (radio.on) radioAdvance();
+    else if (state.context && state.context.tab === 'fav') nextTrack(); // a favourites playlist plays on
   });
+  // Keys: Space play/pause, ←/→ 5 seconds, N next, P previous, L favourite, R repeat.
   document.addEventListener('keydown', function (e) {
-    if (e.code !== 'Space') return;
     var tag = (e.target && e.target.tagName) || '';
-    if (/INPUT|SELECT|TEXTAREA|BUTTON|A/.test(tag)) return;
-    e.preventDefault(); togglePlay();
+    if (/INPUT|SELECT|TEXTAREA|BUTTON|A/.test(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    var k = e.key.toLowerCase();
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    else if (e.key === 'ArrowRight' && state.song) { e.preventDefault(); seekBy(5); }
+    else if (e.key === 'ArrowLeft' && state.song) { e.preventDefault(); seekBy(-5); }
+    else if (k === 'n') nextTrack();
+    else if (k === 'p') prevTrack();
+    else if (k === 'l' && state.song) toggleFav(entryOf(state.song, state.opts));
+    else if (k === 'r') toggleRepeat();
   });
+  function seekBy(sec) {
+    audio.currentTime = Math.max(0, Math.min(playLength() - 0.05, audio.currentTime + sec));
+    drawFrame();
+  }
+
+  // Now playing bar -------------------------------------------------------------
+  var np = $('#np');
+  function nowPlaying(song) {
+    if (!song) return;
+    np.hidden = false;
+    document.body.classList.add('has-np');
+    $('#np-title').textContent = song.title;
+    $('#np-sub').textContent = styleName(song) + ' · ' + song.key + ' ' + (MODE_JA[song.mode] || song.mode) + ' · ' + song.bpm + ' BPM';
+    var liked = isFav(currentId());
+    $('#np-like').setAttribute('aria-pressed', String(liked));
+    $('#np-like').setAttribute('aria-label', liked ? 'お気に入りから外す' : 'お気に入りに追加');
+    $('#np-repeat').setAttribute('aria-pressed', String(!!state.repeat));
+    drawArt(song, $('#np-art'));
+    npTime();
+    mediaMetadata(song);
+  }
+  function npPlaying(on) {
+    $('#np-play-icon').innerHTML = on ? pauseIcon : playIcon;
+    $('#np-play').setAttribute('aria-label', on ? '一時停止' : '再生');
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
+  }
+  var seeking = false;
+  function npTime() {
+    if (!state.song) return;
+    var len = playLength(), t = Math.min(len, audio.currentTime || 0);
+    $('#np-time').textContent = fmt(t) + ' / ' + fmt(len);
+    if (!seeking) {
+      var s = $('#np-seek');
+      s.value = String(Math.round(len ? t / len * 1000 : 0));
+      s.style.setProperty('--p', (len ? t / len * 100 : 0) + '%');
+    }
+    if ('mediaSession' in navigator && navigator.mediaSession.setPositionState && len) {
+      try { navigator.mediaSession.setPositionState({ duration: len, playbackRate: audio.playbackRate || 1, position: t }); } catch (e) {}
+    }
+  }
+  $('#np-seek').addEventListener('input', function () {
+    seeking = true;
+    this.style.setProperty('--p', (this.value / 10) + '%');
+    audio.currentTime = this.value / 1000 * playLength();
+    drawFrame();
+  });
+  $('#np-seek').addEventListener('change', function () { seeking = false; npTime(); });
+  $('#np-play').addEventListener('click', togglePlay);
+  $('#np-next').addEventListener('click', nextTrack);
+  $('#np-prev').addEventListener('click', prevTrack);
+  $('#np-like').addEventListener('click', function () { if (state.song) toggleFav(entryOf(state.song, state.opts)); });
+  $('#np-repeat').addEventListener('click', toggleRepeat);
+  function toggleRepeat() {
+    state.repeat = !state.repeat;
+    audio.loop = !!(state.song && state.song.loop) || state.repeat;
+    $('#np-repeat').setAttribute('aria-pressed', String(state.repeat));
+  }
+
+  // Cover art: the song's piano roll on its style's colour (bar, lock screen).
+  var ART_BG = { pop: '#F2541B', jpop: '#E0457B', dance: '#5B4BFF', lofi: '#8C6A4A', chiptune: '#2EA043', ambient: '#2C7DA0', jazz: '#B7791F' };
+  function drawArt(song, cv) {
+    var g = cv.getContext('2d'), W = cv.width, H = cv.height;
+    var base = ART_BG[Object.keys(song.mix || {})[0]] || '#F2541B';
+    g.fillStyle = '#111216'; g.fillRect(0, 0, W, H);
+    var grad = g.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, base); grad.addColorStop(1, '#111216');
+    g.globalAlpha = 0.85; g.fillStyle = grad; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+    // The first eight bars of melody and bass.
+    var span = Math.min(song.loop ? song.loopEnd : song.duration, song.barDuration * 8);
+    var ns = song.notes.filter(function (n) { return (n.inst === 'lead' || n.inst === 'bass') && !n.layer && n.t < span; });
+    if (!ns.length) return;
+    var lo = 127, hi = 0;
+    ns.forEach(function (n) { lo = Math.min(lo, n.midi); hi = Math.max(hi, n.midi); });
+    var pad = W * 0.12, rowH = (H - 2 * pad) / (hi - lo + 1);
+    ns.forEach(function (n) {
+      g.fillStyle = n.inst === 'lead' ? '#FFFFFF' : 'rgba(255,255,255,0.45)';
+      var x = pad + n.t / span * (W - 2 * pad), w = Math.max(W / 96, n.d / span * (W - 2 * pad) - 1);
+      g.fillRect(x, H - pad - (n.midi - lo + 1) * rowH, w, Math.max(W / 128, rowH - 1));
+    });
+  }
+  // Lock screen / notification: title, style, cover art, and the buttons.
+  var artUrl = null;
+  function mediaMetadata(song) {
+    if (!('mediaSession' in navigator) || !window.MediaMetadata) return;
+    var meta = { title: song.title, artist: 'music-composition.js', album: styleName(song) + ' · ' + song.bpm + ' BPM' };
+    navigator.mediaSession.metadata = new MediaMetadata(meta);
+    var cv = document.createElement('canvas');
+    cv.width = cv.height = 512;
+    drawArt(song, cv);
+    cv.toBlob(function (blob) {
+      if (!blob || state.song !== song) return;
+      if (artUrl) URL.revokeObjectURL(artUrl);
+      artUrl = URL.createObjectURL(blob);
+      meta.artwork = [{ src: artUrl, sizes: '512x512', type: 'image/png' }];
+      navigator.mediaSession.metadata = new MediaMetadata(meta);
+    });
+  }
+  if ('mediaSession' in navigator) {
+    [['play', function () { audio.play().catch(function () {}); }], ['pause', function () { audio.pause(); }],
+      ['previoustrack', prevTrack], ['nexttrack', nextTrack],
+      ['seekbackward', function (d) { seekBy(-((d && d.seekOffset) || 10)); }], ['seekforward', function (d) { seekBy((d && d.seekOffset) || 10); }],
+      ['seekto', function (d) { if (d && d.seekTime !== undefined) { audio.currentTime = d.seekTime; drawFrame(); } }]
+    ].forEach(function (h) { try { navigator.mediaSession.setActionHandler(h[0], h[1]); } catch (e) {} });
+  }
   canvas.addEventListener('click', function (e) {
     if (!state.song) return;
     var r = canvas.getBoundingClientRect();
@@ -2002,12 +2316,6 @@
         radioStatus();
       });
       $('#eyebrow').textContent = 'Continuous play · ' + radio.count + ' 曲目';
-      if ('mediaSession' in navigator && window.MediaMetadata) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: item.song.title, artist: 'music-composition.js',
-          album: styleName(item.song) + ' · ' + item.song.bpm + ' BPM'
-        });
-      }
       radioPrepare().catch(radioError);
     }).catch(function (err) {
       radio.advancing = false;
@@ -2034,9 +2342,6 @@
     $('#radio-stop').hidden = !radio.on;
     $('#eyebrow').classList.toggle('live', radio.on);
     if (!radio.on) $('#eyebrow').textContent = 'Now composed';
-    if ('mediaSession' in navigator) {
-      try { navigator.mediaSession.setActionHandler('nexttrack', radio.on ? radioAdvance : null); } catch (e) {}
-    }
   }
   $('#radio-start').addEventListener('click', function () {
     var r = radioRules();
@@ -2384,6 +2689,31 @@
   setStyle(state.style);
   renderHistory();
   if (radioRulesFromUrl()) radioStatus('「連続再生を始める」で、このルールの曲を流し続けます');
+
+  // App: offline support (sw.js: the network first, the cache when offline),
+  // installing, and an offline badge. Only on the site itself.
+  if ('serviceWorker' in navigator && !window.claude && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
+  }
+  var installPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    installPrompt = e;
+    $('#install').hidden = false;
+  });
+  $('#install').addEventListener('click', function () {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    installPrompt.userChoice.then(function () { installPrompt = null; $('#install').hidden = true; }, function () {});
+  });
+  window.addEventListener('appinstalled', function () { $('#install').hidden = true; });
+  function onlineState() { $('#offline').hidden = navigator.onLine !== false; }
+  window.addEventListener('online', onlineState);
+  window.addEventListener('offline', onlineState);
+  onlineState();
+
   var shared = optionsFromUrl();
   if (shared) {
     applyOptions(shared);

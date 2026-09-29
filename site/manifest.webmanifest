@@ -1,0 +1,22 @@
+{
+  "name": "music-composition.js",
+  "short_name": "MCJ",
+  "description": "シードから曲を作曲して再生・保存する、ブラウザの中だけで動く作曲アプリ。",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#111216",
+  "theme_color": "#111216",
+  "lang": "ja",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "連続再生", "short_name": "連続再生", "url": "/?radio=1&source=pwa", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

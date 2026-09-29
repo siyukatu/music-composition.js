@@ -16,7 +16,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = '1.0.0-beta.3';
+  var VERSION = '1.0.0-beta.4';
   var TAU = Math.PI * 2;
 
   // ---------------------------------------------------------------------------

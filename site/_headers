@@ -13,6 +13,13 @@ https://:project.pages.dev/*
 /apple-touch-icon.png
   Cache-Control: public, max-age=86400
 
+# The service worker and the manifest are always revalidated, so updates reach
+# installed apps right away.
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
 # The page is revalidated on every load, so a deploy's new script URLs
 # (?h=<hash>, stamped by scripts/build.js) are picked up immediately.
 /
