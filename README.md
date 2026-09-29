@@ -13,9 +13,10 @@
 
 ## 作曲のしくみ
 
-- **構成**: イントロ・Aメロ・プレコーラス・サビ・ブリッジ・アウトロから、長さに合わせて組み立てます。最後のサビで半音〜全音上に転調することがあります（直前に新しいキーの V7 を置きます）
-- **和声**: 定番の 4 コードループか、機能和声（T→S→D）に沿った進行を選び、セカンダリードミナント、同主調からの借用和音（iv・♭VI・♭VII など）、sus4 の解決、ベースが順次進行になる転回形、セクションの変わり目の ii–V やドミナントで彩ります。マイナーキーのドミナントは導音を上げた V を使います
-- **メロディ**: 4 小節の「モチーフ→応答→モチーフ（移高・反行・語尾の変化）→終止」でつくり、強拍はコードトーン、ときどき倚音で解決させます。コードごとのスケールで鳴らすので、借用和音やセカンダリードミナントの上でも音が外れません。サビは高めの音域で、フレーズの頂点にアクセントを付けます
+- **構成**: イントロ・Aメロ・プレコーラス（Bメロ）・サビ・ブリッジ・アウトロから、長さに合わせて組み立てます。最後のサビの前に静かな「落ちサビ」を入れたり、最後のサビで半音〜全音上に転調したりします（直前に新しいキーの V7 を置きます）
+- **和声**: 王道進行・小室進行・カノン進行・丸サ進行・下降ベースなど、名前のある進行をスタイルとセクションの役割に合わせて選び、機能が同じコードへの置き換え（I↔vi、IV↔ii、iii→III7）で変化を付けます。プレコーラスは必ずドミナントで終わり、サビへ向かいます。セカンダリードミナント、同主調からの借用和音（iv・♭VI・♭VII など）、sus4 の解決、ベースが順次進行になる転回形、セクションの変わり目の ii–V も使います。マイナーキーのドミナントは導音を上げた V です
+- **メロディ**: 4 小節の「モチーフ→応答→モチーフ（移高・反行・語尾の変化）→終止」でつくり、強拍はコードトーン、ときどき倚音で解決させます。リズムは拍ごとのリズムセル（シンコペーション・タイを含む）から曲ごとに生成します。サビは直前のメロディより 3〜5 度上から入り、サビの終盤に一度だけ最高音を置きます（最後のサビはさらに高く）。コードごとのスケールで鳴らすので、借用和音やセカンダリードミナントの上でも音が外れません
+- **伴奏**: ドラム・ベース・コードのパターンを、リズムの種類（8 ビート、4 つ打ち、シャッフル…）のルールに沿って曲ごとに生成します。4 小節ごとのフレーズ終わりのバリエーション、キックに合わせたベース、次のコードを先取りする「食い」も入ります
 - **表現**: 3 連符、しゃくり（ピッチベンド）、ゴーストノート、フィル・ブレイク、プレコーラスのビルドアップ、ブリッジのハーフタイム、最後のサビのハモり
 
 ## インストール
@@ -85,7 +86,8 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | オプション | 値 | 既定値 |
 |---|---|---|
 | `seed` | 文字列 / 数値 | ランダム |
-| `style` | `pop` `dance` `lofi` `chiptune` `ambient` `auto` | `auto`（シードで決定） |
+| `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `auto` | `auto`（シードで決定） |
+| `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き | スタイルどおり |
 | `key` | `C`〜`B`（`F#`, `Bb` なども可） | シードで決定 |
 | `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイルに合わせて決定 |
 | `bpm` | 40〜240 | スタイルに合わせて決定 |
@@ -93,6 +95,30 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | `duration` | 目安の秒数（残響を含む。`bars` 未指定時。4 小節単位に丸め） | — |
 | `loop` | `true` / `false` | `false` |
 | `sampleRate` | 8000〜96000 | `44100` |
+
+### `parts`（楽器と演奏）
+
+| キー | 値 |
+|---|---|
+| `drums` | `acoustic` `electronic` `lofi` `chip` `none` |
+| `groove` | `eightbeat` `sixteenbeat` `fourfloor` `halftime` `shuffle` `breakbeat` `chip` |
+| `bass` | `synth` `finger` `sine` `chip` `none` |
+| `bassLine` | `root` `drive` `offbeat` `syncopated`（キックに合わせる）`walking` `long` |
+| `chords` | `piano` `epiano` `synth` `organ` `chip` `none` |
+| `comping` | `block` `rhythm` `arpeggio` `sustain` |
+| `guitar` | `strum` `cutting` `arpeggio` `none` |
+| `pad` | `warm` `wide` `strings` `ambient` `none` |
+| `lead` | `saw` `pluck` `soft` `square` `flute` `brass` `bell` `piano` |
+| `arp` | `eighths` `sixteenths` `bells` `none` |
+| `swing` | 0〜0.5 |
+
+```js
+MusicComposition.generate({ style: 'lofi', seed: 'rain', parts: { chords: 'piano', guitar: 'arpeggio', bassLine: 'walking' } });
+MusicComposition.parts        // 選べる値の一覧
+MusicComposition.styleParts   // 各スタイルの既定値
+```
+
+パターン（ドラムの叩き方、ベースライン、コードのリズム）はどの設定でも曲ごとに自動で作られます。
 
 `loop: true` のときはイントロとアウトロを省き、曲の末尾からはみ出したリバーブやリリースを先頭に重ねて、継ぎ目なくループする WAV を書き出します。
 
@@ -106,10 +132,11 @@ song.key       // 'A'
 song.mode      // 'dorian'
 song.bpm       // 70
 song.duration  // 秒数（ループ時は loopEnd と同じ）
-song.sections  // [{ type: 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro', startBar, bars, start, key, shift }]
-               // A = Aメロ, P = プレコーラス, B = サビ, C = ブリッジ。最後のサビで転調することがあります
+song.parts     // 使われた楽器と演奏 { drums: 'lofi', groove: 'shuffle', ... }
+song.sections  // [{ type: 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro', startBar, bars, start, key, shift, drop }]
+               // A = Aメロ, P = プレコーラス, B = サビ（drop: true は落ちサビ）, C = ブリッジ。最後のサビで転調することがあります
 song.chords    // [{ bar, time, name: 'Am7', degree }]（1 小節に 2 つのコードが入ることもあります）
-song.notes     // [{ t, d, midi, vel, inst: 'lead' | 'bass' | 'chords' | 'arp' | 'drums', ... }]
+song.notes     // [{ t, d, midi, vel, inst: 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums', ... }]
 ```
 
 楽譜を見てから `render(song)` で音声化できるので、ピアノロールの表示などにも使えます。
@@ -140,14 +167,15 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 | `style` `key` `mode` `bpm` | 省略するとシードから決まる |
 | `bars` / `sec` | 長さ（小節 / 秒）。どちらもなければ 32 小節 |
 | `loop=1` | ループ用 |
+| `parts` | 楽器と演奏。`parts=guitar:strum,lead:brass,swing:0.15` |
 
 共有ダイアログの「ほかのアプリで共有…」（`navigator.share`）では、ブラウザで描いたカード画像（1200×630 の PNG）も一緒に渡します。
 
 ### 連続再生
 
-サイドバーの「連続再生」で、スタイル（複数選択）・モード・BPM の範囲・1 曲の長さ（秒）を決めると、その範囲からランダムに選んだ新しい曲を止めるまで流し続けます。再生中に次の曲を Worker で作っておくので、曲の切り替わりで待ちません。「次の曲へ」やロック画面の「次のトラック」（Media Session）で飛ばせます。
+サイドバーの「連続再生」で、スタイル（複数選択）・モード・BPM の範囲・1 曲の長さ（秒または小節）を決めると、その範囲からランダムに選んだ新しい曲を止めるまで流し続けます。再生中に次の曲を Worker で作っておくので、曲の切り替わりで待ちません。「次の曲へ」やロック画面の「次のトラック」（Media Session）で飛ばせます。
 
-ルールは URL に入るので、ブックマークや共有もできます（再生はボタンを押してから始まります）。
+「楽器と演奏」を変えていれば、その設定も使います。ルールは URL に入るので、ブックマークや共有もできます（再生はボタンを押してから始まります）。長さを小節で決めるときは `bars=16-32` です。
 
 ```
 https://mcj.siyukatu.me/?radio=1&styles=lofi,ambient&modes=dorian&bpm=70-90&sec=60-120

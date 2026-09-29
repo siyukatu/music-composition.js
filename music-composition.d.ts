@@ -2,18 +2,43 @@
 // https://github.com/siyukatu/music-composition.js
 
 declare namespace MusicComposition {
-  type Style = 'pop' | 'dance' | 'lofi' | 'chiptune' | 'ambient';
+  type Style = 'pop' | 'jpop' | 'dance' | 'lofi' | 'chiptune' | 'ambient';
   type Mode = 'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian';
   /** A = verse, P = pre-chorus, B = chorus, C = bridge. */
   type SectionType = 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro';
-  type Instrument = 'lead' | 'bass' | 'chords' | 'arp' | 'drums';
+  type Instrument = 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums';
   type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'open' | 'crash';
+
+  /** What plays and how. Every field is optional; the style supplies the rest. */
+  interface Parts {
+    /** Drum kit. */
+    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'none';
+    /** Drum pattern family (each song generates its own pattern within it). */
+    groove?: 'eightbeat' | 'sixteenbeat' | 'fourfloor' | 'halftime' | 'shuffle' | 'breakbeat' | 'chip';
+    bass?: 'synth' | 'finger' | 'sine' | 'chip' | 'none';
+    /** How the bass plays: 'syncopated' locks to the kick drum, 'walking' in quarter notes. */
+    bassLine?: 'root' | 'drive' | 'offbeat' | 'syncopated' | 'walking' | 'long';
+    /** Chord instrument. */
+    chords?: 'piano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'none';
+    /** How the chords play. 'rhythm' is a generated syncopated pattern. */
+    comping?: 'block' | 'rhythm' | 'arpeggio' | 'sustain';
+    /** Guitar (plucked string synthesis): strumming, 16th-note cutting, or arpeggios. */
+    guitar?: 'strum' | 'cutting' | 'arpeggio' | 'none';
+    pad?: 'warm' | 'wide' | 'strings' | 'ambient' | 'none';
+    /** Melody instrument. */
+    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'flute' | 'brass' | 'bell' | 'piano';
+    arp?: 'eighths' | 'sixteenths' | 'bells' | 'none';
+    /** 0 (straight) – 0.5. */
+    swing?: number;
+  }
 
   interface ComposeOptions {
     /** Same seed + options => same song. Random if omitted. */
     seed?: string | number;
     /** Default 'auto' (picked from the seed). */
     style?: Style | 'auto';
+    /** Override the style's instruments and playing. */
+    parts?: Parts;
     /** 40–240. Chosen from the style if omitted. */
     bpm?: number;
     /** 'C' … 'B', sharps or flats ('F#', 'Bb'), or a pitch class 0–11. Picked from the seed if omitted. */
@@ -45,6 +70,8 @@ declare namespace MusicComposition {
     key: string;
     /** Semitones above the song's key (a final chorus may move up). */
     shift: number;
+    /** A quiet chorus (chords and melody only) before the last one. */
+    drop: boolean;
   }
 
   interface Chord {
@@ -86,6 +113,8 @@ declare namespace MusicComposition {
     title: string;
     seed: string;
     style: Style;
+    /** The parts actually used (style defaults plus overrides). */
+    parts: Required<Parts>;
     bpm: number;
     key: string;
     mode: Mode;
@@ -121,6 +150,10 @@ interface MusicCompositionStatic {
   /** Object URL for an <audio> element. Revoke it with URL.revokeObjectURL when done. */
   toURL(wav: ArrayBuffer): string;
   readonly styles: MusicComposition.Style[];
+  /** The choices for each field of `parts`. */
+  readonly parts: { [K in keyof MusicComposition.Parts]-?: string[] };
+  /** Each style's default parts. */
+  readonly styleParts: { [S in MusicComposition.Style]: Required<MusicComposition.Parts> };
   readonly modes: MusicComposition.Mode[];
   readonly keys: string[];
 }

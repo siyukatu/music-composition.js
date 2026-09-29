@@ -109,7 +109,66 @@ test('melodies move mostly by step and stay in range', () => {
   assert.ok(wide / pairs < 0.005, wide + ' leaps wider than an octave in ' + pairs);
 });
 
+test('every part choice renders non-silent audio without NaN', () => {
+  for (const part of Object.keys(MusicComposition.parts)) {
+    for (const value of MusicComposition.parts[part]) {
+      const song = MusicComposition.compose({ seed: 'parts', style: 'pop', bars: 8, loop: true, parts: { [part]: value } });
+      assert.strictEqual(song.parts[part], value);
+      const w = readWav(MusicComposition.render(song, { sampleRate: 16000 }));
+      let peak = 0, bad = false;
+      for (let i = 0; i < w.samples.length; i++) { const x = w.samples[i]; if (x !== x) bad = true; peak = Math.max(peak, Math.abs(x)); }
+      assert.ok(!bad && peak > 3000, part + '=' + value + ': peak ' + peak);
+    }
+  }
+});
+
+test('parts override the style and are reported on the song', () => {
+  const song = MusicComposition.compose({ seed: 'p', style: 'lofi', parts: { chords: 'piano', guitar: 'strum', swing: 0 } });
+  assert.strictEqual(song.parts.chords, 'piano');
+  assert.strictEqual(song.parts.guitar, 'strum');
+  assert.strictEqual(song.parts.bass, MusicComposition.styleParts.lofi.bass);
+  assert.ok(song.notes.some(n => n.inst === 'guitar'));
+  assert.ok(song.notes.some(n => n.patch === 'piano'));
+});
+
+test('choruses enter above the line before them and peak once, late', () => {
+  let rises = 0, single = 0, late = 0, n = 0;
+  for (const style of ['pop', 'jpop', 'dance', 'lofi']) {
+    for (let i = 0; i < 15; i++) {
+      const song = MusicComposition.compose({ seed: 'climax' + i, style, bars: 64 });
+      const chorus = song.sections.find(s => s.type === 'B' && !s.drop);
+      const lead = song.notes.filter(x => x.inst === 'lead' && !x.harmony);
+      const before = lead.filter(x => x.t < chorus.start - song.barDuration * 0.3).pop();
+      const first = lead.find(x => x.t >= chorus.start - 0.01);
+      const inChorus = lead.filter(x => x.t >= chorus.start && x.t < chorus.start + chorus.bars * song.barDuration);
+      const top = Math.max(...inChorus.map(x => x.midi));
+      const peak = inChorus.find(x => x.midi === top);
+      n++;
+      if (first.midi - before.midi >= 3) rises++;
+      if (inChorus.filter(x => x.midi === top).length === 1) single++;
+      if ((peak.t - chorus.start) / (chorus.bars * song.barDuration) >= 0.6) late++;
+    }
+  }
+  assert.ok(rises / n >= 0.75, 'chorus rises in ' + rises + '/' + n);
+  assert.ok(single / n >= 0.9, 'single peak in ' + single + '/' + n);
+  assert.ok(late / n >= 0.9, 'late peak in ' + late + '/' + n);
+});
+
+test('pre-choruses end on a dominant chord', () => {
+  for (let i = 0; i < 20; i++) {
+    const song = MusicComposition.compose({ seed: 'pre' + i, style: 'jpop', bars: 64 });
+    for (const s of song.sections.filter(x => x.type === 'P')) {
+      const lastBar = s.startBar + s.bars - 1;
+      const last = song.chords.filter(c => c.bar === lastBar).pop();
+      assert.strictEqual(last.degree, 4, 'seed pre' + i + ': ' + last.name);
+    }
+  }
+});
+
 test('invalid options throw readable errors', () => {
+  assert.throws(() => MusicComposition.compose({ parts: { drums: 'tabla' } }), /unknown drums/);
+  assert.throws(() => MusicComposition.compose({ parts: { kazoo: 'loud' } }), /unknown part/);
+  assert.throws(() => MusicComposition.compose({ parts: { swing: 2 } }), /swing/);
   assert.throws(() => MusicComposition.compose({ style: 'polka' }), /unknown style/);
   assert.throws(() => MusicComposition.compose({ mode: 'phrygian' }), /unknown mode/);
   assert.throws(() => MusicComposition.compose({ key: 'H' }), /unknown key/);
