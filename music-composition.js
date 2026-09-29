@@ -580,8 +580,8 @@
     piano:      { wave: 'add', roll: 0.012, lh: true, partials: [[1, 1, 1.8], [2, 0.5, 1], [3, 0.26, 0.6], [4, 0.13, 0.4], [5, 0.07, 0.3], [6, 0.04, 0.22]], inh: 0.0004, a: 0.002, d: 3, s: 0, r: 0.25, cutoff: 0, gain: 0.1, pan: -0.08, rev: 0.3, dly: 0.04, vib: 0 },
     organ:      { wave: 'add', partials: [[1, 1, 0], [2, 0.7, 0], [3, 0.4, 0], [4, 0.28, 0], [6, 0.16, 0], [8, 0.12, 0]], a: 0.008, d: 0.2, s: 1, r: 0.08, cutoff: 0, gain: 0.045, pan: -0.1, rev: 0.3, dly: 0, vib: 0.1 },
     keys:       { wave: 'saw', unison: 1, a: 0.004, d: 0.5, s: 0.15, r: 0.12, cutoff: 700, env: 2000, fd: 0.18, res: 0.1, gain: 0.13, pan: -0.1, rev: 0.3, dly: 0.1, vib: 0 },
-    guitar:     { wave: 'ks', bright: 0.55, ring: 2.2, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 0.16, pan: 0.3, rev: 0.3, dly: 0.08, vib: 0 },
-    guitarMute: { wave: 'ks', bright: 0.35, ring: 0.18, a: 0.001, d: 1, s: 1, r: 0.03, cutoff: 0, gain: 0.16, pan: 0.32, rev: 0.15, dly: 0.05, vib: 0 },
+    guitar:     { wave: 'ks', bright: 0.55, body: 3200, ring: 2.2, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 0.19, pan: 0.3, rev: 0.3, dly: 0.08, vib: 0 },
+    guitarMute: { wave: 'ks', bright: 0.35, body: 2600, ring: 0.18, a: 0.001, d: 1, s: 1, r: 0.03, cutoff: 0, gain: 0.19, pan: 0.32, rev: 0.15, dly: 0.05, vib: 0 },
     pad:        { wave: 'saw', unison: 3, detune: 14, a: 0.45, d: 1.2, s: 0.8, r: 0.9, cutoff: 800, env: 300, fd: 1.5, res: 0.05, gain: 0.07, pan: 0, rev: 0.6, dly: 0, vib: 0 },
     padWide:    { wave: 'saw', unison: 3, detune: 18, a: 0.08, d: 1.2, s: 0.8, r: 0.5, cutoff: 1300, env: 500, fd: 0.8, res: 0.1, gain: 0.08, pan: 0, rev: 0.5, dly: 0, vib: 0 },
     strings:    { wave: 'saw', unison: 3, detune: 9, a: 0.3, d: 1, s: 0.9, r: 0.6, cutoff: 2000, env: 500, fd: 1, res: 0.05, gain: 0.055, pan: 0, rev: 0.55, dly: 0, vib: 0.12 },
@@ -625,12 +625,12 @@
     musicboxArp: { wave: 'add', transpose: 12, partials: [[1, 1, 1.4], [2, 0.12, 0.5], [5.4, 0.28, 0.12], [8.9, 0.1, 0.06]], a: 0.001, d: 2.5, s: 0, r: 0.8, cutoff: 0, gain: 0.06, pan: -0.3, rev: 0.6, dly: 0.35, vib: 0 },
 
     // Plucked strings: harp (chords rolled, with a left hand), pizzicato, nylon guitar, upright bass.
-    harp:       { wave: 'ks', roll: 0.035, lh: true, bright: 0.42, ring: 3.5, a: 0.001, d: 1, s: 1, r: 1.4, cutoff: 0, gain: 0.35, pan: -0.15, rev: 0.45, dly: 0.05, vib: 0 },
-    harpLead:   { wave: 'ks', bright: 0.5, ring: 3, a: 0.001, d: 1, s: 1, r: 0.9, cutoff: 0, gain: 1.8, pan: 0.05, rev: 0.4, dly: 0.2, vib: 0 },
-    harpArp:    { wave: 'ks', bright: 0.45, ring: 2.5, a: 0.001, d: 1, s: 1, r: 1, cutoff: 0, gain: 0.34, pan: -0.35, rev: 0.45, dly: 0.25, vib: 0 },
-    pizzicato:  { wave: 'ks', roll: 0.006, bright: 0.3, ring: 0.45, a: 0.001, d: 1, s: 1, r: 0.05, cutoff: 0, gain: 0.6, pan: -0.1, rev: 0.4, dly: 0, vib: 0 },
-    nylon:      { wave: 'ks', bright: 0.3, ring: 2.6, a: 0.001, d: 1, s: 1, r: 0.3, cutoff: 0, gain: 0.18, pan: 0.25, rev: 0.3, dly: 0.05, vib: 0 },
-    bassUpright: { wave: 'ks', bright: 0.22, ring: 1.1, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 1.2, pan: 0, rev: 0.05, dly: 0, vib: 0 }
+    harp:       { wave: 'ks', roll: 0.035, lh: true, bright: 0.42, body: 1900, ring: 3.5, a: 0.001, d: 1, s: 1, r: 1.4, cutoff: 0, gain: 0.41, pan: -0.15, rev: 0.45, dly: 0.05, vib: 0 },
+    harpLead:   { wave: 'ks', bright: 0.5, body: 2200, ring: 3, a: 0.001, d: 1, s: 1, r: 0.9, cutoff: 0, gain: 2.37, pan: 0.05, rev: 0.4, dly: 0.2, vib: 0 },
+    harpArp:    { wave: 'ks', bright: 0.45, body: 2200, ring: 2.5, a: 0.001, d: 1, s: 1, r: 1, cutoff: 0, gain: 0.52, pan: -0.35, rev: 0.45, dly: 0.25, vib: 0 },
+    pizzicato:  { wave: 'ks', roll: 0.006, bright: 0.3, body: 1800, ring: 0.45, a: 0.001, d: 1, s: 1, r: 0.05, cutoff: 0, gain: 0.76, pan: -0.1, rev: 0.4, dly: 0, vib: 0 },
+    nylon:      { wave: 'ks', bright: 0.3, body: 1500, ring: 2.6, a: 0.001, d: 1, s: 1, r: 0.3, cutoff: 0, gain: 0.23, pan: 0.25, rev: 0.3, dly: 0.05, vib: 0 },
+    bassUpright: { wave: 'ks', bright: 0.12, body: 420, ring: 1.1, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 2.8, pan: 0, rev: 0.05, dly: 0, vib: 0 }
   };
 
   // Progression idioms, in Roman numerals relative to the key (major-key
@@ -3099,6 +3099,10 @@
     var revS = P.rev || 0, dlyS = P.dly || 0;
     var rMul = Math.exp(-1 / (Math.max(P.r, 0.001) / 5 * sr)), env = 1, durS = n.d * sr;
     var dcX = 0, dcY = 0;
+    // body (Hz): a low-pass for the instrument's body. A low string loses its
+    // brightness only once per (long) period, so without it a bass rings
+    // twangy like a steel string; a double bass's body keeps the low partials.
+    var bodyA = P.body ? 1 - Math.exp(-TAU * P.body / sr) : 0, b1 = 0, b2 = 0;
     for (var i = 0; i < total; i++) {
       var x = 0;
       if (i < burst) { lp += bright * ((ctx.rand01() * 2 - 1) - lp); x = lp * gainX; }
@@ -3112,6 +3116,7 @@
       if (++rb === size) rb = 0;
       if (i >= durS) env *= rMul;
       var o = y - dcX + 0.995 * dcY; dcX = y; dcY = o;
+      if (bodyA) { b1 += bodyA * (o - b1); b2 += bodyA * (b1 - b2); o = b2; }
       var g = o * env * amp, j = start + i;
       L[j] += g * panL; Rr[j] += g * panR;
       if (revS) rev[j] += g * revS;
