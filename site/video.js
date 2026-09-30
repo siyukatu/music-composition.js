@@ -1,7 +1,8 @@
 /*
  * Music video export for the demo page: draws the song as it plays (a scrolling
- * piano roll with the chord, section and beat) and encodes it with the song's
- * audio into an MP4.
+ * piano roll, the chord strip, the section and the beat) and encodes it with the
+ * song's audio into an MP4. It looks like the site: its colours (light or dark,
+ * as the page is shown), thin lines, square corners and one red-orange accent.
  *
  *   MCVideo.render(song, wavArrayBuffer, { aspect: '16:9' | '1:1' | '9:16', onProgress, signal }) -> Promise<Blob>
  *
@@ -14,59 +15,112 @@
   var MEDIABUNNY = 'https://cdn.jsdelivr.net/npm/mediabunny@1.60.0/dist/bundles/mediabunny.min.mjs';
   var FPS = 30;
   var SIZES = { '16:9': [1280, 720], '1:1': [1080, 1080], '9:16': [720, 1280] };
-  var C = {
-    ground: '#111216', ground2: '#191B22', surface: '#1A1C21', line: '#2C3038', ink: '#ECEEF2', muted: '#969CA8',
-    lead: '#FF6A33', bass: '#5B8BFF', chords: '#2EC4A0', guitar: '#E0A640', arp: '#C07BF0', drums: '#6C727E'
+  // The site's tokens, with its dark theme as the fallback.
+  var TOKENS = {
+    ground: ['--roll-bg', '#0E0F12'], band: ['--roll-band', '#141519'], grid: ['--roll-grid', '#202227'], line: ['--line', '#2A2C32'],
+    ink: ['--ink', '#F2F2F2'], muted: ['--muted', '#9B9B9B'], accent: ['--accent', '#FF6A3D'], accentInk: ['--accent-ink', '#1A0904'],
+    lead: ['--lead', '#FF6A3D'], bass: ['--bass', '#4FB0E8'], chords: ['--chords', '#3F7268'], guitar: ['--guitar', '#E0A640'],
+    arp: ['--arp', '#C07BF0'], drums: ['--drums', '#6C6C6C']
   };
   var SECTION = { intro: 'INTRO', A: 'VERSE', P: 'PRE-CHORUS', B: 'CHORUS', C: 'BRIDGE', outro: 'OUTRO' };
-  var SECTION_COLOR = { intro: C.muted, A: C.bass, P: C.arp, B: C.lead, C: C.chords, outro: C.muted };
+  var SECTION_COLOR = { intro: 'muted', A: 'bass', P: 'arp', B: 'accent', C: 'chords', outro: 'muted' };
   var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient', jazz: 'Jazz', bossa: 'Bossa Nova' };
+  var ALPHA = { chords: 0.45, guitar: 0.55, arp: 0.7, bass: 0.95, lead: 0.95 };
+  var DRUM_ROW = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
+
+  // cubic-bezier(x1, y1, x2, y2) as a function of time (0..1), like CSS.
+  function bezier(x1, y1, x2, y2) {
+    function at(a, b, s) { return 3 * a * s * (1 - s) * (1 - s) + 3 * b * s * s * (1 - s) + s * s * s; }
+    return function (x) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      var lo = 0, hi = 1, s = x;
+      for (var i = 0; i < 24; i++) { s = (lo + hi) / 2; if (at(x1, x2, s) < x) lo = s; else hi = s; }
+      return at(y1, y2, s);
+    };
+  }
+  var EASE = bezier(0.76, 0, 0.24, 1);     // --ease
+  var EASE_WIPE = bezier(0.85, 0, 0.15, 1); // --ease-wipe
+  var STRIP = 0.45; // seconds: the chord strip's fill and scroll, as on the site
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return v || fallback;
+  }
+  function colors() {
+    var c = {};
+    Object.keys(TOKENS).forEach(function (k) { c[k] = cssVar(TOKENS[k][0], TOKENS[k][1]); });
+    return c;
   }
   function fmt(sec) {
     sec = Math.max(0, Math.floor(sec));
     return Math.floor(sec / 60) + ':' + (sec % 60 < 10 ? '0' : '') + (sec % 60);
   }
   function lengthOf(song) { return song.loop ? song.loopEnd : song.duration; }
+  function spacing(g, px) { if ('letterSpacing' in g) g.letterSpacing = px + 'px'; }
 
   // Everything that doesn't change from frame to frame.
   function prepare(song, W, H) {
     var total = lengthOf(song);
-    var pitched = song.notes.filter(function (n) { return n.inst !== 'drums' && !n.harmony && n.midi > 0; });
+    var pitched = song.notes.filter(function (n) { return n.inst !== 'drums' && !n.harmony && n.midi > 0 && n.t < total; });
     var lo = 127, hi = 0, maxD = 0;
     pitched.forEach(function (n) { lo = Math.min(lo, n.midi); hi = Math.max(hi, n.midi); maxD = Math.max(maxD, n.d); });
     var byStart = pitched.slice().sort(function (a, b) { return a.t - b.t; });
     var order = { chords: 0, guitar: 1, bass: 2, arp: 3, lead: 4 };
-    var drums = song.notes.filter(function (n) { return n.inst === 'drums'; });
+    var drums = song.notes.filter(function (n) { return n.inst === 'drums' && n.t < total; });
     var U = Math.min(W, H);
     var pad = Math.round(U * 0.06);
     var portrait = H > W * 1.2;
-    var L = {
-      pad: pad,
-      titleY: pad + U * 0.075,
-      metaY: pad + U * 0.075 + U * 0.05,
-      rollTop: portrait ? H * 0.24 : pad + U * 0.2,
-      rollBottom: portrait ? H * 0.70 : H - pad - U * 0.2,
-      chordY: portrait ? H * 0.80 : H - pad - U * 0.07,
-      barY: H - pad * 0.55,
-      playX: W * (portrait ? 0.3 : 0.28)
-    };
-    L.drumH = U * 0.05;
-    return {
-      song: song, W: W, H: H, U: U, L: L, total: total,
+    var L = { pad: pad, portrait: portrait };
+    L.eyebrowY = pad + U * 0.02;
+    L.titleSize = Math.round(U * 0.062);
+    L.titleY = L.eyebrowY + U * 0.018 + L.titleSize;
+    L.chipTop = L.titleY + U * 0.03;
+    L.chipH = Math.round(U * 0.046);
+    L.rollTop = portrait ? H * 0.25 : L.chipTop + L.chipH + U * 0.085;
+    L.rollBottom = portrait ? H * 0.68 : H - pad - U * 0.2;
+    L.stripTop = L.rollBottom + U * 0.035;
+    L.stripH = Math.round(U * 0.062);
+    L.bigChordY = portrait ? H * 0.86 : 0;
+    L.barY = H - pad * 0.7;
+    L.playX = W * (portrait ? 0.3 : 0.28);
+    L.head = U * 0.034; // the roll's header row (bar numbers)
+    L.drumH = U * 0.055;
+
+    var P = {
+      song: song, W: W, H: H, U: U, L: L, total: total, C: colors(),
       lo: lo - 2, hi: hi + 2, maxD: maxD, notes: byStart, order: order,
       kicks: drums.filter(function (n) { return n.drum === 'kick'; }).map(function (n) { return n.t; }),
       snares: drums.filter(function (n) { return n.drum === 'snare' || n.drum === 'clap'; }).map(function (n) { return [n.t, n.vel]; }),
       drums: drums,
       leads: byStart.filter(function (n) { return n.inst === 'lead'; }),
+      chords: song.chords.filter(function (c) { return c.time < total - 0.01; }),
       // Seconds shown across the width: about three bars, fewer on narrow frames.
       span: song.barDuration * (portrait ? 2.2 : W / H > 1.2 ? 3.2 : 2.6),
       display: cssVar('--font-display', 'sans-serif'),
       mono: cssVar('--font-mono', 'monospace')
     };
+    P.stripFont = '400 ' + Math.round(U * 0.026) + 'px ' + P.mono;
+    P.chipFont = '400 ' + Math.round(U * 0.021) + 'px ' + P.mono;
+    return P;
+  }
+  // Widths that need a font (measured once, on the frame's own canvas).
+  function measure(g, P) {
+    if (P.strip) return;
+    var U = P.U, padX = U * 0.022, x = 0;
+    g.font = P.stripFont;
+    spacing(g, 0);
+    P.strip = P.chords.map(function (c) {
+      var w = Math.ceil(g.measureText(c.name).width + padX * 2);
+      var box = { x: x, w: w, name: c.name, time: c.time };
+      x += w;
+      return box;
+    });
+    P.stripW = x;
+    var song = P.song;
+    P.chips = [song.styleLabel || STYLE[song.style] || song.style, song.key + ' ' + song.mode, song.bpm + ' BPM', song.meter || '4/4'];
+    g.font = P.chipFont;
+    P.chipW = P.chips.map(function (s) { return Math.ceil(g.measureText(s).width + U * 0.03); });
   }
 
   function lastBefore(times, t) {
@@ -83,163 +137,268 @@
     while (lo < hi) { var mid = (lo + hi) >> 1; if (notes[mid].t < t) lo = mid + 1; else hi = mid; }
     return lo;
   }
-  function fitText(g, text, font, size, maxW) {
-    g.font = size + 'px ' + font;
-    while (g.measureText(text).width > maxW && size > 10) { size -= 2; g.font = size + 'px ' + font; }
+  function fitText(g, text, font, size, maxW, weight) {
+    var set = function () { g.font = (weight || '400') + ' ' + size + 'px ' + font; };
+    set();
+    while (g.measureText(text).width > maxW && size > 10) { size -= 2; set(); }
     return size;
+  }
+  function rgba(hex, a) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return 'rgba(255,106,61,' + a + ')';
+    var n = parseInt(m[1], 16);
+    return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  // Clip to [x, x + w * p] (a wipe from the left) and draw.
+  function wiped(g, x, y, w, h, p, draw) {
+    if (p <= 0) return;
+    g.save();
+    g.beginPath(); g.rect(x, y, w * p, h); g.clip();
+    draw();
+    g.restore();
   }
 
   function drawFrame(g, P, t) {
-    var song = P.song, W = P.W, H = P.H, U = P.U, L = P.L;
+    var song = P.song, W = P.W, H = P.H, U = P.U, L = P.L, C = P.C;
+    measure(g, P);
+    spacing(g, 0);
+    g.textBaseline = 'alphabetic';
+    g.textAlign = 'left';
+    g.globalAlpha = 1;
 
-    // Background, breathing with the kick drum.
-    var k = lastBefore(P.kicks, t);
-    var kick = k >= 0 ? Math.exp(-(t - P.kicks[k]) / 0.18) : 0;
     g.fillStyle = C.ground;
-    g.fillRect(0, 0, W, H);
-    var grad = g.createRadialGradient(L.playX, (L.rollTop + L.rollBottom) / 2, 0, L.playX, (L.rollTop + L.rollBottom) / 2, Math.max(W, H) * 0.75);
-    grad.addColorStop(0, 'rgba(255,106,51,' + (0.07 + 0.1 * kick).toFixed(3) + ')');
-    grad.addColorStop(1, 'rgba(17,18,22,0)');
-    g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
 
     // Where are we?
-    var sec = song.sections[0];
-    song.sections.forEach(function (s) { if (s.start <= t + 1e-6) sec = s; });
+    var sec = song.sections[0], secIdx = 0;
+    song.sections.forEach(function (s, i) { if (s.start <= t + 1e-6) { sec = s; secIdx = i; } });
     var ci = -1;
-    for (var i = 0; i < song.chords.length; i++) if (song.chords[i].time <= t + 0.02) ci = i;
+    for (var i = 0; i < P.chords.length; i++) if (P.chords[i].time <= t + 0.02) ci = i;
 
-    // Title and meta
-    g.textBaseline = 'alphabetic';
-    g.textAlign = 'left';
+    // Header: an English eyebrow, the title (light weight, wiping in), the facts as chips.
+    g.font = '500 ' + Math.round(U * 0.019) + 'px ' + P.mono;
+    spacing(g, U * 0.005);
+    g.fillStyle = C.accent;
+    g.fillText('MUSIC-COMPOSITION.JS', L.pad, L.eyebrowY);
+    spacing(g, 0);
     g.fillStyle = C.ink;
-    fitText(g, song.title, P.display, Math.round(U * 0.075), W - L.pad * 2);
-    g.fillText(song.title, L.pad, L.titleY);
-    g.fillStyle = C.muted;
-    var meta = [song.styleLabel || STYLE[song.style] || song.style, sec.key + ' ' + song.mode, song.bpm + ' BPM'].join('  ·  ');
-    fitText(g, meta, P.mono, Math.round(U * 0.028), W - L.pad * 2);
-    g.fillText(meta, L.pad, L.metaY);
+    var ts = fitText(g, song.title, P.display, L.titleSize, W - L.pad * 2, '300');
+    wiped(g, L.pad, L.titleY - ts * 1.1, W, ts * 1.4, EASE_WIPE((t - 0.1) / 0.6), function () { g.fillText(song.title, L.pad, L.titleY); });
+
+    var cx = L.pad;
+    g.font = P.chipFont;
+    g.textBaseline = 'middle';
+    P.chips.forEach(function (s, k) {
+      var w = P.chipW[k], a = Math.max(0, Math.min(1, (t - 0.3 - k * 0.06) / 0.45));
+      if (a <= 0) { cx += w - 1; return; }
+      var dy = (1 - EASE(a)) * U * 0.01;
+      g.globalAlpha = a;
+      if (k === 0) { g.fillStyle = C.accent; g.fillRect(cx, L.chipTop + dy, w, L.chipH); }
+      else { g.strokeStyle = C.line; g.lineWidth = 1; g.strokeRect(cx + 0.5, L.chipTop + dy + 0.5, w - 1, L.chipH - 1); }
+      g.fillStyle = k === 0 ? C.accentInk : C.ink;
+      g.fillText(s, cx + U * 0.015, L.chipTop + dy + L.chipH / 2 + 1);
+      cx += w - 1;
+    });
+    g.globalAlpha = 1;
+    g.textBaseline = 'alphabetic';
 
     // Piano roll ----------------------------------------------------------
-    var top = L.rollTop, bottom = L.rollBottom - L.drumH - U * 0.02;
+    var rt = L.rollTop, rb = L.rollBottom;
+    var top = rt + L.head, laneTop = rb - L.drumH, bottom = laneTop - U * 0.012;
     var rowH = (bottom - top) / (P.hi - P.lo + 1);
     var pxPerSec = W / P.span;
     var X = function (tt) { return L.playX + (tt - t) * pxPerSec; };
     var Y = function (m) { return bottom - (m - P.lo + 1) * rowH; };
     var t0 = t - L.playX / pxPerSec, t1 = t + (W - L.playX) / pxPerSec;
+    var bd = song.barDuration;
 
-    // Bar lines
-    g.fillStyle = C.line;
-    for (var b = Math.max(0, Math.floor(t0 / song.barDuration)); b * song.barDuration <= t1; b++) {
-      var bx = Math.round(X(b * song.barDuration));
-      g.globalAlpha = 0.6;
-      g.fillRect(bx, top, 1, L.rollBottom - top);
+    // The beat, very softly, around the playhead.
+    var k = lastBefore(P.kicks, t);
+    var kick = k >= 0 ? Math.exp(-(t - P.kicks[k]) / 0.18) : 0;
+    var glowR = Math.max(W, H) * 0.6;
+    var grad = g.createRadialGradient(L.playX, (rt + rb) / 2, 0, L.playX, (rt + rb) / 2, glowR);
+    grad.addColorStop(0, rgba(C.accent, (0.03 + 0.07 * kick).toFixed(3)));
+    grad.addColorStop(1, rgba(C.accent, 0));
+    g.fillStyle = grad;
+    g.fillRect(0, rt, W, rb - rt);
+
+    // Sections as alternate bands, like the site's roll.
+    song.sections.forEach(function (s, si) {
+      if (si % 2 === 0) return;
+      var x0 = Math.max(0, X(s.start)), x1 = Math.min(W, X(s.start + s.bars * bd));
+      if (x1 > x0) { g.fillStyle = C.band; g.fillRect(x0, rt, x1 - x0, rb - rt); }
+    });
+    // Bar lines, with bar numbers in the header row.
+    g.font = '500 ' + Math.round(U * 0.017) + 'px ' + P.mono;
+    g.textBaseline = 'middle';
+    for (var b = Math.max(0, Math.floor(t0 / bd)); b * bd <= t1 && b < song.bars; b++) {
+      var bx = Math.round(X(b * bd)) + 0.5;
+      g.strokeStyle = C.grid; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(bx, rt); g.lineTo(bx, laneTop); g.stroke();
+      g.fillStyle = C.muted; g.globalAlpha = 0.6;
+      g.fillText(String(b + 1), bx + U * 0.008, rt + L.head / 2);
+      g.globalAlpha = 1;
     }
-    g.globalAlpha = 1;
+    g.textBaseline = 'alphabetic';
 
     var from = firstIndexFrom(P.notes, t0 - P.maxD), to = firstIndexFrom(P.notes, t1);
     var visible = P.notes.slice(from, to).filter(function (n) { return n.t + n.d >= t0; });
     visible.sort(function (a, b) { return P.order[a.inst] - P.order[b.inst]; });
-    var h = Math.max(2, rowH * 0.8);
+    var h = Math.max(2, rowH - 1), glow = [];
     visible.forEach(function (n) {
-      var x = X(n.t), w = Math.max(3, n.d * pxPerSec - 2), y = Y(n.midi) + (rowH - h) / 2;
-      var on = n.t <= t && t < n.t + n.d;
-      var base = n.inst === 'chords' ? 0.35 : n.inst === 'guitar' ? 0.45 : n.inst === 'arp' ? 0.6 : 0.85;
+      var x = X(n.t), w = Math.max(3, n.d * pxPerSec - 1), y = Y(n.midi) + (rowH - h) / 2;
+      if (n.t <= t && t < n.t + n.d && n.inst !== 'chords') { glow.push([n, x, y, w]); return; }
+      g.globalAlpha = (ALPHA[n.inst] || 0.9) * (n.t + n.d < t ? 0.55 : 1);
       g.fillStyle = C[n.inst];
-      if (on) {
-        // Sounding notes glow.
-        g.globalAlpha = 0.18;
-        g.fillRect(x - 4, y - 4, w + 8, h + 8);
-        g.globalAlpha = 1;
-      } else {
-        g.globalAlpha = n.t + n.d < t ? base * 0.45 : base;
-      }
       g.fillRect(x, y, w, h);
     });
     g.globalAlpha = 1;
+    // Sounding notes glow.
+    if (glow.length) {
+      g.shadowBlur = U * 0.022;
+      glow.forEach(function (q) { g.fillStyle = g.shadowColor = C[q[0].inst]; g.fillRect(q[1], q[2] - 1, q[3], h + 2); });
+      g.shadowBlur = 0; g.shadowColor = 'transparent';
+    }
 
     // Rings where melody notes start.
     for (var li = firstIndexFrom(P.leads, t - 0.7); li < P.leads.length && P.leads[li].t <= t; li++) {
       var ln = P.leads[li], age = t - ln.t;
-      var r = U * (0.012 + age * 0.09);
       g.strokeStyle = C.lead;
-      g.globalAlpha = Math.max(0, 0.8 * (1 - age / 0.7));
-      g.lineWidth = Math.max(1.5, U * 0.004);
+      g.globalAlpha = Math.max(0, 0.7 * (1 - age / 0.7));
+      g.lineWidth = Math.max(1.5, U * 0.003);
       g.beginPath();
-      g.arc(L.playX, Y(ln.midi) + rowH / 2, r, 0, Math.PI * 2);
+      g.arc(L.playX, Y(ln.midi) + rowH / 2, U * (0.012 + age * 0.08), 0, Math.PI * 2);
       g.stroke();
     }
     g.globalAlpha = 1;
 
     // Drum lane
-    var laneTop = L.rollBottom - L.drumH;
-    var rows = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
+    g.fillStyle = C.band; g.fillRect(0, laneTop, W, rb - laneTop);
+    g.fillStyle = C.line; g.fillRect(0, Math.round(laneTop), W, 1);
     g.fillStyle = C.drums;
-    var dFrom = firstIndexFrom(P.drums, t0);
-    for (var di = dFrom; di < P.drums.length && P.drums[di].t <= t1; di++) {
+    var dh = (L.drumH - U * 0.02) / 3;
+    for (var di = firstIndexFrom(P.drums, t0); di < P.drums.length && P.drums[di].t <= t1; di++) {
       var dn = P.drums[di];
       var hit = dn.t <= t && t - dn.t < 0.12;
-      g.globalAlpha = hit ? 1 : (dn.t < t ? 0.25 : 0.55) * (0.4 + 0.6 * dn.vel);
-      g.fillRect(X(dn.t), laneTop + rows[dn.drum] * L.drumH / 3, dn.drum === 'crash' ? 5 : 3, L.drumH / 3 - 2);
+      g.globalAlpha = hit ? 1 : (dn.t < t ? 0.3 : 0.6) * (0.4 + 0.6 * dn.vel);
+      g.fillRect(X(dn.t), laneTop + U * 0.01 + DRUM_ROW[dn.drum] * dh - (hit ? 1 : 0), dn.drum === 'crash' ? U * 0.006 : U * (hit ? 0.004 : 0.0028), dh - 2 + (hit ? 2 : 0));
     }
     g.globalAlpha = 1;
 
-    // Playhead, flashing on the backbeat.
+    // The roll's frame: thin lines above and below.
+    g.fillStyle = C.line;
+    g.fillRect(0, Math.round(rt), W, 1);
+    g.fillRect(0, Math.round(rb), W, 1);
+
+    // Playhead: the accent, with a notch at the top, brighter on the backbeat.
     var sn = lastBefore(P.snares, t);
     var flash = sn >= 0 ? Math.exp(-(t - P.snares[sn][0]) / 0.12) * P.snares[sn][1] : 0;
-    g.fillStyle = C.ink;
-    g.globalAlpha = 0.35 + 0.65 * flash;
-    g.fillRect(Math.round(L.playX) - 1, top - U * 0.02, 2, L.rollBottom - top + U * 0.02);
+    var px = Math.round(L.playX), nw = U * 0.009;
+    g.fillStyle = C.accent;
+    g.globalAlpha = 0.75 + 0.25 * flash;
+    g.fillRect(px - 1, rt, 2, rb - rt);
+    g.beginPath(); g.moveTo(px - nw, rt); g.lineTo(px + nw, rt); g.lineTo(px, rt + nw * 1.2); g.closePath(); g.fill();
     g.globalAlpha = 1;
 
-    // Section and chord --------------------------------------------------
-    g.textAlign = 'left';
+    // Section, above the roll: its colour, wiping in when it begins.
     var secLabel = SECTION[sec.type] || sec.type;
-    g.font = '600 ' + Math.round(U * 0.024) + 'px ' + P.mono;
-    g.fillStyle = SECTION_COLOR[sec.type] || C.muted;
-    g.fillText(secLabel, L.pad, top - U * 0.035);
-    if (sec.shift) {
-      var prevSec = song.sections[song.sections.indexOf(sec) - 1];
-      if (prevSec && !prevSec.shift && t - sec.start < song.barDuration * 2) {
-        g.fillStyle = C.lead;
-        g.fillText('  KEY ↑ ' + sec.key, L.pad + g.measureText(secLabel).width, top - U * 0.035);
-      }
-    }
-
-    if (ci >= 0) {
-      var chord = song.chords[ci], next = song.chords[ci + 1];
-      var fresh = Math.min(1, (t - chord.time) / 0.12);
+    var prevSec = song.sections[secIdx - 1];
+    if (sec.shift && prevSec && prevSec.shift !== sec.shift) secLabel += '  KEY ↑ ' + sec.key;
+    g.font = '500 ' + Math.round(U * 0.022) + 'px ' + P.mono;
+    spacing(g, U * 0.004);
+    var sy = rt - U * 0.022, sw = g.measureText(secLabel).width;
+    wiped(g, L.pad, sy - U * 0.03, sw + U * 0.03, U * 0.045, EASE_WIPE((t - sec.start) / 0.6), function () {
+      g.fillStyle = C[SECTION_COLOR[sec.type]] || C.muted;
+      g.fillRect(L.pad, sy - U * 0.0165, U * 0.004, U * 0.02);
       g.fillStyle = C.ink;
-      g.globalAlpha = 0.4 + 0.6 * fresh;
-      var cs = fitText(g, chord.name, P.display, Math.round(U * 0.1), W * 0.55);
-      g.fillText(chord.name, L.pad, L.chordY);
-      g.globalAlpha = 1;
+      g.fillText(secLabel, L.pad + U * 0.014, sy);
+    });
+    spacing(g, 0);
+
+    // The chord strip, as on the site: the current chord fills in from the
+    // left while the previous one empties to the right, and the strip slides
+    // to keep it in the middle, all with the same easing.
+    drawStrip(g, P, t, ci);
+
+    // A large chord name, where there is room for it (portrait).
+    if (L.portrait && ci >= 0) {
+      var chord = P.chords[ci], next = P.chords[ci + 1];
+      var fresh = EASE((t - chord.time) / STRIP);
+      g.fillStyle = C.ink;
+      var cs = fitText(g, chord.name, P.display, Math.round(U * 0.13), W * 0.6, '300');
+      wiped(g, L.pad, L.bigChordY - cs, W, cs * 1.3, fresh, function () { g.fillText(chord.name, L.pad, L.bigChordY); });
       if (next) {
         var nx = L.pad + g.measureText(chord.name).width + U * 0.04;
-        g.font = Math.round(cs * 0.4) + 'px ' + P.display;
+        g.font = '300 ' + Math.round(cs * 0.36) + 'px ' + P.display;
         g.fillStyle = C.muted;
-        g.fillText('→ ' + next.name, nx, L.chordY);
+        g.fillText('→ ' + next.name, nx, L.bigChordY);
       }
     }
 
     // Progress, split into sections --------------------------------------
-    var barX = L.pad, barW = W - L.pad * 2, barH = Math.max(3, U * 0.006);
+    var barX = L.pad, barW = W - L.pad * 2, barH = Math.max(3, Math.round(U * 0.005));
     song.sections.forEach(function (s) {
-      var sx = barX + (s.start / P.total) * barW, sw = (s.bars * song.barDuration / P.total) * barW;
-      g.fillStyle = SECTION_COLOR[s.type] || C.muted;
+      if (s.start >= P.total) return;
+      var sx = barX + (s.start / P.total) * barW, sw2 = (Math.min(s.bars * bd, P.total - s.start) / P.total) * barW;
+      g.fillStyle = C[SECTION_COLOR[s.type]] || C.muted;
       g.globalAlpha = 0.25;
-      g.fillRect(sx + 1, L.barY, sw - 2, barH);
-      g.globalAlpha = 0.95;
-      var done = Math.max(0, Math.min(sw, (t - s.start) / P.total * barW));
-      if (done > 0) g.fillRect(sx + 1, L.barY, Math.max(0, done - 2), barH);
+      g.fillRect(sx + 1, L.barY, sw2 - 2, barH);
+      g.globalAlpha = 1;
+      var done = Math.max(0, Math.min(sw2, (t - s.start) / P.total * barW));
+      if (done > 0) g.fillRect(sx + 1, L.barY, Math.max(0, Math.min(sw2 - 2, done)), barH);
     });
     g.globalAlpha = 1;
-    g.font = Math.round(U * 0.022) + 'px ' + P.mono;
+    g.font = '400 ' + Math.round(U * 0.02) + 'px ' + P.mono;
     g.fillStyle = C.muted;
     g.textAlign = 'right';
     g.fillText(fmt(t) + ' / ' + fmt(P.total), W - L.pad, L.barY - U * 0.018);
     g.textAlign = 'left';
-    g.fillText('music-composition.js · ' + (location.host || 'mcj.siyukatu.me'), L.pad, L.barY - U * 0.018);
+    g.fillText(location.host || 'mcj.siyukatu.me', L.pad, L.barY - U * 0.018);
+  }
+
+  function drawStrip(g, P, t, ci) {
+    var L = P.L, U = P.U, C = P.C, boxes = P.strip;
+    if (!boxes.length) return;
+    var x0 = L.pad, vw = P.W - L.pad * 2, y = L.stripTop, h = L.stripH;
+    var max = Math.max(0, P.stripW - vw);
+    var target = function (i) { return i < 0 ? 0 : Math.max(0, Math.min(max, boxes[i].x + boxes[i].w / 2 - vw / 2)); };
+    var p = ci >= 0 ? EASE((t - boxes[ci].time) / STRIP) : 1;
+    var off = ci >= 0 ? target(ci - 1) + (target(ci) - target(ci - 1)) * p : 0;
+
+    g.save();
+    g.beginPath(); g.rect(x0, y - 1, vw, h + 2); g.clip();
+    g.font = P.stripFont;
+    g.textBaseline = 'middle';
+    var ty = y + h / 2 + 1, padX = U * 0.022;
+    boxes.forEach(function (bx, i) {
+      var x = x0 + bx.x - off;
+      if (x > x0 + vw || x + bx.w < x0) return;
+      // The fill: the current chord's from the left, the previous one's leaving to the right.
+      var f0 = 0, f1 = 0;
+      if (i === ci) { f0 = 0; f1 = p; }
+      else if (i === ci - 1) { f0 = p; f1 = 1; }
+      g.fillStyle = C.muted;
+      g.fillText(bx.name, x + padX, ty);
+      if (f1 > f0) {
+        var fx = x + bx.w * f0, fw = bx.w * (f1 - f0);
+        g.fillStyle = C.accent;
+        g.fillRect(fx, y, fw, h);
+        g.save();
+        g.beginPath(); g.rect(fx, y, fw, h); g.clip();
+        g.fillStyle = C.accentInk;
+        g.fillText(bx.name, x + padX, ty);
+        g.restore();
+      }
+      g.fillStyle = C.line;
+      g.fillRect(Math.round(x), y, 1, h);
+    });
+    var end = x0 + P.stripW - off;
+    g.fillStyle = C.line;
+    g.fillRect(x0, y, Math.min(vw, end - x0), 1);
+    g.fillRect(x0, y + h - 1, Math.min(vw, end - x0), 1);
+    if (end < x0 + vw) g.fillRect(Math.round(end) - 1, y, 1, h);
+    g.restore();
+    g.textBaseline = 'alphabetic';
   }
 
   // Audio ------------------------------------------------------------------
@@ -261,8 +420,9 @@
   function whenFontsReady(P) {
     if (!document.fonts || !document.fonts.load) return Promise.resolve();
     return Promise.all([
-      document.fonts.load('40px ' + P.display, P.song.title),
-      document.fonts.load('20px ' + P.mono)
+      document.fonts.load('300 40px ' + P.display, P.song.title),
+      document.fonts.load('400 20px ' + P.mono),
+      document.fonts.load('500 20px ' + P.mono)
     ]).catch(function () {});
   }
 

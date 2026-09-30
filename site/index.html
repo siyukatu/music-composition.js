@@ -447,7 +447,7 @@
   .progression .c {
     appearance: none; font-family: var(--font-mono); font-size: 13px; padding: 6px 12px; border: 1px solid var(--line); border-left: 0;
     white-space: nowrap; color: var(--muted); background: var(--surface); cursor: pointer; flex: none;
-    position: relative; isolation: isolate; transition: color .35s var(--ease), background .3s var(--ease);
+    position: relative; isolation: isolate; transition: color .45s var(--ease), background .3s var(--ease);
   }
   /* The current chord fills in from the left, like the buttons, and empties out to the right. */
   .progression .c::before {
@@ -457,6 +457,24 @@
   .progression .c:hover { background: var(--surface-2); color: var(--ink); }
   .progression .c.on { color: var(--accent-ink); }
   .progression .c.on::before { transform: scaleX(1); transform-origin: left; }
+
+  /* The song as a line of sections (like the shared video's): each one in its
+     own colour, pale ahead of the playhead and full behind it. */
+  .secbar { position: relative; height: 3px; }
+  .secbar .s {
+    position: absolute; top: 0; height: 3px; margin-left: 1px; background: color-mix(in srgb, var(--c) 25%, transparent);
+    transition: left .6s var(--ease), width .6s var(--ease);
+  }
+  .secbar .s i { position: absolute; inset: 0; background: var(--c); transform: scaleX(var(--f, 0)); transform-origin: left; }
+  .secbar .s.new { animation: wipe-in .6s var(--ease-wipe) both; }
+  .secmap { padding-bottom: 18px; cursor: pointer; margin-top: -6px; }
+  .secmap .s { appearance: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+  .secmap .s b {
+    position: absolute; left: 0; right: 4px; top: 7px; font: 500 10.5px/1 var(--font-mono); letter-spacing: .06em; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-align: left; transition: color .45s var(--ease);
+  }
+  .secmap .s.on b, .secmap .s:hover b { color: var(--ink); }
+  .secmap .s:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* Share */
   dialog.share {
@@ -534,15 +552,17 @@
   /* While the next song is being made: a line runs along the top of the bar. */
   .np::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: var(--accent); clip-path: inset(0 100% 0 0); pointer-events: none; }
   .np.busy::before { animation: line-run 1.4s var(--ease) infinite; }
-  .np.busy .np-seek { visibility: hidden; }
+  .np.busy .np-track { visibility: hidden; }
   .np.busy .np-meta { animation: veil-in .6s var(--ease) infinite alternate; }
+  /* The seek bar: the sections underneath, a transparent range input (for the thumb) on top. */
+  .np-track { position: relative; height: 3px; }
+  .np-track .secbar { position: absolute; inset: 0; }
   .np-seek {
-    display: block; width: 100%; margin: 0; height: 3px; background: transparent; accent-color: var(--accent);
+    position: relative; display: block; width: 100%; margin: 0; height: 3px; background: transparent; accent-color: var(--accent);
     -webkit-appearance: none; appearance: none; cursor: pointer;
   }
-  .np-seek::-webkit-slider-runnable-track { height: 3px; background: linear-gradient(to right, var(--accent) var(--p, 0%), var(--line) var(--p, 0%)); }
-  .np-seek::-moz-range-track { height: 3px; background: var(--line); }
-  .np-seek::-moz-range-progress { height: 3px; background: var(--accent); }
+  .np-seek::-webkit-slider-runnable-track { height: 3px; background: transparent; }
+  .np-seek::-moz-range-track { height: 3px; background: transparent; }
   .np-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); margin-top: -4.5px; }
   .np-seek::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: var(--accent); }
   .np-inner { max-width: 1180px; margin: 0 auto; padding: 6px 24px 10px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; align-items: center; gap: 14px; }
@@ -553,14 +573,20 @@
   .np-ctrl, .np-extra { display: flex; align-items: center; gap: 2px; }
   .np-btn {
     appearance: none; border: none; background: none; color: var(--ink); width: 40px; height: 40px;
-    display: grid; place-items: center; cursor: pointer; transition: background .3s var(--ease), color .3s var(--ease);
+    display: grid; place-items: center; cursor: pointer; transition: background .3s var(--ease), color .3s var(--ease), opacity .3s var(--ease);
   }
   .np-btn:hover { background: var(--surface-2); }
   .np-btn[aria-pressed="true"] { color: var(--accent); }
   .np-btn[disabled] { opacity: .35; cursor: default; background: none; }
-  #np-like[aria-pressed="true"] svg { fill: currentColor; }
-  .np-btn.busy svg { animation: spin 1s linear infinite; }
+  /* Next, while the next song is being made: a spinner in place of the icon. */
+  .np-btn.busy { position: relative; opacity: 1; }
+  .np-btn.busy svg { opacity: 0; }
+  .np-btn.busy::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+    border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
+  #np-like[aria-pressed="true"] svg { fill: currentColor; }
   /* The heart pops when a song is liked. */
   .pop svg { animation: pop .42s cubic-bezier(.2, 1.6, .4, 1); }
   @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
@@ -574,7 +600,7 @@
   .np-play::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; pointer-events: none; }
   .np.playing .np-play::after { animation: beat var(--beat, .5s) ease-out infinite; }
   @keyframes beat { 0% { opacity: .55; transform: scale(.92); } 100% { opacity: 0; transform: scale(1.18); } }
-  @media (prefers-reduced-motion: reduce) { .np.playing .np-play::after, .pop svg, .np.swap .np-meta, .np.swap .np-art, .np-btn.busy svg, .np.busy::before, .np.busy .np-meta { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .np.playing .np-play::after, .pop svg, .np.swap .np-meta, .np.swap .np-art, .np.busy::before, .np.busy .np-meta { animation: none; } }
   .np-play { appearance: none; border: none; width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; transition: background .3s var(--ease); }
   .np-play:hover { background: var(--ink); color: var(--surface); }
   .np-time { font: 12px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 4px; white-space: nowrap; }
@@ -919,6 +945,7 @@
           </div>
         </div>
       </div>
+      <div class="secbar secmap" id="secmap" role="group" aria-label="セクション"></div>
       <div class="legend" aria-hidden="true">
         <span><i style="background:var(--lead)"></i>メロディ</span>
         <span><i style="background:var(--chords)"></i>コード / パッド</span>
@@ -1107,7 +1134,10 @@
 
 <!-- Now playing: stays at the bottom of the screen, like a music app -->
 <div class="np" id="np" hidden>
-  <input type="range" class="np-seek" id="np-seek" min="0" max="1000" step="1" value="0" aria-label="再生位置">
+  <div class="np-track">
+    <div class="secbar" id="np-secs" aria-hidden="true"></div>
+    <input type="range" class="np-seek" id="np-seek" min="0" max="1000" step="1" value="0" aria-label="再生位置">
+  </div>
   <div class="np-inner">
     <canvas class="np-art" id="np-art" width="96" height="96" aria-hidden="true"></canvas>
     <div class="np-meta">
@@ -1158,7 +1188,7 @@
 
 <audio id="audio" preload="auto"></audio>
 <script src="music-composition.js?h=c666a3"></script>
-<script src="video.js?h=0b38ed"></script>
+<script src="video.js?h=4c61f7"></script>
 <script src="midi.js?h=9648b8"></script>
 <script>
 (function () {
@@ -1865,6 +1895,7 @@
     $('#stats').textContent = '生成 ' + (ms / 1000).toFixed(2) + ' 秒 · ' + ((opts.sampleRate || 44100) / 1000) + ' kHz · ' +
       (bytes / 1048576).toFixed(1) + ' MB · 音符 ' + song.notes.length + ' 個';
     renderProgression(song, longer);
+    renderSections(song, longer);
     drawStatic(longer);
     // The notes sweep in: over the view for a new song, over the added bars for a longer one.
     state.reveal = reduceMotion.matches ? null : { at: performance.now(), from: longer ? oldEnd : 0, to: longer ? playLength() : viewEnd() };
@@ -1902,6 +1933,7 @@
   function showVeil(on, next) {
     var veil = $('#veil'), steps = $('#veil-steps').children;
     np.classList.toggle('busy', on && !np.hidden);
+    $('#np-next').disabled = on;
     $('#np-next').classList.toggle('busy', on);
     clearInterval(veilTimer);
     clearTimeout(veilHide);
@@ -2289,7 +2321,6 @@
     if (!seeking) {
       var s = $('#np-seek');
       s.value = String(Math.round(len ? t / len * 1000 : 0));
-      s.style.setProperty('--p', (len ? t / len * 100 : 0) + '%');
     }
     if ('mediaSession' in navigator && navigator.mediaSession.setPositionState && len) {
       try { navigator.mediaSession.setPositionState({ duration: len, playbackRate: audio.playbackRate || 1, position: t }); } catch (e) {}
@@ -2297,7 +2328,6 @@
   }
   $('#np-seek').addEventListener('input', function () {
     seeking = true;
-    this.style.setProperty('--p', (this.value / 10) + '%');
     seekTo(this.value / 1000 * playLength());
   });
   $('#np-seek').addEventListener('change', function () { seeking = false; npTime(); });
@@ -2555,6 +2585,7 @@
       g.beginPath(); g.moveTo(px - 5, 0); g.lineTo(px + 5, 0); g.lineTo(px, 6); g.closePath(); g.fill();
     }
     $('#t-cur').textContent = fmt(t);
+    updateSections(t);
     // Highlight current chord
     var idx = -1;
     for (var i = 0; i < song.chords.length; i++) if (song.chords[i].time <= t + 0.01) idx = i;
@@ -2563,15 +2594,42 @@
       var cur = document.querySelector('.progression .c[data-i="' + idx + '"]');
       if (cur) {
         cur.classList.add('on');
-        // Keep the current chord in the middle of the strip (.progression is its offsetParent).
+        // Keep the current chord in the middle of the strip (.progression is its offsetParent),
+        // moving with the same timing as the fill.
         var box = cur.parentElement;
-        var left = Math.max(0, cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2);
-        if (Math.abs(left - box.scrollLeft) > 1) box.scrollTo({ left: left, behavior: audio.paused || reduceMotion.matches ? 'auto' : 'smooth' });
+        var left = Math.max(0, Math.min(box.scrollWidth - box.clientWidth, cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2));
+        scrollStrip(box, left, audio.paused || reduceMotion.matches);
       }
       state.chordIdx = idx;
     }
   }
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // cubic-bezier(x1, y1, x2, y2) as a function of time (0..1), like CSS.
+  function bezier(x1, y1, x2, y2) {
+    function at(a, b, s) { return 3 * a * s * (1 - s) * (1 - s) + 3 * b * s * s * (1 - s) + s * s * s; }
+    return function (x) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      var lo = 0, hi = 1, s = x;
+      for (var i = 0; i < 24; i++) { s = (lo + hi) / 2; if (at(x1, x2, s) < x) lo = s; else hi = s; }
+      return at(y1, y2, s);
+    };
+  }
+  var EASE = bezier(0.76, 0, 0.24, 1); // --ease
+  var STRIP_MS = 450; // .progression .c::before's transition
+  var stripAnim = 0;
+  function scrollStrip(box, left, now) {
+    cancelAnimationFrame(stripAnim);
+    var from = box.scrollLeft;
+    if (now || Math.abs(left - from) <= 1) { box.scrollLeft = left; return; }
+    var t0 = performance.now();
+    (function step() {
+      var p = Math.min(1, (performance.now() - t0) / STRIP_MS);
+      box.scrollLeft = from + (left - from) * EASE(p);
+      if (p < 1) stripAnim = requestAnimationFrame(step);
+    })();
+  }
 
   // While playing, the roll keeps the playhead about a third of the way in —
   // unless the listener has just scrolled it themselves.
@@ -2637,9 +2695,64 @@
       var enter = !reduceMotion.matches && (longer ? i >= had : i < 24);
       return '<button type="button" class="c' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(i - had, 24) : i) + '" data-i="' + i + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
     }).join('');
-    if (!longer) box.scrollLeft = 0;
+    if (!longer) { cancelAnimationFrame(stripAnim); box.scrollLeft = 0; }
     state.chordIdx = null;
   }
+
+  // The section bars (the player's, and the seek bar's): same colours as the shared video.
+  var SEC_EN = { intro: 'INTRO', A: 'VERSE', P: 'PRE-CHORUS', B: 'CHORUS', C: 'BRIDGE', outro: 'OUTRO' };
+  var SEC_COLOR = { intro: '--muted', A: '--bass', P: '--arp', B: '--accent', C: '--chords', outro: '--muted' };
+  var SEC_NAME = { intro: 'イントロ', A: 'A メロ', P: 'B メロ', B: 'サビ', C: 'ブリッジ', outro: 'アウトロ' };
+  var secFill = [];
+  function renderSections(song, longer) {
+    var total = playLength(), bd = song.barDuration;
+    var secs = song.sections.filter(function (s) { return s.start < total - 0.01; });
+    secFill = [];
+    [$('#secmap'), $('#np-secs')].forEach(function (box, bi) {
+      var map = bi === 0, had = longer ? box.children.length : 0;
+      if (!longer) box.textContent = '';
+      secs.forEach(function (s, i) {
+        var el = box.children[i];
+        if (!el) {
+          el = document.createElement(map ? 'button' : 'span');
+          el.className = 's' + (had && !reduceMotion.matches ? ' new' : '');
+          el.appendChild(document.createElement('i'));
+          if (map) { el.type = 'button'; el.appendChild(document.createElement('b')); }
+          box.appendChild(el);
+        }
+        var end = Math.min(total, s.start + s.bars * bd);
+        el.style.left = (s.start / total * 100) + '%';
+        el.style.width = 'calc(' + ((end - s.start) / total * 100) + '% - 2px)';
+        el.style.setProperty('--c', 'var(' + (SEC_COLOR[s.type] || '--muted') + ')');
+        el.dataset.t = s.start;
+        if (map) {
+          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '');
+          el.lastChild.textContent = label;
+          el.title = (SEC_NAME[s.type] || s.type) + '（' + fmt(s.start) + '）から再生';
+          el.setAttribute('aria-label', el.title);
+        }
+        secFill.push({ el: el, s0: s.start, s1: end, f: -1, on: null });
+      });
+      while (box.children.length > secs.length) box.removeChild(box.lastChild);
+    });
+    updateSections(audio.currentTime || 0);
+  }
+  function updateSections(t) {
+    secFill.forEach(function (q) {
+      var f = Math.max(0, Math.min(1, (t - q.s0) / (q.s1 - q.s0)));
+      if (Math.abs(f - q.f) > 0.0005) { q.el.style.setProperty('--f', f.toFixed(4)); q.f = f; }
+      var on = t >= q.s0 && t < q.s1;
+      if (on !== q.on) { q.el.classList.toggle('on', on); q.on = on; }
+    });
+  }
+  $('#secmap').addEventListener('click', function (e) {
+    if (!state.song) return;
+    var b = e.target.closest('.s');
+    // A click lands where it points; the keyboard goes to the section's start.
+    if (e.detail === 0 && b) { seekTo(+b.dataset.t); return; }
+    var r = this.getBoundingClientRect();
+    seekTo(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * playLength());
+  });
   $('#progression').addEventListener('click', function (e) {
     var b = e.target.closest('.c');
     if (!b || !state.song) return;
