@@ -459,16 +459,23 @@
   .progression .c {
     appearance: none; font-family: var(--font-mono); font-size: 13px; padding: 6px 12px; border: 1px solid var(--line); border-left: 0;
     white-space: nowrap; color: var(--muted); background: var(--surface); cursor: pointer; flex: none;
-    position: relative; isolation: isolate; transition: color .45s var(--ease), background .3s var(--ease);
+    position: relative; isolation: isolate; transition: color .3s var(--ease), background .3s var(--ease);
   }
-  /* The current chord fills in from the left, like the buttons, and empties out to the right. */
+  /* The current chord fills in from the left, like the buttons, and empties out
+     to the right; its name turns with the fill (a copy in the fill's colour,
+     uncovered the same way). */
   .progression .c::before {
     content: ""; position: absolute; inset: -1px 0 -1px -1px; z-index: -1; background: var(--accent);
     transform: scaleX(0); transform-origin: right; transition: transform .45s var(--ease);
   }
+  .progression .c::after {
+    content: attr(data-name); position: absolute; inset: -1px 0 -1px -1px; padding: 7px 12px 7px 13px; color: var(--accent-ink);
+    clip-path: inset(0 100% 0 0); pointer-events: none;
+  }
   .progression .c:hover { background: var(--surface-2); color: var(--ink); }
-  .progression .c.on { color: var(--accent-ink); }
   .progression .c.on::before { transform: scaleX(1); transform-origin: left; }
+  .progression .c.on::after { clip-path: inset(0 0 0 0); transition: clip-path .45s var(--ease); }
+  .progression .c.out::after { clip-path: inset(0 0 0 100%); transition: clip-path .45s var(--ease); }
 
   /* The song as a line of sections (like the shared video's): each one in its
      own colour, pale ahead of the playhead and full behind it. */
@@ -2607,9 +2614,16 @@
     var idx = -1;
     for (var i = 0; i < song.chords.length; i++) if (song.chords[i].time <= t + 0.01) idx = i;
     if (idx !== state.chordIdx) {
-      var prev = document.querySelector('.progression .c.on'); if (prev) prev.classList.remove('on');
+      // The name leaves to the right (.out), then goes back, unseen, to wait on the left.
+      var prev = document.querySelector('.progression .c.on');
+      if (prev) {
+        prev.classList.remove('on');
+        prev.classList.add('out');
+        setTimeout(function () { prev.classList.remove('out'); }, STRIP_MS + 50);
+      }
       var cur = document.querySelector('.progression .c[data-i="' + idx + '"]');
       if (cur) {
+        cur.classList.remove('out');
         cur.classList.add('on');
         // Keep the current chord in the middle of the strip (.progression is its offsetParent),
         // moving with the same timing as the fill.
@@ -2710,7 +2724,7 @@
     var box = $('#progression'), had = longer ? box.children.length : 0;
     box.innerHTML = song.chords.map(function (c, i) {
       var enter = !reduceMotion.matches && (longer ? i >= had : i < 24);
-      return '<button type="button" class="c' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(i - had, 24) : i) + '" data-i="' + i + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
+      return '<button type="button" class="c' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(i - had, 24) : i) + '" data-i="' + i + '" data-name="' + escapeHtml(c.name) + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
     }).join('');
     if (!longer) { cancelAnimationFrame(stripAnim); box.scrollLeft = 0; }
     state.chordIdx = null;
