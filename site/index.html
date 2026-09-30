@@ -347,6 +347,18 @@
   .chip:first-child b { color: inherit; opacity: .7; }
   .chip.loop { background: var(--accent-soft); }
 
+  /* Skeletons: stand-in text, invisible, on a pale block of the same size,
+     with a light passing over it; replaced by the real thing when it is known. */
+  .sk, .sk * { color: transparent !important; }
+  .sk {
+    background: linear-gradient(90deg, var(--surface-2) 40%, color-mix(in srgb, var(--line) 60%, var(--surface-2)) 50%, var(--surface-2) 60%) !important;
+    background-size: 250% 100% !important; border-color: var(--surface) !important;
+    animation: sk 1.6s var(--ease) infinite; user-select: none; pointer-events: none;
+  }
+  .sk::before { display: none; }
+  @keyframes sk { from { background-position: 100% 0; } to { background-position: 0 0; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
   .transport { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   /* The play buttons are the round ones. */
   .play {
@@ -903,8 +915,9 @@
       <div class="now">
         <div>
           <p class="eyebrow" id="eyebrow">Now composed</p>
-          <h2 class="song-title" id="title">…</h2>
-          <div class="chips" id="chips"></div>
+          <!-- Until the first song is ready: skeletons the size of the real text. -->
+          <h2 class="song-title" id="title" aria-label="作曲しています"><span class="sk" aria-hidden="true">Crystal Drift</span></h2>
+          <div class="chips" id="chips" aria-hidden="true"><span class="chip sk"><b>style</b>Lo-fi</span><span class="chip sk"><b>key</b>A ドリアン</span><span class="chip sk"><b>bpm</b>120</span><span class="chip sk"><b>meter</b>4/4</span><span class="chip sk"><b>bars</b>32</span><span class="chip sk"><b>seed</b>sakura-2026</span></div>
         </div>
       </div>
 
@@ -912,7 +925,7 @@
         <button class="play" id="play" aria-label="再生" disabled>
           <svg id="play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
         </button>
-        <div class="time"><strong id="t-cur">0:00</strong> / <span id="t-dur">0:00</span></div>
+        <div class="time"><strong id="t-cur">0:00</strong> / <span id="t-dur"><span class="sk" aria-hidden="true">0:00</span></span></div>
         <div class="spacer"></div>
         <a class="btn btn-ghost dl" id="download" href="#" download="music.wav" aria-disabled="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
@@ -957,10 +970,10 @@
 
       <div class="field">
         <div class="label">コード進行</div>
-        <div class="progression" id="progression"></div>
+        <div class="progression" id="progression"><span class="c sk">Am7</span><span class="c sk">D7</span><span class="c sk">Gmaj7</span><span class="c sk">Cmaj7</span><span class="c sk">F#m7b5</span><span class="c sk">B7</span><span class="c sk">Em</span><span class="c sk">E7</span></div>
       </div>
 
-      <p class="stats" id="stats"></p>
+      <p class="stats" id="stats"><span class="sk" aria-hidden="true">生成 1.50 秒 · 44.1 kHz · 19.0 MB · 音符 927 個</span></p>
       <p class="error" id="error" hidden></p>
     </section>
   </div>
@@ -1141,8 +1154,8 @@
   <div class="np-inner">
     <canvas class="np-art" id="np-art" width="96" height="96" aria-hidden="true"></canvas>
     <div class="np-meta">
-      <strong id="np-title">…</strong>
-      <span id="np-sub"></span>
+      <strong id="np-title"><span class="sk" aria-hidden="true">Crystal Drift</span></strong>
+      <span id="np-sub"><span class="sk" aria-hidden="true">Lo-fi · A ドリアン · 70 BPM</span></span>
     </div>
     <div class="np-ctrl">
       <button type="button" class="np-btn" id="np-prev" aria-label="前の曲" title="前の曲（P）">
@@ -1156,7 +1169,7 @@
       </button>
     </div>
     <div class="np-extra">
-      <span class="np-time" id="np-time">0:00 / 0:00</span>
+      <span class="np-time" id="np-time"><span class="sk" aria-hidden="true">0:00 / 0:00</span></span>
       <button type="button" class="np-btn" id="np-extend" aria-label="この曲を延長" title="この曲を延長（+16 小節、E）">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12h10M9 7l5 5-5 5"/><path d="M18 8v8M14 12h8" stroke-width="1.8"/></svg>
       </button>
@@ -1870,6 +1883,7 @@
     ].map(function (c, i) { return '<span class="chip" style="--i:' + i + '"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
     if (song.loop) chips += '<span class="chip loop" style="--i:6"><b>loop</b>' + fmt(song.loopEnd) + '</span>';
     $('#chips').innerHTML = chips;
+    $('#chips').removeAttribute('aria-hidden');
     $('#chips').classList.remove('enter');
     if (!longer) { void $('#chips').offsetWidth; $('#chips').classList.add('enter'); }
     $('#t-dur').textContent = fmt(playLength());
