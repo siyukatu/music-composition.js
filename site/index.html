@@ -65,7 +65,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
   /* White, thin lines, light type, square corners (only the play buttons and
-     switches are round), one navy accent. */
+     switches are round), one red-orange accent. */
   :root {
     --ground: #FFFFFF;
     --surface: #FFFFFF;
@@ -74,15 +74,15 @@
     --ink: #000000;
     --muted: #6B6B6B;
     --line: #E3E3E3;
-    --accent: #132275;
+    --accent: #E8431A;
     --accent-ink: #FFFFFF;
-    --accent-soft: #E9EBF5;
-    --accent-2: #6B77B0;
-    --lead: #132275;
+    --accent-soft: #FDE9E2;
+    --accent-2: #F28A5E;
+    --lead: #E8431A;
     --bass: #2A8BC9;
-    --chords: #9AA3C8;
+    --chords: #8EC3B7;
     --arp: #9B45D6;
-    --guitar: #C38A2E;
+    --guitar: #C9A227;
     --drums: #9A9A9A;
     --roll-bg: #FFFFFF;
     --roll-band: #F8F8F8;
@@ -105,13 +105,13 @@
       --ink: #F2F2F2;
       --muted: #9B9B9B;
       --line: #2A2C32;
-      --accent: #8E9BFF;
-      --accent-ink: #0B0F2E;
-      --accent-soft: #1B1F3A;
-      --accent-2: #8E9BFF;
-      --lead: #8E9BFF;
+      --accent: #FF6A3D;
+      --accent-ink: #1A0904;
+      --accent-soft: #3A1D14;
+      --accent-2: #FF8F66;
+      --lead: #FF6A3D;
       --bass: #4FB0E8;
-      --chords: #5C6488;
+      --chords: #3F7268;
       --arp: #C07BF0;
       --guitar: #E0A640;
       --drums: #6C6C6C;
@@ -130,13 +130,13 @@
     --ink: #F2F2F2;
     --muted: #9B9B9B;
     --line: #2A2C32;
-    --accent: #8E9BFF;
-    --accent-ink: #0B0F2E;
-    --accent-soft: #1B1F3A;
-    --accent-2: #8E9BFF;
-    --lead: #8E9BFF;
+    --accent: #FF6A3D;
+    --accent-ink: #1A0904;
+    --accent-soft: #3A1D14;
+    --accent-2: #FF8F66;
+    --lead: #FF6A3D;
     --bass: #4FB0E8;
-    --chords: #5C6488;
+    --chords: #3F7268;
     --arp: #C07BF0;
     --guitar: #E0A640;
     --drums: #6C6C6C;
@@ -416,7 +416,7 @@
   dialog.closing::backdrop { animation: veil-out .4s var(--ease) forwards; }
   @keyframes veil-out { to { opacity: 0; } }
 
-  /* Toast: short news above the player bar, square, with a navy edge. */
+  /* Toast: short news above the player bar, square, with an orange edge. */
   .toast {
     position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 30; transform: translate(-50%, 8px);
     background: var(--ink); color: var(--surface); padding: 11px 18px 11px 16px; font-size: 13.5px; border-left: 3px solid var(--accent-2);
@@ -628,7 +628,7 @@
     position: relative; background: #111318; color: #E6E8EC; padding: 16px 18px; overflow-x: auto; border-left: 3px solid var(--accent-2);
     font: 13px/1.65 var(--font-mono); margin: 0 0 14px;
   }
-  .code .k { color: #9DAAFF; } .code .s { color: #8BD5B8; } .code .c { color: #7C8391; } .code .n { color: #F2C77A; }
+  .code .k { color: #FF9C73; } .code .s { color: #8BD5B8; } .code .c { color: #7C8391; } .code .n { color: #F2C77A; }
   .code-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px; }
   .code-head span { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
   .copy { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 400 12px var(--font-body); padding: 5px 10px; cursor: pointer; }
