@@ -65,6 +65,15 @@ for (const style of MusicComposition.styles) {
   }
 }
 
+test('a loop does not go from a verse back to the same verse', () => {
+  for (const style of ['pop', 'jpop', 'lofi', 'jazz', 'bossa', 'chiptune'])
+    for (let bars = 16; bars <= 64; bars += 8)
+      for (const seed of ['a', 'b', 'c']) {
+        const s = MusicComposition.compose({ seed, style, loop: true, bars }).sections;
+        assert.notStrictEqual(s[s.length - 1].type, s[0].type, `${style} ${bars} bars ${seed}: ${s.map(x => x.type).join(' ')}`);
+      }
+});
+
 test('loop songs end exactly on the last bar', () => {
   const song = MusicComposition.compose({ seed: 'loop', loop: true, bars: 8 });
   assert.strictEqual(song.duration, song.loopEnd);

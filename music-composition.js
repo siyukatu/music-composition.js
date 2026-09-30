@@ -1579,6 +1579,9 @@
         remaining -= flen;
       }
       if (io) out.push({ type: 'outro', bars: 4 });
+      // A loop goes from its last section back to its first: a verse there would
+      // play the same verse twice in a row (A -> A). It ends on a chorus instead.
+      if (loop && out.length > 1 && out[out.length - 1].type === out[0].type) out[out.length - 1].type = 'B';
       return out;
     }
     // A form ends well when every section is whole and the last one before
