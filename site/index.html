@@ -475,10 +475,13 @@
   .secbar { position: relative; height: 3px; }
   .secbar .s {
     position: absolute; top: 0; height: 3px; margin-left: 1px; background: color-mix(in srgb, var(--c) 25%, transparent);
-    transition: left .6s var(--ease), width .6s var(--ease);
+    transition: left .6s var(--ease), width .6s var(--ease), opacity .6s var(--ease);
   }
   .secbar .s i { position: absolute; inset: 0; background: var(--c); transform: scaleX(var(--f, 0)); transform-origin: left; }
-  .secbar .s.new { animation: wipe-in .6s var(--ease-wipe) both; }
+  .secbar .s.pending { visibility: hidden; }
+  /* (the clip reaches below the bar, to take the label along) */
+  .secbar .s.new { animation: sec-in .6s var(--ease-wipe) var(--d, 0s) both; }
+  @keyframes sec-in { from { clip-path: inset(-4px 100% -24px 0); } to { clip-path: inset(-4px 0 -24px 0); } }
   .secmap { padding-bottom: 18px; cursor: pointer; margin-top: -6px; }
   .secmap .s { appearance: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
   .secmap .s b {
@@ -2717,24 +2720,62 @@
   var SEC_EN = { intro: 'INTRO', A: 'VERSE', P: 'PRE-CHORUS', B: 'CHORUS', C: 'BRIDGE', outro: 'OUTRO' };
   var SEC_COLOR = { intro: '--muted', A: '--bass', P: '--arp', B: '--accent', C: '--chords', outro: '--muted' };
   var SEC_NAME = { intro: 'イントロ', A: 'A メロ', P: 'B メロ', B: 'サビ', C: 'ブリッジ', outro: 'アウトロ' };
-  var secFill = [];
+  var secFill = [], secGen = 0;
   function renderSections(song, longer) {
     var total = playLength(), bd = song.barDuration;
     var secs = song.sections.filter(function (s) { return s.start < total - 0.01; });
+    var gen = ++secGen, anim = longer && !reduceMotion.matches;
     secFill = [];
+    // Longer: the sections that stay slide over to open a gap the size of the
+    // added ones (their places, empty); then the added ones wipe into it.
     [$('#secmap'), $('#np-secs')].forEach(function (box, bi) {
-      var map = bi === 0, had = longer ? box.children.length : 0;
+      var map = bi === 0, old = longer ? Array.prototype.slice.call(box.children) : [];
       if (!longer) box.textContent = '';
+      var used = [], els = secs.map(function () { return null; }), added = [];
+      // The same section: same start and kind. Then the ones that moved (the outro), from the end.
       secs.forEach(function (s, i) {
-        var el = box.children[i];
-        if (!el) {
-          el = document.createElement(map ? 'button' : 'span');
-          el.className = 's' + (had && !reduceMotion.matches ? ' new' : '');
-          el.appendChild(document.createElement('i'));
-          if (map) { el.type = 'button'; el.appendChild(document.createElement('b')); }
-          box.appendChild(el);
+        for (var j = 0; j < old.length; j++) {
+          if (!used[j] && +old[j].dataset.t === s.start && old[j].dataset.type === s.type) { used[j] = true; els[i] = old[j]; return; }
         }
+      });
+      for (var j = old.length - 1; j >= 0; j--) {
+        if (used[j]) continue;
+        for (var i = secs.length - 1; i >= 0; i--) {
+          if (!els[i] && secs[i].type === old[j].dataset.type) { used[j] = true; els[i] = old[j]; break; }
+        }
+      }
+      for (i = secs.length - 1; i >= 0; i--) {
+        if (els[i]) continue;
+        var el = document.createElement(map ? 'button' : 'span');
+        el.className = 's' + (anim ? ' pending' : '');
+        el.appendChild(document.createElement('i'));
+        if (map) { el.type = 'button'; el.appendChild(document.createElement('b')); }
+        box.insertBefore(el, els[i + 1] || null);
+        els[i] = el;
+        added.unshift(el);
+      }
+      old.forEach(function (el, j) {
+        if (used[j]) return;
+        if (!anim) { el.remove(); return; }
+        el.style.width = '0px';
+        el.style.opacity = '0';
+        setTimeout(function () { el.remove(); }, 600);
+      });
+      if (anim && added.length) {
+        setTimeout(function () {
+          if (gen !== secGen) return;
+          added.forEach(function (el, k) {
+            el.style.setProperty('--d', (k * 0.12) + 's');
+            el.classList.remove('pending');
+            el.classList.add('new');
+            el.addEventListener('animationend', function () { el.classList.remove('new'); }, { once: true });
+          });
+        }, 600);
+      }
+      secs.forEach(function (s, i) {
+        var el = els[i];
         var end = Math.min(total, s.start + s.bars * bd);
+        el.dataset.type = s.type;
         el.style.left = (s.start / total * 100) + '%';
         el.style.width = 'calc(' + ((end - s.start) / total * 100) + '% - 2px)';
         el.style.setProperty('--c', 'var(' + (SEC_COLOR[s.type] || '--muted') + ')');
@@ -2747,7 +2788,6 @@
         }
         secFill.push({ el: el, s0: s.start, s1: end, f: -1, on: null });
       });
-      while (box.children.length > secs.length) box.removeChild(box.lastChild);
     });
     updateSections(audio.currentTime || 0);
   }
