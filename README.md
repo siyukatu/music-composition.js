@@ -84,7 +84,7 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | `renderAsync(song, { sampleRate })` | `Promise<ArrayBuffer>` | `render` の非同期版 |
 | `encodeWAV(left, right, sampleRate)` | `ArrayBuffer` | Float32Array を 16-bit WAV にエンコード |
 | `toBlob(wav)` / `toURL(wav)` | `Blob` / `string` | `<audio>` やダウンロード用 |
-| `styles` / `modes` / `keys` | `string[]` | 指定できる値の一覧 |
+| `styles` / `modes` / `moods` / `keys` | `string[]` | 指定できる値の一覧 |
 | `version` | `string` | ライブラリのバージョン |
 
 ### オプション
@@ -95,7 +95,9 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | `style` | `pop` `jpop` `dance` `lofi` `chiptune` `ambient` `jazz` `bossa` `auto`、ミックス（`'jpop+lofi'`）、カスタムスタイル（オブジェクト） | `auto`（シードで決定） |
 | `parts` | 楽器と演奏（下の表）。指定したものだけスタイルの設定を上書き。値を配列にすると 1 曲の中で使い分ける（下を参照） | スタイルどおり |
 | `key` | `C`〜`B`（`F#`, `Bb` なども可） | シードで決定 |
-| `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイルに合わせて決定 |
+| `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイル（`mood` があればムード）に合わせて決定 |
+| `mood` | `bright` `dark` `sad` `calm` `energetic` `dreamy` `tense` `auto`。曲の雰囲気（下の表） | `auto`（スタイルのまま） |
+| `contrast` | `true` にすると、曲の途中を同主調の反対の色に変える（明るい曲なら短調、暗い曲なら長調。下を参照） | `false` |
 | `bpm` | 40〜240 | スタイルに合わせて決定 |
 | `bars` | 8〜256（4 の倍数に丸め） | `32` |
 | `duration` | 目安の秒数（残響を含む。`bars` 未指定時。4 小節単位に丸め） | — |
@@ -103,6 +105,30 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | `extend` | `true`（最大 30 秒）/ 秒数。サビの途中やAメロのあとでアウトロに入らないよう、区切りのいいところ（丸ごとのサビ）まで曲を延ばす。延ばしきれないときは最大 8 小節短くする | `false` |
 | `loop` | `true` / `false` | `false` |
 | `sampleRate` | 8000〜96000 | `44100` |
+
+### `mood`（雰囲気）と `contrast`（途中で色を変える）
+
+スタイルはそのままに、曲の雰囲気を変えます。
+
+| 値 | 雰囲気 | 変わるところ |
+|---|---|---|
+| `bright` | 明るい | 長調（ミクソリディアン・リディアンも）、スタイルの中で速め、メロディは高め |
+| `dark` | 暗い | 短調、遅め、メロディは低め。ナポリの II（主音の半音上の長三和音 ♭II）から V へ進む進行や、i と ♭II を行き来する進行。最後は長三和音で終わらない |
+| `sad` | 切ない | 短調か長調（王道進行・小室進行など vi を中心にした進行）、遅め。7th コードと倚音が増え、音数を減らしてなめらかに |
+| `calm` | 穏やか | 長調・リディアン・ドリアン、ゆっくり。ドラムを弱く、音数を減らし、シンコペーションも控えめに |
+| `energetic` | 元気 | 長調・ミクソリディアン、速め。音数とシンコペーションを増やし、ドラムを強く |
+| `dreamy` | 幻想的 | リディアン、ゆっくり。add9・maj7 の浮遊感のある和音、残響とディレイを深く |
+| `tense` | 緊迫 | 短調、速め、ドラムを強く。♭II やアンダルシア進行などの張りつめた進行、短く切った刻むようなメロディ |
+
+`mode` や `bpm` を指定すれば、そちらが優先です。`mood` を指定しない（`auto`）ときの曲は、このオプションができる前と同じです。
+
+`contrast: true` にすると、曲の一部が同主調の反対の色になります（ハ長調の曲ならハ短調）。暗いほうへ変わるのは、Bメロ（プリコーラス）のある曲ならすべての Bメロ、ない曲なら 2 番以降のAメロ、それとブリッジです。メロディは和音に沿って作られるので、同じAメロの節が短調で歌われます。暗い曲では、同じ場所が長調になって光が差します。
+
+```js
+MusicComposition.generate({ seed: 'rain', style: 'pop', mood: 'dark' });
+MusicComposition.generate({ seed: 'rain', style: 'jpop', mood: 'bright', contrast: true }); // 明るい曲の中に短調の場面
+song.sections[2]  // { type: 'P', key: 'F', mode: 'minor', contrast: true, ... }
+```
 
 ### `parts`（楽器と演奏）
 
@@ -183,8 +209,10 @@ song.mode      // 'dorian'
 song.bpm       // 70
 song.duration  // 秒数（ループ時は loopEnd と同じ）
 song.parts     // 使われた楽器と演奏 { drums: 'lofi', groove: 'shuffle', ... }
-song.sections  // [{ type: 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro', startBar, bars, start, key, shift, drop }]
+song.mood      // 'dark'（指定しなかったときは null）
+song.sections  // [{ type: 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro', startBar, bars, start, key, mode, shift, drop, contrast }]
                // A = Aメロ, P = プレコーラス, B = サビ（drop: true は落ちサビ）, C = ブリッジ。最後のサビで転調することがあります
+               // contrast: true のセクションは同主調の反対の色（mode がそのセクションの旋法）
 song.meter     // '4/4' | '3/4'
 song.chords    // [{ bar, time, name: 'Am7', degree, tones: [9, 0, 4, 7] }]（1 小節に 2 つのコードが入ることもあります）
 song.notes     // [{ t, d, midi, vel, inst: 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums', ... }]
@@ -242,6 +270,8 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 |---|---|
 | `seed` | シード（必須） |
 | `style` `key` `mode` `bpm` | 省略するとシードから決まる。ミックスは `style=jpop,lofi`（重みは `jpop:2,lofi`） |
+| `mood` | 雰囲気（`mood=dark` など） |
+| `contrast=1` | 途中で色を変える（`contrast: true`） |
 | `cs` | カスタムスタイル（設定を JSON にして Base64URL にしたもの） |
 | `bars` / `sec` | 長さ（小節 / 秒）。どちらもなければ 32 小節 |
 | `loop=1` | ループ用 |
@@ -253,12 +283,12 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 
 ### 連続再生
 
-サイドバーの「連続再生」で、スタイル（複数選択）・モード・BPM の範囲・1 曲の長さ（秒または小節）を決めると、その範囲からランダムに選んだ新しい曲を止めるまで流し続けます。再生中に次の曲を Worker で作っておくので、曲の切り替わりで待ちません。「次の曲へ」やロック画面の「次のトラック」（Media Session）で飛ばせます。
+サイドバーの「連続再生」で、スタイル（複数選択）・雰囲気・モード・BPM の範囲・1 曲の長さ（秒または小節）を決めると、その範囲からランダムに選んだ新しい曲を止めるまで流し続けます。再生中に次の曲を Worker で作っておくので、曲の切り替わりで待ちません。「次の曲へ」やロック画面の「次のトラック」（Media Session）で飛ばせます。
 
 拍子（4/4・3/4）と保存したカスタムスタイルも選べます。「ときどきスタイルを混ぜる」をオンにすると、選んだスタイルから 2 つを混ぜた曲も流します（URL では `mix=1`）。「楽器と演奏」を変えていれば、その設定も使います。ルールは URL に入るので、ブックマークや共有もできます（再生はボタンを押してから始まります）。長さを小節で決めるときは `bars=16-32` です。
 
 ```
-https://mcj.siyukatu.me/?radio=1&styles=lofi,ambient&modes=dorian&bpm=70-90&sec=60-120
+https://mcj.siyukatu.me/?radio=1&styles=lofi,ambient&moods=calm,dreamy&bpm=70-90&sec=60-120
 ```
 
 ### MIDI の書き出し

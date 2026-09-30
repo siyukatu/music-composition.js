@@ -110,6 +110,8 @@
 
   var HARMONIC_MINOR = [0, 2, 3, 5, 7, 8, 11];
   var MELODIC_MINOR = [0, 2, 3, 5, 7, 9, 11];
+  // The scale of the Neapolitan bII (a major chord a half step above a minor tonic).
+  var PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
   // The scale of bII7 (the tritone substitute for V7), by the key's letter
   // names: Cb Db Eb F G Ab Bb in C, i.e. Db lydian dominant. Its 7th (Cb) sits
   // on the tonic's letter, hence -1.
@@ -341,6 +343,40 @@
     }
   };
   var STYLE_NAMES = Object.keys(STYLES);
+
+  // Moods: how a song feels, on top of its style.
+  // modes: the modes that carry the mood, weighted (only those the style uses, when it uses any).
+  // tempo: where in the style's tempo range to play (0 its slowest, 1 its fastest; a little beyond at the ends).
+  // register: melody higher or lower (scale steps); notes, sync, legato: melody density, syncopation, smoothness.
+  // sevenths, spice, colour: more seventh chords, more chromatic colour, more add9 chords.
+  // drums: drum loudness; wet, delay: space. dark: the minor ending stays minor (no Picardy third).
+  var MOODS = {
+    bright:    { label: 'Bright', modes: { major: 4, mixolydian: 1, lydian: 1 }, tempo: [0.5, 1], register: 1, notes: 1.05, sync: 0.05 },
+    dark:      { label: 'Dark', modes: { minor: 1 }, tempo: [-0.1, 0.4], register: -2, notes: 0.9, legato: 0.05, sevenths: -0.1, drums: 0.95, wet: 1.15, dark: true },
+    sad:       { label: 'Sad', modes: { minor: 3, major: 2, dorian: 1 }, tempo: [0, 0.45], register: -1, notes: 0.85, legato: 0.08, sevenths: 0.3, spice: 0.15, drums: 0.85, wet: 1.15 },
+    calm:      { label: 'Calm', modes: { major: 3, lydian: 1, dorian: 1 }, tempo: [-0.1, 0.35], register: -1, notes: 0.8, legato: 0.1, sync: -0.15, sevenths: 0.15, drums: 0.72, wet: 1.1 },
+    energetic: { label: 'Energetic', modes: { major: 3, mixolydian: 2, minor: 1 }, tempo: [0.6, 1.08], register: 1, notes: 1.15, sync: 0.1, drums: 1.1 },
+    dreamy:    { label: 'Dreamy', modes: { lydian: 3, major: 2, dorian: 1 }, tempo: [-0.1, 0.4], notes: 0.8, legato: 0.1, sevenths: 0.35, colour: 3, drums: 0.8, wet: 1.3, delay: 1.3 },
+    tense:     { label: 'Tense', modes: { minor: 1 }, tempo: [0.65, 1.1], notes: 1.15, sync: 0.12, legato: -0.1, sevenths: -0.1, drums: 1.1, dark: true }
+  };
+  var MOOD_NAMES = Object.keys(MOODS);
+  // The style with the mood's nudges (a copy; the style itself is left alone).
+  function moodStyle(st, md) {
+    var s = {}, k;
+    for (k in st) s[k] = st[k];
+    s.melody = {}; for (k in st.melody) s.melody[k] = st.melody[k];
+    s.fx = {}; for (k in st.fx) s.fx[k] = st.fx[k];
+    var m = s.melody;
+    if (md.register) m.center = [m.center[0] + md.register, m.center[1] + md.register];
+    if (md.notes) m.notes = m.notes * md.notes;
+    if (md.sync) m.sync = clamp(m.sync + md.sync, 0, 1);
+    if (md.legato) m.legato = clamp(m.legato + md.legato, 0.5, 1);
+    if (md.sevenths) s.sevenths = clamp(s.sevenths + md.sevenths, 0, 1);
+    if (md.spice) s.spice = clamp(s.spice + md.spice, 0, 1);
+    if (md.wet) s.fx.wet = Math.min(1.6, s.fx.wet * md.wet);
+    if (md.delay) s.fx.delay = Math.min(1.5, s.fx.delay * md.delay);
+    return s;
+  }
 
   // A style's own parts (with its triple-meter instruments in 3/4).
   function styleParts(st, three) {
@@ -650,22 +686,29 @@
   // numerals; b = lowered, lowercase = minor, X7 on a non-dominant degree = a
   // secondary dominant). '|' separates bars, ',' splits a bar in two.
   // roles: sections the idiom suits (A verse, P pre-chorus, B chorus, C bridge).
+  // tags: the styles it suits, and the moods (bright, dark, sad, calm,
+  // energetic, dreamy, tense) it is favoured for when a song asks for one.
+  // mood: true = used only for those moods (so songs without a mood don't change).
   var IDIOMS = {
     major: [
-      { p: 'IVmaj7 | V7 | iii7 | vi', roles: 'BP', tags: 'jpop pop' },                      // 王道進行
-      { p: 'IVmaj7 | V | iii7 | vi | ii7 | V7 | I | I', roles: 'B', tags: 'jpop' },          // 王道 + cadence
-      { p: 'vi | IV | V | I', roles: 'BA', tags: 'jpop pop dance' },                        // 小室進行
-      { p: 'I,V/3 | vi,iii | IV,I/3 | IV,V', roles: 'AB', tags: 'jpop pop' },               // カノン進行
-      { p: 'IVmaj7 | III7 | vi7 | v7,I7', roles: 'AB', tags: 'jpop lofi' },                 // 丸サ進行
-      { p: 'I | V/3 | vi | I/5 | IV | I/3 | ii7 | V7', roles: 'AB', tags: 'jpop pop' },     // descending bass
-      { p: 'IV | V | iii | vi | ii | iii | IVmaj7 | Vsus4,V', roles: 'B', tags: 'jpop' },
-      { p: 'I | vi | IV | V', roles: 'AB', tags: 'pop jpop chip' },                        // 50s
-      { p: 'I | V | vi | IV', roles: 'BA', tags: 'pop dance chip' },
-      { p: 'vi | IV | I | V', roles: 'B', tags: 'pop dance' },
-      { p: 'IV | I | V | vi', roles: 'B', tags: 'pop jpop' },
-      { p: 'I | iii | IV | V', roles: 'A', tags: 'pop jpop' },
-      { p: 'I | IV | I | V', roles: 'A', tags: 'chip pop' },
-      { p: 'I | IV | vi | V', roles: 'AB', tags: 'pop chip' },
+      { p: 'IVmaj7 | V7 | iii7 | vi', roles: 'BP', tags: 'jpop pop sad' },                  // 王道進行
+      { p: 'IVmaj7 | V | iii7 | vi | ii7 | V7 | I | I', roles: 'B', tags: 'jpop sad' },      // 王道 + cadence
+      { p: 'vi | IV | V | I', roles: 'BA', tags: 'jpop pop dance sad energetic' },          // 小室進行
+      { p: 'I,V/3 | vi,iii | IV,I/3 | IV,V', roles: 'AB', tags: 'jpop pop calm' },          // カノン進行
+      { p: 'IVmaj7 | III7 | vi7 | v7,I7', roles: 'AB', tags: 'jpop lofi sad dreamy' },      // 丸サ進行
+      { p: 'I | V/3 | vi | I/5 | IV | I/3 | ii7 | V7', roles: 'AB', tags: 'jpop pop calm' }, // descending bass
+      { p: 'IV | V | iii | vi | ii | iii | IVmaj7 | Vsus4,V', roles: 'B', tags: 'jpop sad' },
+      { p: 'I | vi | IV | V', roles: 'AB', tags: 'pop jpop chip bright calm' },            // 50s
+      { p: 'I | V | vi | IV', roles: 'BA', tags: 'pop dance chip bright energetic' },
+      { p: 'vi | IV | I | V', roles: 'B', tags: 'pop dance energetic' },
+      { p: 'IV | I | V | vi', roles: 'B', tags: 'pop jpop bright' },
+      { p: 'I | iii | IV | V', roles: 'A', tags: 'pop jpop bright' },
+      { p: 'I | IV | I | V', roles: 'A', tags: 'chip pop bright energetic' },
+      { p: 'I | IV | vi | V', roles: 'AB', tags: 'pop chip bright' },
+      // Mood: open, floating colours (add9, maj7) that never quite land; a bass climbing to the chorus.
+      { p: 'Iadd9 | IVadd9 | Iadd9 | IVadd9', roles: 'AB', tags: 'dreamy calm', mood: true },
+      { p: 'Imaj7 | iii7 | IVmaj7 | IVmaj7', roles: 'AC', tags: 'dreamy calm sad', mood: true },
+      { p: 'I | V/3 | IV/3 | V', roles: 'AB', tags: 'bright energetic', mood: true },
       { p: 'IV | V | vi | vi', roles: 'P', tags: 'jpop pop' },
       { p: 'ii7 | iii7 | IVmaj7 | V', roles: 'P', tags: 'jpop pop' },
       { p: 'vi | V | IV | V', roles: 'PC', tags: 'pop jpop dance' },
@@ -674,10 +717,10 @@
       { p: 'Imaj7 | I7 | IVmaj7 | iv7', roles: 'AC', tags: 'lofi jpop' },
       { p: 'IVmaj7 | iii7 | ii7 | Imaj7', roles: 'A', tags: 'lofi' },
       { p: 'IVmaj7 | III7 | vi7 | II7,V7', roles: 'AC', tags: 'lofi jpop' },
-      { p: 'bVI | bVII | I | I', roles: 'C', tags: 'pop jpop chip dance' },
-      { p: 'IV | iv | I | vi', roles: 'C', tags: 'pop jpop lofi' },
-      { p: 'vi | iii | IV | I', roles: 'CA', tags: 'pop jpop' },
-      { p: 'Imaj7 | IVmaj7 | Imaj7 | IVmaj7', roles: 'ABC', tags: 'ambient' },
+      { p: 'bVI | bVII | I | I', roles: 'C', tags: 'pop jpop chip dance bright energetic' },
+      { p: 'IV | iv | I | vi', roles: 'C', tags: 'pop jpop lofi sad' },
+      { p: 'vi | iii | IV | I', roles: 'CA', tags: 'pop jpop sad' },
+      { p: 'Imaj7 | IVmaj7 | Imaj7 | IVmaj7', roles: 'ABC', tags: 'ambient dreamy calm' },
       // Jazz: ii-V-I, I-vi-ii-V (rhythm changes), the circle from iii, tritone substitutes (bII7 for V7).
       { p: 'ii7 | V7 | Imaj7 | Imaj7', roles: 'AB', tags: 'jazz bossa', only: true },
       { p: 'Imaj7 | vi7 | ii7 | V7', roles: 'AB', tags: 'jazz bossa', only: true },
@@ -694,21 +737,29 @@
       { p: 'Imaj7 | II7 | ii7,V7 | Imaj7', roles: 'AB', tags: 'bossa', only: true },
       { p: 'IVmaj7 | IVmaj7 | bVII7 | bVII7 | iii7 | VI7 | ii7 | V7', roles: 'C', tags: 'bossa', only: true },
       { p: 'IVmaj7 | iv7 | Imaj7 | VI7', roles: 'BP', tags: 'bossa', only: true },
-      { p: 'Iadd9 | vi7 | IVmaj7 | V', roles: 'AB', tags: 'ambient pop' }
+      { p: 'Iadd9 | vi7 | IVmaj7 | V', roles: 'AB', tags: 'ambient pop dreamy calm' }
     ],
     minor: [
-      { p: 'i | bVI | bIII | bVII', roles: 'BA', tags: 'dance pop jpop chip' },
-      { p: 'i | bVII | bVI | V', roles: 'BC', tags: 'dance pop jpop chip' },              // Andalusian
+      { p: 'i | bVI | bIII | bVII', roles: 'BA', tags: 'dance pop jpop chip energetic sad' },
+      { p: 'i | bVII | bVI | V', roles: 'BC', tags: 'dance pop jpop chip dark tense' },   // Andalusian
       { p: 'i | iv | bVII | bIII', roles: 'A', tags: 'pop dance jpop' },
-      { p: 'bVI | bVII | i | i', roles: 'BP', tags: 'dance pop jpop chip' },
-      { p: 'i | bVI | iv | V', roles: 'AB', tags: 'pop jpop chip' },
-      { p: 'iv | V | i | i', roles: 'P', tags: 'pop jpop' },
-      { p: 'bVImaj7 | V7 | i7 | i7', roles: 'AB', tags: 'lofi jpop' },
-      { p: 'iv7 | bVII7 | bIIImaj7 | bVImaj7', roles: 'AC', tags: 'lofi jpop' },         // circle of fifths
+      { p: 'bVI | bVII | i | i', roles: 'BP', tags: 'dance pop jpop chip energetic' },
+      { p: 'i | bVI | iv | V', roles: 'AB', tags: 'pop jpop chip sad dark' },
+      { p: 'iv | V | i | i', roles: 'P', tags: 'pop jpop dark' },
+      { p: 'bVImaj7 | V7 | i7 | i7', roles: 'AB', tags: 'lofi jpop sad' },
+      { p: 'iv7 | bVII7 | bIIImaj7 | bVImaj7', roles: 'AC', tags: 'lofi jpop sad' },     // circle of fifths
       { p: 'i7 | iv7 | i7 | V7', roles: 'A', tags: 'lofi' },
-      { p: 'bVI | bVII | V | i', roles: 'PC', tags: 'jpop pop dance' },
+      { p: 'bVI | bVII | V | i', roles: 'PC', tags: 'jpop pop dance tense' },
       { p: 'i | bIII | bVII | iv', roles: 'AB', tags: 'pop dance' },
-      { p: 'i7 | bVImaj7 | i7 | bVImaj7', roles: 'ABC', tags: 'ambient' },
+      { p: 'i7 | bVImaj7 | i7 | bVImaj7', roles: 'ABC', tags: 'ambient dreamy calm dark' },
+      // Dark and tense: the Neapolitan bII (a half step above the tonic) on its way
+      // to V, a phrygian vamp between i and bII, the tonic held under a rising line.
+      { p: 'i | bVI | bII | V', roles: 'AB', tags: 'dark tense', mood: true },
+      { p: 'i | bII | i | bII', roles: 'AC', tags: 'dark tense', mood: true },
+      { p: 'i | iv | V | i', roles: 'A', tags: 'dark sad', mood: true },
+      { p: 'bVI | bII | V | V', roles: 'P', tags: 'dark tense', mood: true },
+      { p: 'i | i | bVI | V', roles: 'B', tags: 'tense dark', mood: true },
+      { p: 'iv | V | i | bVI', roles: 'C', tags: 'dark sad', mood: true },
       // Jazz in minor: ii-V-i with the half-diminished ii and V7(b9), the minor circle, tritone substitutes.
       { p: 'iiø7 | V7 | i7 | i7', roles: 'AB', tags: 'jazz bossa', only: true },
       { p: 'i7 | iv7 | iiø7 | V7', roles: 'AP', tags: 'jazz bossa', only: true },
@@ -721,7 +772,7 @@
       { p: 'i7 | iv7 | bIIImaj7 | bVImaj7', roles: 'BC', tags: 'bossa', only: true }
     ],
     dorian: [
-      { p: 'i7 | IV7 | i7 | IV7', roles: 'AB', tags: 'lofi pop dance ambient jazz bossa' },
+      { p: 'i7 | IV7 | i7 | IV7', roles: 'AB', tags: 'lofi pop dance ambient jazz bossa calm dreamy' },
       // Modal jazz: a dorian vamp, up a half step for the bridge feel; ii-V back home.
       { p: 'i7 | i7 | i7 | i7', roles: 'AC', tags: 'jazz', only: true },
       { p: 'ii7 | V7 | i7 | IV7', roles: 'BP', tags: 'jazz bossa', only: true },
@@ -733,8 +784,8 @@
       { p: 'I | IV | bVII | IV', roles: 'AB', tags: 'pop chip' }
     ],
     lydian: [
-      { p: 'I | II | I | II', roles: 'AB', tags: 'ambient pop' },
-      { p: 'Imaj7 | II | vi | V', roles: 'AB', tags: 'ambient pop chip' }
+      { p: 'I | II | I | II', roles: 'AB', tags: 'ambient pop dreamy calm' },
+      { p: 'Imaj7 | II | vi | V', roles: 'AB', tags: 'ambient pop chip dreamy bright' }
     ]
   };
 
@@ -1420,6 +1471,8 @@
    * @param {number} [options.bpm]           Tempo. Chosen from the style if omitted.
    * @param {string} [options.key]           'C' ... 'B' (sharps or flats). Random if omitted.
    * @param {string} [options.mode]          'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian'
+   * @param {string} [options.mood]          'bright' | 'dark' | 'sad' | 'calm' | 'energetic' | 'dreamy' | 'tense' | 'auto'
+   * @param {boolean} [options.contrast]     Pre-choruses (or later verses) and the bridge in the parallel key of the other colour.
    * @param {number} [options.bars]          Length in bars (rounded to a multiple of 4, 8–256). Default 32.
    *                                          A song that changes key gets one more chorus in the new key (8 bars).
    * @param {number} [options.duration]      Target length in seconds, including the reverb tail (used when bars is omitted).
@@ -1456,6 +1509,11 @@
       else { st = blendStyles(mix.list, R('mix'), BEATS === 3); styleName = mix.name; }
     }
     if (!st) { st = STYLES[styleName]; mix = { list: [[styleName, 1]] }; }
+    // Mood: a copy of the style with its nudges (none: the style as it is).
+    var moodName = o.mood === undefined || o.mood === null || o.mood === '' || o.mood === 'auto' ? null : String(o.mood);
+    if (moodName && !MOODS[moodName]) throw new Error('music-composition.js: unknown mood "' + o.mood + '" (use ' + MOOD_NAMES.join(', ') + ')');
+    var md = moodName ? MOODS[moodName] : null;
+    if (md) st = moodStyle(st, md);
     var chosen = resolveParts(styleParts(st, BEATS === 3), o.parts);
     // Each part as a list of what it plays (in order: verse, chorus, bridge,
     // pre-chorus); parts.sometimes may leave a part out of this song.
@@ -1495,9 +1553,17 @@
     }
     var parts = sectionParts('B');
 
-    var bpm = o.bpm ? clamp(Math.round(+o.bpm), 40, 240) : Math.round(R('bpm').range(st.bpm[0], st.bpm[1]));
+    var bpm;
+    if (o.bpm) bpm = clamp(Math.round(+o.bpm), 40, 240);
+    else if (md) bpm = clamp(Math.round(st.bpm[0] + (st.bpm[1] - st.bpm[0]) * R('bpm').range(md.tempo[0], md.tempo[1])), 40, 240);
+    else bpm = Math.round(R('bpm').range(st.bpm[0], st.bpm[1]));
     var modeName;
-    if (!o.mode || o.mode === 'auto') modeName = st.modeW ? wpick(R('mode'), st.modeW) : R('mode').pick(st.modes);
+    if ((!o.mode || o.mode === 'auto') && md) {
+      // The mood's modes, among those the style plays in (all of the mood's if none are).
+      var own = st.modeW ? Object.keys(st.modeW) : st.modes, mw = {}, anyMode = false;
+      for (var mk0 in md.modes) if (own.indexOf(mk0) >= 0) { mw[mk0] = md.modes[mk0]; anyMode = true; }
+      modeName = wpick(R('mode'), anyMode ? mw : md.modes);
+    } else if (!o.mode || o.mode === 'auto') modeName = st.modeW ? wpick(R('mode'), st.modeW) : R('mode').pick(st.modes);
     else if (MODES[o.mode]) modeName = o.mode;
     else throw new Error('music-composition.js: unknown mode "' + o.mode + '" (use ' + Object.keys(MODES).join(', ') + ')');
     var scale = MODES[modeName];
@@ -1550,9 +1616,10 @@
       var d = ((deg % 7) + 7) % 7;
       return (scale[(d + 4) % 7] - scale[d] + 12) % 12 === 6;
     };
-    function tonicName(shift) {
+    // (mode: a section's own mode, for the spelling of a contrasting section.)
+    function tonicName(shift, mode) {
       var pc = ((keyPc + shift) % 12 + 12) % 12;
-      return spelling(pc, modeName)[pc];
+      return spelling(pc, mode || modeName)[pc];
     }
 
     // Form -------------------------------------------------------------------
@@ -1636,6 +1703,21 @@
       s.startBar = startBar; s.start = startBar * barDur; startBar += s.bars;
     });
     var lastChorus = chorusIdx.length ? chorusIdx[chorusIdx.length - 1] : -1;
+    // Contrast: sections in the parallel key of the other colour: a bright song
+    // clouds over (C major -> C minor), a dark one lets the light in. The
+    // pre-choruses (the song darkens just before its chorus), or, in a song
+    // without them, the verses after the first (the same tune in the other
+    // mode: a melody follows its chords, as everywhere); and the bridge.
+    // (Chosen by kind and place, never by what comes later, so a longer
+    // version of the song changes none of the sections it already had.)
+    var contrastMode = bright ? 'minor' : 'major';
+    if (o.contrast) {
+      var verses = 0;
+      sections.forEach(function (s) {
+        if (s.type === 'A') verses++;
+        if (s.type === 'P' || s.type === 'C' || (s.type === 'A' && !usePre && verses > 1)) s.contrast = true;
+      });
+    }
 
     // Harmony ----------------------------------------------------------------
     var hr = R('harmony');
@@ -1648,7 +1730,7 @@
       if (sevenths[deg] === undefined) sevenths[deg] = R('seventh-' + deg).chance(st.sevenths);
       var tones = sevenths[deg] ? [0, 2, 4, 6] : [0, 2, 4];
       // Colour: add9 on stable major chords.
-      if (!sevenths[deg] && (deg === 0 || deg === 3) && !isDim(deg) && (scale[(deg + 2) % 7] - scale[deg] + 12) % 12 === 4 && hr.chance(spice * 0.25)) tones = [0, 2, 4, 8];
+      if (!sevenths[deg] && (deg === 0 || deg === 3) && !isDim(deg) && (scale[(deg + 2) % 7] - scale[deg] + 12) % 12 === 4 && hr.chance(spice * 0.25 * (md && md.colour || 1))) tones = [0, 2, 4, 8];
       return makeChord(deg, scale, { tones: tones });
     }
     function borrowed(deg) {
@@ -1668,9 +1750,10 @@
     // Where a chord outside the key borrows its scale from: in major keys the
     // parallel minor first (iv, bVI, bVII); in minor keys harmonic minor for V
     // and dorian for IV.
+    // Last of all, phrygian, for the Neapolitan bII of the dark idioms.
     var CANDIDATE_SCALES = bright
-      ? [scale, MODES.minor, MODES.mixolydian, MODES.major, MODES.dorian, HARMONIC_MINOR, MELODIC_MINOR, MODES.lydian]
-      : [scale, HARMONIC_MINOR, MODES.dorian, MODES.minor, MELODIC_MINOR, MODES.major, MODES.mixolydian, MODES.lydian];
+      ? [scale, MODES.minor, MODES.mixolydian, MODES.major, MODES.dorian, HARMONIC_MINOR, MELODIC_MINOR, MODES.lydian, PHRYGIAN]
+      : [scale, HARMONIC_MINOR, MODES.dorian, MODES.minor, MELODIC_MINOR, MODES.major, MODES.mixolydian, MODES.lydian, PHRYGIAN];
     function triad(s, deg) {
       var t = (s[(deg + 2) % 7] - s[deg] + 12) % 12, f = (s[(deg + 4) % 7] - s[deg] + 12) % 12;
       return t === 4 && f === 7 ? 'maj' : t === 3 && f === 7 ? 'min' : t === 3 && f === 6 ? 'dim' : 'other';
@@ -1692,7 +1775,10 @@
       }
       if (!s) s = scale;
       var tones = ext === 'sus4' ? [0, 3, 4] : ext === 'sus2' ? [0, 1, 4] : ext === 'add9' ? [0, 2, 4, 8] : /7/.test(ext) ? [0, 2, 4, 6] : [0, 2, 4];
-      if (ext === '7' && !wantMinor && !m[1] && (s[(deg + 6) % 7] - s[deg] + 12) % 12 !== 10) {
+      // (A dominant 7th: a major 3rd and a minor 7th. iii7 has the minor 7th too,
+      // but its minor 3rd makes III7 a secondary dominant, V7/vi.)
+      var dom7 = (s[(deg + 2) % 7] - s[deg] + 12) % 12 === 4 && (s[(deg + 6) % 7] - s[deg] + 12) % 12 === 10;
+      if (ext === '7' && !wantMinor && !m[1] && !dom7) {
         // X7 where the diatonic chord isn't a dominant 7th: a secondary dominant.
         c = secondaryDominant(scale, (deg + 3) % 7, true);
       } else {
@@ -1712,8 +1798,14 @@
     if (st.tagW) for (var tg in st.tagW) tagMax = Math.max(tagMax, st.tagW[tg]);
     // How well an idiom suits the style (in a mix, the best-suited of its styles, by weight).
     // An idiom marked `only` (the jazz progressions) is never borrowed by other styles.
+    // A song with a mood favours the idioms of that mood (four times); the idioms
+    // written for moods alone are left out of songs without one.
     function idiomFit(id) {
-      var tags = id.tags.split(' ');
+      var tags = id.tags.split(' '), ofMood = moodName && tags.indexOf(moodName) >= 0;
+      if (id.mood && !ofMood) return 0;
+      return styleFit(id, tags) * (ofMood ? 4 : 1);
+    }
+    function styleFit(id, tags) {
       if (!st.tagW) return tags.indexOf(idiomTag) >= 0 ? 1 : id.only ? 0 : 0.15;
       if (id.only && !tags.some(function (t) { return st.tagW[t]; })) return 0;
       var best = 0.15;
@@ -1837,6 +1929,35 @@
       });
     }
     ['A', 'B', 'C'].forEach(function (k) { progs[k] = vary(progs[k]); });
+    // A contrasting section's progression: an idiom of the other colour, read as
+    // if that were the key's own mode (one per kind of section, each from a
+    // stream of its own).
+    var contrastProgs = {};
+    function contrastProg(type) {
+      if (contrastProgs[type]) return contrastProgs[type];
+      var keep = { hr: hr, scale: scale, cands: CANDIDATE_SCALES, list: idiomList };
+      hr = R('contrast-' + type);
+      scale = MODES[contrastMode];
+      CANDIDATE_SCALES = contrastMode === 'minor'
+        ? [MODES.minor, HARMONIC_MINOR, MODES.dorian, MELODIC_MINOR, PHRYGIAN, MODES.major, MODES.mixolydian, MODES.lydian]
+        : [MODES.major, MODES.mixolydian, MODES.minor, MODES.lydian, MODES.dorian, HARMONIC_MINOR, MELODIC_MINOR, PHRYGIAN];
+      idiomList = IDIOMS[contrastMode];
+      var prog = pickIdiom(type, LEN[type]);
+      hr = keep.hr; scale = keep.scale; CANDIDATE_SCALES = keep.cands; idiomList = keep.list;
+      // To the rest of the song these chords are borrowed (no secondary dominants aimed at them).
+      prog.forEach(function (bar) { bar.forEach(function (c) { if (c.kind === 'dia' && c.scale !== scale) c.kind = 'bor'; }); });
+      return (contrastProgs[type] = prog);
+    }
+    function contrastPlan(type, L) {
+      var key = 'contrast' + type + L;
+      if (!planCache[key]) {
+        var shared = hr;
+        hr = R('contrast-plan-' + type + L);
+        planCache[key] = embellish(basePlan(contrastProg(type), L));
+        hr = shared;
+      }
+      return planCache[key].map(function (b) { return { segs: b.segs.map(function (sg) { return { s: sg.s, c: sg.c }; }), cont: b.cont }; });
+    }
     var planCache = {};
     function planFor(type, L) {
       var key = type + L;
@@ -1853,12 +1974,12 @@
       else if (bright && hr.chance(0.4)) cs = [dia(1), dominant(true), dia(0), dia(0)];                                    // ii - V7 - I
       else cs = degs.map(function (d) { return d === 4 ? dominant(false) : dia(d); });
       var last = makeChord(0, scale, {});
-      if (!bright && hr.chance(0.3)) last = makeChord(0, modeName === 'dorian' ? MODES.mixolydian : MODES.major, { kind: 'bor' }); // Picardy third
+      if (!bright && hr.chance(0.3) && !(md && md.dark)) last = makeChord(0, modeName === 'dorian' ? MODES.mixolydian : MODES.major, { kind: 'bor' }); // Picardy third
       cs[3] = last;
       return cs.map(function (c) { return { segs: [{ s: 0, c: c }], cont: false }; });
     }
     sections.forEach(function (sec) {
-      var pl = sec.type === 'intro' ? introPlan() : sec.type === 'outro' ? outroPlan() : planFor(sec.type, sec.bars);
+      var pl = sec.type === 'intro' ? introPlan() : sec.type === 'outro' ? outroPlan() : sec.contrast ? contrastPlan(sec.type, sec.bars) : planFor(sec.type, sec.bars);
       if (sec.shift) pl = pl.map(function (b) { return { cont: b.cont, segs: b.segs.map(function (sg) { return { s: sg.s, c: withProps(sg.c, { shift: sec.shift }) }; }) }; });
       sec.plan = pl;
     });
@@ -2088,9 +2209,9 @@
       };
     });
 
-    var E = 1;
+    var E = 1, drumMood = md && md.drums || 1;
     function drum(bar, step, kind, vel, pan) {
-      notes.push({ t: T(bar, step), d: stepDur, midi: { kick: 36, snare: 38, clap: 39, hat: 42, pedal: 44, open: 46, crash: 49 }[kind], vel: V(Math.min(1, vel * E)), inst: 'drums', drum: kind, kit: kit, pan: pan || 0 });
+      notes.push({ t: T(bar, step), d: stepDur, midi: { kick: 36, snare: 38, clap: 39, hat: 42, pedal: 44, open: 46, crash: 49 }[kind], vel: V(Math.min(1, vel * E * drumMood)), inst: 'drums', drum: kind, kit: kit, pan: pan || 0 });
     }
     var bassPushed = false, compPushed = false;
 
@@ -2112,7 +2233,7 @@
       if (!info.cont) {
         segs.forEach(function (sg) {
           chords.push({
-            bar: bar, time: T(bar, sg.s), name: chordName(sg.c, tonicName(sg.c.shift), keyPc), degree: sg.c.deg,
+            bar: bar, time: T(bar, sg.s), name: chordName(sg.c, tonicName(sg.c.shift, info.sec.contrast ? contrastMode : null), keyPc), degree: sg.c.deg,
             // Pitch classes (0 = C), root first.
             tones: sg.c.tones.map(function (t) { return ((keyPc + chordPitch(sg.c, sg.c.deg + t)) % 12 + 12) % 12; })
           });
@@ -2896,7 +3017,11 @@
       barDuration: barDur,
       duration: body + tail,
       loopEnd: body,
-      sections: sections.map(function (s) { return { type: s.type, startBar: s.startBar, bars: s.bars, start: s.start, key: tonicName(s.shift), shift: s.shift, drop: !!s.drop }; }),
+      mood: moodName,
+      sections: sections.map(function (s) {
+        var m = s.contrast ? contrastMode : modeName;
+        return { type: s.type, startBar: s.startBar, bars: s.bars, start: s.start, key: tonicName(s.shift, m), mode: m, shift: s.shift, drop: !!s.drop, contrast: !!s.contrast };
+      }),
       chords: chords,
       notes: notes,
       // Mix settings for render() (reverb, delay, sidechain, tape).
@@ -3701,6 +3826,8 @@
     // Each style's settings in the terms of a custom style (a starting point for one).
     styleSettings: STYLE_NAMES.reduce(function (o, k) { o[k] = styleSettings(STYLES[k]); return o; }, {}),
     modes: Object.keys(MODES),
+    // Choices for compose({ mood }).
+    moods: MOOD_NAMES.slice(),
     keys: NOTE_NAMES.slice()
   };
 }));

@@ -223,6 +223,8 @@
   .style-btn.alt { color: var(--muted); }
   .style-btn.alt[aria-pressed="true"] { color: var(--accent-ink); }
   .style-desc { font-size: 12.5px; color: var(--muted); margin: 0; min-height: 2.6em; }
+  .moods { grid-template-columns: repeat(4, 1fr); }
+  .moods .style-btn { padding: 10px 4px; }
   .style-desc .link-btn { margin-left: 6px; }
   .custom-list { display: flex; flex-wrap: wrap; gap: 6px; }
   .custom-list .chip-btn { color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -763,6 +765,17 @@
         </div>
 
         <div class="field">
+          <div class="label">雰囲気</div>
+          <div class="styles moods" id="moods" role="group" aria-label="雰囲気"></div>
+          <p class="style-desc" id="mood-desc"></p>
+          <label class="switch" for="contrast">
+            <span class="switch-text">途中で色を変える<small>明るい曲なら Bメロ（なければ 2 番のAメロ）とブリッジを同じ主音の短調に、暗い曲なら長調にします</small></span>
+            <input type="checkbox" id="contrast">
+            <span class="track" aria-hidden="true"></span>
+          </label>
+        </div>
+
+        <div class="field">
           <label class="label" for="seed">シード <small>同じシード＝同じ曲</small></label>
           <div class="seed-row">
             <input type="text" id="seed" spellcheck="false" maxlength="64">
@@ -870,6 +883,10 @@
         <div class="field">
           <div class="label">拍子</div>
           <div class="chipset" id="radio-meters" role="group" aria-label="連続再生の拍子（複数選択）"></div>
+        </div>
+        <div class="field">
+          <div class="label">雰囲気 <small>選ばなければおまかせ</small></div>
+          <div class="chipset" id="radio-moods" role="group" aria-label="連続再生の雰囲気（複数選択）"></div>
         </div>
         <div class="field">
           <div class="label">モード <small>選ばなければおまかせ</small></div>
@@ -1210,9 +1227,9 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=13e482"></script>
-<script src="video.js?h=4c61f7"></script>
-<script src="midi.js?h=9648b8"></script>
+<script src="music-composition.js?h=6f9a17"></script>
+<script src="video.js?h=9ab2d4"></script>
+<script src="midi.js?h=6568c4"></script>
 <script>
 (function () {
   'use strict';
@@ -1232,10 +1249,21 @@
     add: ['＋ カスタム', '']
   };
   var MODE_JA = { major: 'メジャー', minor: 'マイナー', dorian: 'ドリアン', mixolydian: 'ミクソリディアン', lydian: 'リディアン' };
+  var MOOD_INFO = {
+    auto: ['おまかせ', 'スタイルのままの雰囲気で作ります。'],
+    bright: ['明るい', '長調で速め、高めのメロディ。'],
+    dark: ['暗い', '短調でゆっくり、低めのメロディ。主音の半音上の和音（ナポリの ♭II）の重い響きも。'],
+    sad: ['切ない', '王道進行や短調で、7th の和音と、和音の外から寄りかかる音（倚音）が多め。ゆっくり、なめらかに。'],
+    calm: ['穏やか', 'ゆっくり。ドラムは控えめ、メロディの音数も少なく。'],
+    energetic: ['元気', '速めで、メロディもドラムも弾むように。'],
+    dreamy: ['幻想的', 'リディアンと add9・maj7 の浮遊する響き、深い残響とディレイ。'],
+    tense: ['緊迫', '短調で速く。張りつめた進行に、短く刻むメロディ。']
+  };
+  var MOODS = MusicComposition.moods || [];
   var SECTION_JA = { intro: 'INTRO', A: 'A', P: 'PRE', B: 'B', C: 'BRIDGE', outro: 'OUTRO' };
   var STYLES = MusicComposition.styles;
 
-  var state = { style: 'lofi', mix: { jpop: 1, lofi: 1 }, unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, raf: 0, syncUrl: false, gen: 0, repeat: false, context: null,
+  var state = { style: 'lofi', mood: 'auto', mix: { jpop: 1, lofi: 1 }, unit: 'bars', meter: '4/4', song: null, opts: null, url: null, busy: false, raf: 0, syncUrl: false, gen: 0, repeat: false, context: null,
     endless: false, extending: false, reveal: null };
   var audio = $('#audio');
   var canvas = $('#roll');
@@ -1325,6 +1353,23 @@
       b.addEventListener('click', function () { setStyle('custom:' + c.id); });
       box.appendChild(b);
     });
+  }
+  // Mood: おまかせ and the library's moods, as a grid like the styles.
+  var moodsEl = $('#moods');
+  ['auto'].concat(MOODS).forEach(function (name) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'style-btn';
+    b.id = 'mood-' + name;
+    b.textContent = MOOD_INFO[name] ? MOOD_INFO[name][0] : name;
+    b.addEventListener('click', function () { setMood(name); });
+    moodsEl.appendChild(b);
+  });
+  function setMood(name) {
+    state.mood = MOODS.indexOf(name) >= 0 ? name : 'auto';
+    moodsEl.querySelectorAll('.style-btn').forEach(function (b) { b.setAttribute('aria-pressed', String(b.id === 'mood-' + state.mood)); });
+    $('#mood-desc').textContent = MOOD_INFO[state.mood] ? MOOD_INFO[state.mood][1] : '';
+    updateSnippet();
   }
   function currentCustom() { return state.style.indexOf('custom:') === 0 ? findCustom(state.style.slice(7)) : null; }
   function setStyle(name) {
@@ -1801,6 +1846,8 @@
     if (st) o.style = st;
     if (keySel.value) o.key = keySel.value;
     if (modeSel.value) o.mode = modeSel.value;
+    if (state.mood !== 'auto') o.mood = state.mood;
+    if ($('#contrast').checked) o.contrast = true;
     var bpm = parseInt($('#bpm').value, 10);
     if (bpm >= 40 && bpm <= 240) o.bpm = bpm;
     if (state.unit === 'sec') o.duration = Math.max(10, Math.min(600, parseInt($('#sec').value, 10) || 60));
@@ -1815,7 +1862,7 @@
     return o;
   }
 
-  ['#seed', '#key', '#mode', '#bpm', '#bars', '#sec', '#loop', '#extend', '#rate'].forEach(function (s) {
+  ['#seed', '#key', '#mode', '#contrast', '#bpm', '#bars', '#sec', '#loop', '#extend', '#rate'].forEach(function (s) {
     $(s).addEventListener('input', updateSnippet);
     $(s).addEventListener('change', updateSnippet);
   });
@@ -1885,12 +1932,14 @@
     if (!longer) setTitle(song.title);
     var chips = [
       ['style', styleName(song)],
+      song.mood ? ['mood', MOOD_INFO[song.mood] ? MOOD_INFO[song.mood][0] : song.mood] : null,
       ['key', song.key + ' ' + (MODE_JA[song.mode] || song.mode)],
+      song.sections.some(function (x) { return x.contrast; }) ? ['contrast', MODE_JA[song.sections.filter(function (x) { return x.contrast; })[0].mode]] : null,
       ['bpm', song.bpm],
       ['meter', song.meter],
       ['bars', song.bars],
       ['seed', song.seed]
-    ].map(function (c, i) { return '<span class="chip" style="--i:' + i + '"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
+    ].filter(Boolean).map(function (c, i) { return '<span class="chip" style="--i:' + i + '"><b>' + c[0] + '</b>' + escapeHtml(String(c[1])) + '</span>'; }).join('');
     if (song.loop) chips += '<span class="chip loop" style="--i:6"><b>loop</b>' + fmt(song.loopEnd) + '</span>';
     $('#chips').innerHTML = chips;
     $('#chips').removeAttribute('aria-hidden');
@@ -2003,7 +2052,7 @@
   function saveLib() { try { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); } catch (e) {} }
   function entryOf(song, opts) {
     return {
-      id: shareQuery(opts), title: song.title, style: styleName(song), key: song.key, mode: song.mode, bpm: song.bpm,
+      id: shareQuery(opts), title: song.title, style: styleName(song), key: song.key, mode: song.mode, mood: song.mood || null, bpm: song.bpm,
       meter: song.meter, seed: song.seed, opts: JSON.parse(JSON.stringify(opts))
     };
   }
@@ -2053,7 +2102,7 @@
       b.innerHTML = '<span class="h-title"></span><span class="h-seed"></span><span class="h-meta"></span>';
       b.querySelector('.h-title').textContent = h.title;
       b.querySelector('.h-seed').textContent = h.seed;
-      b.querySelector('.h-meta').textContent = h.style + ' · ' + h.key + ' ' + (MODE_JA[h.mode] || h.mode) + ' · ' + h.bpm + ' BPM' + (h.meter === '3/4' ? ' · 3/4' : '');
+      b.querySelector('.h-meta').textContent = h.style + (h.mood && MOOD_INFO[h.mood] ? ' · ' + MOOD_INFO[h.mood][0] : '') + ' · ' + h.key + ' ' + (MODE_JA[h.mode] || h.mode) + ' · ' + h.bpm + ' BPM' + (h.meter === '3/4' ? ' · 3/4' : '');
       b.title = '再生する';
       b.addEventListener('click', function () { playEntry(h, libTab); });
       var like = document.createElement('button');
@@ -2117,6 +2166,8 @@
   function applyOptions(o) {
     $('#seed').value = o.seed;
     applyStyle(o.style);
+    setMood(o.mood);
+    $('#contrast').checked = !!o.contrast;
     keySel.value = o.key || '';
     modeSel.value = o.mode || '';
     $('#bpm').value = o.bpm || '';
@@ -2549,7 +2600,7 @@
       if (s1 < t0 || s0 > t1) return;
       var x0 = X(s0), x1 = X(s1);
       if (i % 2 === 1) { g.fillStyle = C.band; g.fillRect(x0, 0, x1 - x0, h); }
-      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '');
+      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '') + (s.contrast ? ' · ' + (s.mode === 'minor' ? '短調' : '長調') : '');
       g.font = R.font;
       var lw = g.measureText(label).width, lx = Math.max(x0 + 6, 6);
       if (lx + lw > x1 - 6) lx = x1 - 6 - lw;
@@ -2647,7 +2698,7 @@
       return at(y1, y2, s);
     };
   }
-  var EASE = bezier(0.76, 0, 0.24, 1); // --ease
+  var EASE_OUT = bezier(0, 0, 0.58, 1); // CSS ease-out: the strip sets off at once and settles
   var STRIP_MS = 450; // .progression .c::before's transition
   var stripAnim = 0;
   function scrollStrip(box, left, now) {
@@ -2657,7 +2708,7 @@
     var t0 = performance.now();
     (function step() {
       var p = Math.min(1, (performance.now() - t0) / STRIP_MS);
-      box.scrollLeft = from + (left - from) * EASE(p);
+      box.scrollLeft = from + (left - from) * EASE_OUT(p);
       if (p < 1) stripAnim = requestAnimationFrame(step);
     })();
   }
@@ -2795,7 +2846,7 @@
         el.style.setProperty('--c', 'var(' + (SEC_COLOR[s.type] || '--muted') + ')');
         el.dataset.t = s.start;
         if (map) {
-          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '');
+          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '') + (s.contrast ? ' · ' + s.mode.toUpperCase() : '');
           el.lastChild.textContent = label;
           el.title = (SEC_NAME[s.type] || s.type) + '（' + fmt(s.start) + '）から再生';
           el.setAttribute('aria-label', el.title);
@@ -2841,6 +2892,8 @@
     parts.push('seed: ' + s(o.seed));
     if (o.key) parts.push('key: ' + s(o.key));
     if (o.mode) parts.push('mode: ' + s(o.mode));
+    if (o.mood) parts.push('mood: ' + s(o.mood));
+    if (o.contrast) parts.push('contrast: <span class="k">true</span>');
     if (o.bpm) parts.push('bpm: <span class="n">' + o.bpm + '</span>');
     if (o.bars && o.bars !== 32) parts.push('bars: <span class="n">' + o.bars + '</span>');
     if (o.duration) parts.push('duration: <span class="n">' + o.duration + '</span>');
@@ -2920,6 +2973,7 @@
   renderRadioStyles();
   $('#radio-mix').addEventListener('change', radioRulesChanged);
   $('#radio-extend').addEventListener('change', radioRulesChanged);
+  chipButtons($('#radio-moods'), MOODS, function (v) { return MOOD_INFO[v] ? MOOD_INFO[v][0] : v; }, []);
   chipButtons($('#radio-modes'), RADIO_MODES, function (v) { return MODE_JA[v] || v; }, []);
   var RADIO_METERS = ['4/4', '3/4'];
   chipButtons($('#radio-meters'), RADIO_METERS, function (v) { return v; }, ['4/4']);
@@ -2964,6 +3018,7 @@
       styles: pressedValues($('#radio-styles')).filter(function (v) { return v.indexOf('custom:') < 0 || findCustom(v.slice(7)); }),
       mix: $('#radio-mix').checked,
       extend: $('#radio-extend').checked,
+      moods: pressedValues($('#radio-moods')),
       modes: pressedValues($('#radio-modes')),
       meters: pressedValues($('#radio-meters')),
       bpm: numRange('#radio-bpm-min', '#radio-bpm-max', 40, 240),
@@ -2978,6 +3033,7 @@
     if (plain.length !== RADIO_STYLES.length || plain.length !== r.styles.length) q.set('styles', plain.join(',')); // custom styles stay in this browser
     if (r.mix) q.set('mix', '1');
     if (!r.extend) q.set('ext', '0');
+    if (r.moods.length) q.set('moods', r.moods.join(','));
     if (r.modes.length) q.set('modes', r.modes.join(','));
     if (r.meters.length && r.meters.join() !== '4/4') q.set('meters', r.meters.join(','));
     if (r.bpm) q.set('bpm', r.bpm.join('-'));
@@ -2995,6 +3051,7 @@
     set($('#radio-styles'), styles.length ? styles : RADIO_STYLES);
     $('#radio-mix').checked = p.get('mix') === '1';
     $('#radio-extend').checked = p.get('ext') !== '0';
+    set($('#radio-moods'), (p.get('moods') || '').split(',').filter(function (v) { return MOODS.indexOf(v) >= 0; }));
     set($('#radio-modes'), (p.get('modes') || '').split(',').filter(function (v) { return RADIO_MODES.indexOf(v) >= 0; }));
     var meters = (p.get('meters') || '').split(',').filter(function (v) { return RADIO_METERS.indexOf(v) >= 0; });
     set($('#radio-meters'), meters.length ? meters : ['4/4']);
@@ -3031,6 +3088,7 @@
     else o.duration = between(r.len);
     var parts = readParts();
     if (parts) o.parts = parts;
+    if (r.moods.length) o.mood = r.moods[Math.floor(Math.random() * r.moods.length)];
     if (r.modes.length) o.mode = r.modes[Math.floor(Math.random() * r.modes.length)];
     var meter = r.meters.length ? r.meters[Math.floor(Math.random() * r.meters.length)] : '4/4';
     if (meter === '3/4') o.meter = '3/4';
@@ -3145,6 +3203,8 @@
     else if (o.style) q.set('style', o.style);
     if (o.key) q.set('key', o.key);
     if (o.mode) q.set('mode', o.mode);
+    if (o.mood) q.set('mood', o.mood);
+    if (o.contrast) q.set('contrast', '1');
     if (o.bpm) q.set('bpm', String(o.bpm));
     if (o.bars && o.bars !== 32) q.set('bars', String(o.bars)); // 32 is the default
     else if (!o.bars && o.duration) q.set('sec', String(o.duration));
@@ -3197,6 +3257,8 @@
     var FLAT = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
     if (key) o.key = FLAT[key] || key; // same pitch as the flat spelling, as the key menu lists sharps
     if (MusicComposition.modes.indexOf(p.get('mode')) >= 0) o.mode = p.get('mode');
+    if (MOODS.indexOf(p.get('mood')) >= 0) o.mood = p.get('mood');
+    if (p.get('contrast') === '1') o.contrast = true;
     var bpm = parseInt(p.get('bpm'), 10);
     if (bpm >= 40 && bpm <= 240) o.bpm = bpm;
     var bars = parseInt(p.get('bars'), 10), sec = parseInt(p.get('sec'), 10);
@@ -3465,6 +3527,7 @@
   })();
 
   setStyle(state.style);
+  setMood(state.mood);
   renderHistory(true);
   if (radioRulesFromUrl()) radioStatus('「連続再生を始める」で、このルールの曲を流し続けます');
 

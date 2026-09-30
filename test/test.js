@@ -517,7 +517,125 @@ for (const meter of ['4/4', '3/4']) {
   });
 }
 
+// Moods and contrasting sections ------------------------------------------------
+const MOODS = ['bright', 'dark', 'sad', 'calm', 'energetic', 'dreamy', 'tense'];
+// The same rules as above, counted for one song.
+function ruleCounts(s, c) {
+  const sd = s.stepDuration, spb = s.beatsPerBar * 4;
+  const lead = s.notes.filter(n => n.inst === 'lead' && !n.harmony && !n.layer && !n.counter).sort((a, b) => a.t - b.t);
+  const chordAt = t => { let x = s.chords[0]; for (const y of s.chords) if (y.time <= t + 0.03) x = y; return x.tones; };
+  lead.forEach((n, k) => {
+    c.notes++;
+    const p = Math.floor((n.t / sd) % spb + 0.25) % spb, len = n.d / sd;
+    const a = k > 0 && n.t - (lead[k - 1].t + lead[k - 1].d) <= sd * 3 ? lead[k - 1] : null;
+    const z = k + 1 < lead.length && lead[k + 1].t - (n.t + n.d) <= sd * 3 ? lead[k + 1] : null;
+    if (a) { c.pairs++; const lp = Math.abs(n.midi - a.midi); if (lp === 6 || lp === 10 || lp === 11 || lp > 12) c.badLeaps++; }
+    const inChord = chordAt(n.t).includes(n.midi % 12);
+    if (!inChord && (!z || z.midi === n.midi || Math.abs(z.midi - n.midi) > 2)) c.unresolved++;
+    if (p % 8 === 0 || len >= 3.8 || (p % 4 === 0 && len >= 2.8)) {
+      c.strong++;
+      const nx = lead[k + 1];
+      if (!inChord && !(nx && n.midi - nx.midi >= 1 && n.midi - nx.midi <= 2 && chordAt(nx.t).includes(nx.midi % 12))) c.off++;
+    }
+  });
+}
+
+test('mood "auto" (or none) leaves every song as it was', () => {
+  for (const style of ['pop', 'jazz', 'jpop+lofi'])
+    for (const seed of ['a', 'b']) {
+      const x = MusicComposition.compose({ seed, style }), y = MusicComposition.compose({ seed, style, mood: 'auto', contrast: false });
+      assert.strictEqual(JSON.stringify(x.notes), JSON.stringify(y.notes));
+      assert.strictEqual(x.mood, null);
+    }
+});
+
+test('moods set the mode and the tempo: dark and tense in minor, dark slower than bright, energetic faster than calm', () => {
+  const avg = (mood, style) => {
+    let sum = 0;
+    for (let i = 0; i < 16; i++) {
+      const s = MusicComposition.compose({ seed: 'tempo' + i, style, mood, bars: 8 });
+      assert.strictEqual(s.mood, mood);
+      if (mood === 'dark' || mood === 'tense') assert.strictEqual(s.mode, 'minor');
+      if (mood === 'bright') assert.ok(['major', 'mixolydian', 'lydian'].includes(s.mode), s.mode);
+      sum += s.bpm;
+    }
+    return sum / 16;
+  };
+  for (const style of ['pop', 'jpop', 'lofi', 'jazz']) {
+    assert.ok(avg('dark', style) < avg('bright', style) - 5, style + ': dark vs bright');
+    assert.ok(avg('calm', style) < avg('energetic', style) - 5, style + ': calm vs energetic');
+    assert.ok(avg('tense', style) > avg('sad', style) + 5, style + ': tense vs sad');
+  }
+  // An explicit mode wins over the mood's.
+  assert.strictEqual(MusicComposition.compose({ seed: 'x', style: 'pop', mood: 'dark', mode: 'major' }).mode, 'major');
+});
+
+test('dark and tense songs keep their minor ending, and reach for the Neapolitan bII', () => {
+  let neapolitan = 0;
+  for (let i = 0; i < 24; i++) {
+    const s = MusicComposition.compose({ seed: 'dark' + i, style: 'pop', mood: i % 2 ? 'dark' : 'tense', bars: 48 });
+    const last = s.chords[s.chords.length - 1];
+    assert.ok(last.tones.includes((last.tones[0] + 3) % 12), 'ends on ' + last.name);
+    const tonic = last.tones[0];
+    if (s.chords.some(c => c.tones[0] === (tonic + 1) % 12 && c.tones.includes((tonic + 5) % 12))) neapolitan++;
+  }
+  assert.ok(neapolitan >= 6, neapolitan + ' of 24 with a bII');
+});
+
+test('every mood (and a contrasting section) keeps the melody rules', () => {
+  const c = { notes: 0, pairs: 0, badLeaps: 0, unresolved: 0, strong: 0, off: 0 };
+  for (const extra of MOODS.map(mood => ({ mood })).concat([{ contrast: true }, { contrast: true, mood: 'dark' }, { contrast: true, mood: 'bright' }]))
+    for (const style of ['pop', 'jpop', 'lofi', 'jazz', 'dance'])
+      for (let i = 0; i < 4; i++) ruleCounts(MusicComposition.compose(Object.assign({ seed: 'mood' + i, style, bars: 48 }, extra)), c);
+  assert.ok(c.off / c.strong < 0.01, c.off + ' strong-beat non-chord tones in ' + c.strong);
+  assert.ok(c.unresolved / c.notes < 0.015, c.unresolved + ' unresolved non-chord tones in ' + c.notes);
+  assert.ok(c.badLeaps / c.pairs < 0.004, c.badLeaps + ' tritone/7th leaps in ' + c.pairs);
+});
+
+test('contrast: pre-choruses (or the later verses) and bridges move to the parallel key of the other colour', () => {
+  let seen = 0;
+  const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  for (const style of ['pop', 'jpop', 'lofi', 'dance', 'jazz', 'bossa'])
+    for (let i = 0; i < 6; i++) {
+      const s = MusicComposition.compose({ seed: 'contrast' + i, style, contrast: true, bars: [32, 48, 64][i % 3] });
+      const bright = ['major', 'mixolydian', 'lydian'].includes(s.mode);
+      const pre = s.sections.some(x => x.type === 'P');
+      let verses = 0;
+      s.sections.forEach(x => {
+        if (x.type === 'A') verses++;
+        const want = x.type === 'P' || x.type === 'C' || (x.type === 'A' && !pre && verses > 1);
+        assert.strictEqual(x.contrast, want, style + ' ' + i + ': ' + s.sections.map(y => y.type + (y.contrast ? '*' : '')).join(' '));
+        assert.strictEqual(x.mode, want ? (bright ? 'minor' : 'major') : s.mode);
+        if (!want) return;
+        // Its tonic chords have the other colour's third.
+        const tonicPc = (PC[x.key[0]] + (x.key[1] === '#' ? 1 : x.key[1] === 'b' ? -1 : 0) + 12) % 12;
+        // (Not the last bar: its lead-in points to the next section.)
+        const inside = s.chords.filter(ch => ch.time >= x.start - 0.01 && ch.time < x.start + (x.bars - 1) * s.barDuration - 0.01);
+        inside.filter(ch => ch.tones[0] === tonicPc).forEach(ch => {
+          assert.ok(ch.tones.includes((tonicPc + (bright ? 3 : 4)) % 12), style + ': ' + ch.name + ' in ' + x.key + ' ' + x.mode);
+          seen++;
+        });
+      });
+      assert.ok(s.sections.some(x => x.contrast), style + ' ' + i + ' has a contrasting section');
+    }
+  assert.ok(seen > 20, seen + ' tonic chords checked');
+});
+
+test('contrast: a longer version of the song keeps its beginning', () => {
+  for (const style of ['pop', 'jpop', 'lofi'])
+    for (const seed of ['p', 'q', 'r']) {
+      const a = MusicComposition.compose({ seed, style, contrast: true, bars: 32 });
+      const b = MusicComposition.compose({ seed, style, contrast: true, bars: 48 });
+      // Up to the start of the second-to-last body section of the shorter one
+      // (the one before it leads into it, and that may differ).
+      const cut = a.sections.filter(x => x.type !== 'outro').slice(-2)[0].start - 0.01;
+      const sig = s => JSON.stringify(s.chords.filter(c => c.time < cut).map(c => c.name));
+      assert.strictEqual(sig(a), sig(b), style + ' ' + seed);
+    }
+});
+
 test('invalid options throw readable errors', () => {
+  assert.throws(() => MusicComposition.compose({ mood: 'grumpy' }), /unknown mood/);
   assert.throws(() => MusicComposition.compose({ parts: { drums: 'tabla' } }), /unknown drums/);
   assert.throws(() => MusicComposition.compose({ parts: { kazoo: 'loud' } }), /unknown part/);
   assert.throws(() => MusicComposition.compose({ parts: { swing: 2 } }), /swing/);

@@ -74,15 +74,16 @@
     push(out, [0, 0xff, 0x2f, 0]);
     return chunk('MTrk', out);
   }
-  function keySignature(song) {
-    var name = song.key, pc = NOTE_PC[name.charAt(0)];
+  // (key and mode: the song's, or a section's own.)
+  function keySignature(name, mode) {
+    var pc = NOTE_PC[name.charAt(0)];
     if (name.charAt(1) === '#') pc++;
     if (name.charAt(1) === 'b') pc--;
-    var major = ((pc + (TO_MAJOR[song.mode] || 0)) % 12 + 12) % 12;
+    var major = ((pc + (TO_MAJOR[mode] || 0)) % 12 + 12) % 12;
     var sf = SHARPS[major];
     // F#/Gb major: follow the song's own spelling.
     if (major === 6 && name.indexOf('b') > 0) sf = -6;
-    return meta(0x59, [sf & 255, song.mode === 'minor' ? 1 : 0]);
+    return meta(0x59, [sf & 255, mode === 'minor' ? 1 : 0]);
   }
 
   function fromSong(song) {
@@ -95,12 +96,17 @@
       [0, 0, meta(0x01, utf8('music-composition.js ' + (song.version || '') + ' · seed ' + song.seed + ' · ' + (song.styleLabel || song.style)))],
       [0, 0, meta(0x51, (function (us) { return [(us >> 16) & 255, (us >> 8) & 255, us & 255]; })(Math.round(60000000 / song.bpm)))],
       [0, 0, meta(0x58, [song.beatsPerBar || 4, 2, 24, 8])],
-      [0, 0, keySignature(song)]
+      [0, 0, keySignature(song.key, song.mode)]
     ];
     var SECTION = { intro: 'Intro', A: 'A (verse)', P: 'Pre-chorus', B: 'Chorus', C: 'Bridge', outro: 'Outro' };
+    // A key signature wherever the key or mode changes (a key change, a section in the other mode).
+    var lastSig = song.key + ' ' + song.mode;
     song.sections.forEach(function (s) {
-      var label = (s.drop ? 'Chorus (quiet)' : SECTION[s.type] || s.type) + (s.shift ? ' · key ' + s.key : '');
+      var mode = s.mode || song.mode;
+      var label = (s.drop ? 'Chorus (quiet)' : SECTION[s.type] || s.type) + (s.shift || s.contrast ? ' · key ' + s.key + (s.contrast ? ' ' + mode : '') : '');
       conductor.push([tick(s.start), 1, meta(0x06, utf8(label))]);
+      var sig = s.key + ' ' + mode;
+      if (sig !== lastSig) { conductor.push([tick(s.start), 1, keySignature(s.key, mode)]); lastSig = sig; }
     });
     var tracks = [track(conductor)];
 

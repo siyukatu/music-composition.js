@@ -4,6 +4,8 @@
 declare namespace MusicComposition {
   type Style = 'pop' | 'jpop' | 'dance' | 'lofi' | 'chiptune' | 'ambient' | 'jazz' | 'bossa';
   type Mode = 'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian';
+  /** How a song feels, on top of its style: its mode, tempo, harmony, melody, drums and space. */
+  type Mood = 'bright' | 'dark' | 'sad' | 'calm' | 'energetic' | 'dreamy' | 'tense';
   /** A = verse, P = pre-chorus, B = chorus, C = bridge. */
   type SectionType = 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro';
   type Instrument = 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums';
@@ -113,8 +115,20 @@ declare namespace MusicComposition {
     bpm?: number;
     /** 'C' … 'B', sharps or flats ('F#', 'Bb'), or a pitch class 0–11. Picked from the seed if omitted. */
     key?: string | number;
-    /** Chosen from the style if omitted. */
+    /** Chosen from the style if omitted (or from the mood, when there is one). */
     mode?: Mode | 'auto';
+    /**
+     * The song's mood: bright (major, quicker), dark (minor, slower, lower, the Neapolitan bII),
+     * sad (slower, more sevenths and leaning notes), calm (slow, softer drums, fewer notes),
+     * energetic (quick, busier), dreamy (lydian, add9 and maj7 chords, more reverb),
+     * tense (minor, quick, driving). Default 'auto': the style as it is.
+     */
+    mood?: Mood | 'auto';
+    /**
+     * Sections in the parallel key of the other colour: in a bright song the pre-choruses
+     * (or, without them, the verses after the first) and the bridge turn minor; in a dark song, major.
+     */
+    contrast?: boolean;
     /** Length in bars, rounded to a multiple of 4 (8–256). Default 32. A song that changes key gets one more chorus in the new key (8 bars). */
     bars?: number;
     /** Target length in seconds (including the reverb tail), used when `bars` is omitted. Rounded to whole 4-bar blocks. */
@@ -146,6 +160,10 @@ declare namespace MusicComposition {
     start: number;
     /** Key of this section (after a key change, the new key). */
     key: string;
+    /** Mode of this section: the song's, or the other colour's in a contrasting section. */
+    mode: Mode;
+    /** In the parallel key of the other colour (compose({ contrast: true })). */
+    contrast: boolean;
     /** Semitones above the song's key (a final chorus may move up). */
     shift: number;
     /** A quiet chorus (chords and melody only) before the last one. */
@@ -210,6 +228,8 @@ declare namespace MusicComposition {
     bpm: number;
     key: string;
     mode: Mode;
+    /** The mood asked for, or null. */
+    mood: Mood | null;
     bars: number;
     loop: boolean;
     stepDuration: number;
@@ -251,6 +271,7 @@ interface MusicCompositionStatic {
   /** Each style's settings in the terms of a custom style; parts3 = what changes in 3/4. */
   readonly styleSettings: { [S in MusicComposition.Style]: Required<Omit<MusicComposition.CustomStyle, 'name' | 'base'>> & { parts3: MusicComposition.Parts } };
   readonly modes: MusicComposition.Mode[];
+  readonly moods: MusicComposition.Mood[];
   readonly keys: string[];
 }
 

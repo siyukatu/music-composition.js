@@ -304,6 +304,7 @@
     var secLabel = SECTION[sec.type] || sec.type;
     var prevSec = song.sections[secIdx - 1];
     if (sec.shift && prevSec && prevSec.shift !== sec.shift) secLabel += '  KEY ↑ ' + sec.key;
+    if (sec.contrast) secLabel += '  ' + sec.key + ' ' + String(sec.mode).toUpperCase();
     g.font = '500 ' + Math.round(U * 0.022) + 'px ' + P.mono;
     spacing(g, U * 0.004);
     var sy = rt - U * 0.022, sw = g.measureText(secLabel).width;
