@@ -446,10 +446,17 @@
   .progression { position: relative; display: flex; gap: 0; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; border-left: 1px solid var(--line); }
   .progression .c {
     appearance: none; font-family: var(--font-mono); font-size: 13px; padding: 6px 12px; border: 1px solid var(--line); border-left: 0;
-    white-space: nowrap; color: var(--muted); background: var(--surface); cursor: pointer; flex: none; transition: background .3s var(--ease), color .3s var(--ease);
+    white-space: nowrap; color: var(--muted); background: var(--surface); cursor: pointer; flex: none;
+    position: relative; isolation: isolate; transition: color .35s var(--ease), background .3s var(--ease);
+  }
+  /* The current chord fills in from the left, like the buttons, and empties out to the right. */
+  .progression .c::before {
+    content: ""; position: absolute; inset: -1px 0 -1px -1px; z-index: -1; background: var(--accent);
+    transform: scaleX(0); transform-origin: right; transition: transform .45s var(--ease);
   }
   .progression .c:hover { background: var(--surface-2); color: var(--ink); }
-  .progression .c.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .progression .c.on { color: var(--accent-ink); }
+  .progression .c.on::before { transform: scaleX(1); transform-origin: left; }
 
   /* Share */
   dialog.share {
@@ -530,14 +537,14 @@
   .np.busy .np-seek { visibility: hidden; }
   .np.busy .np-meta { animation: veil-in .6s var(--ease) infinite alternate; }
   .np-seek {
-    display: block; width: 100%; margin: 0; height: 14px; margin-top: -7px; background: transparent; accent-color: var(--accent);
+    display: block; width: 100%; margin: 0; height: 3px; background: transparent; accent-color: var(--accent);
     -webkit-appearance: none; appearance: none; cursor: pointer;
   }
   .np-seek::-webkit-slider-runnable-track { height: 3px; background: linear-gradient(to right, var(--accent) var(--p, 0%), var(--line) var(--p, 0%)); }
   .np-seek::-moz-range-track { height: 3px; background: var(--line); }
   .np-seek::-moz-range-progress { height: 3px; background: var(--accent); }
-  .np-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 4px; height: 12px; background: var(--accent); margin-top: -4.5px; }
-  .np-seek::-moz-range-thumb { width: 4px; height: 12px; border: none; border-radius: 0; background: var(--accent); }
+  .np-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); margin-top: -4.5px; }
+  .np-seek::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: var(--accent); }
   .np-inner { max-width: 1180px; margin: 0 auto; padding: 6px 24px 10px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; align-items: center; gap: 14px; }
   .np-art { width: 48px; height: 48px; display: block; background: var(--surface-2); }
   .np-meta { min-width: 0; display: grid; }
