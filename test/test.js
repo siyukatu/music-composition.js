@@ -634,7 +634,51 @@ test('contrast: a longer version of the song keeps its beginning', () => {
     }
 });
 
+test('blocks: stretches of the song in their own mood, mode and instruments', () => {
+  const blocks = [{ bars: 32, mood: 'bright' }, { bars: 16, mood: 'tense' }, { mood: 'sad', parts: { lead: 'piano', drums: 'none' } }];
+  for (const style of ['pop', 'jpop', 'lofi']) {
+    const s = MusicComposition.compose({ seed: 'blk', style, mode: 'major', blocks });
+    assert.strictEqual(s.bars >= 64, true, 'as long as the blocks: ' + s.bars);
+    assert.deepStrictEqual([...new Set(s.sections.map(x => x.block))], [0, 1, 2], 'every block, in order');
+    s.sections.forEach(x => {
+      assert.strictEqual(x.mood, ['bright', 'tense', 'sad'][x.block]);
+      assert.strictEqual(x.mode, x.block === 0 ? 'major' : 'minor', style + ' ' + x.type + ' in block ' + x.block);
+      const end = x.start + x.bars * s.barDuration, inSec = s.notes.filter(n => n.t >= x.start && n.t < end - s.barDuration);
+      if (x.block === 2) {
+        assert.ok(!inSec.some(n => n.inst === 'drums'), 'no drums in the sad block');
+        assert.ok(inSec.filter(n => n.inst === 'lead' && !n.layer && !n.counter).every(n => n.patch === 'pianoLead'), 'piano lead in the sad block');
+      }
+    });
+    // A minor block's chords are minor-key chords on the same tonic.
+    const tense = s.sections.find(x => x.block === 1);
+    assert.ok(s.chords.some(c => c.bar >= tense.startBar && c.bar < tense.startBar + tense.bars && /^[A-G][b#]?m(?!aj)/.test(c.name)));
+  }
+  // Blocks that pick sections by name: the third chorus, every bridge, a section by index.
+  const p = MusicComposition.compose({ seed: 'pick', style: 'pop', bars: 64, blocks: [{ sections: ['B3', 'C'], mood: 'sad' }, { sections: [1], parts: { lead: 'violin' } }] });
+  let choruses = 0;
+  p.sections.forEach((x, i) => {
+    if (x.type === 'B') choruses++;
+    const picked = (x.type === 'B' && choruses === 3) || x.type === 'C';
+    assert.strictEqual(x.mood, picked ? 'sad' : null, i + ' ' + x.type);
+    assert.deepStrictEqual(x.parts || null, i === 1 ? { lead: 'violin' } : null);
+  });
+  // A longer version keeps the blocks it had.
+  const a = MusicComposition.compose({ seed: 'grow', style: 'jpop', blocks: [{ bars: 24, mood: 'calm' }, { bars: 24, mood: 'tense' }] });
+  const b = MusicComposition.compose({ seed: 'grow', style: 'jpop', blocks: [{ bars: 24, mood: 'calm' }, { bars: 40, mood: 'tense' }] });
+  // (Up to the last bar before the shorter one's last two body sections: that bar leads into what follows.)
+  const cut = a.sections.filter(x => x.type !== 'outro').slice(-2)[0].start - a.barDuration - 0.01;
+  const sig = s => JSON.stringify(s.chords.filter(c => c.time < cut).map(c => c.name));
+  assert.strictEqual(sig(a), sig(b));
+  // Without blocks nothing says block.
+  assert.ok(MusicComposition.compose({ seed: 'x', bars: 32 }).sections.every(x => x.block === null));
+});
+
 test('invalid options throw readable errors', () => {
+  assert.throws(() => MusicComposition.compose({ blocks: [{ mood: 'grumpy' }] }), /blocks\[0\]: unknown mood/);
+  assert.throws(() => MusicComposition.compose({ blocks: [{ mood: 'sad' }, { bars: 8 }] }), /only the last block/);
+  assert.throws(() => MusicComposition.compose({ blocks: [{ sections: ['Z'] }] }), /unknown section/);
+  assert.throws(() => MusicComposition.compose({ blocks: [{ bars: 8, parts: { lead: ['piano', 'saw'] } }] }), /one value/);
+  assert.throws(() => MusicComposition.compose({ blocks: [{ bars: 8, parts: { lead: 'kazoo' } }] }), /unknown lead/);
   assert.throws(() => MusicComposition.compose({ mood: 'grumpy' }), /unknown mood/);
   assert.throws(() => MusicComposition.compose({ parts: { drums: 'tabla' } }), /unknown drums/);
   assert.throws(() => MusicComposition.compose({ parts: { kazoo: 'loud' } }), /unknown part/);

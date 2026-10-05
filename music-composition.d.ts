@@ -129,6 +129,12 @@ declare namespace MusicComposition {
      * (or, without them, the verses after the first) and the bridge turn minor; in a dark song, major.
      */
     contrast?: boolean;
+    /**
+     * Stretches of the song with a colour of their own. Blocks with `bars` follow one another
+     * from the start (the last may leave `bars` out and take the rest; without `bars` or `duration`
+     * the song is as long as they are); blocks with `sections` pick sections wherever they are.
+     */
+    blocks?: Block[];
     /** Length in bars, rounded to a multiple of 4 (8–256). Default 32. A song that changes key gets one more chorus in the new key (8 bars). */
     bars?: number;
     /** Target length in seconds (including the reverb tail), used when `bars` is omitted. Rounded to whole 4-bar blocks. */
@@ -143,6 +149,29 @@ declare namespace MusicComposition {
      * If the next whole chorus is further than that, the song ends up to 8 bars earlier instead.
      */
     extend?: boolean | number;
+  }
+
+  /**
+   * A section by kind ('C': every bridge, 'drop': the quiet chorus), the nth of a kind
+   * ('B3': the third chorus, counting the quiet one), or an index into song.sections.
+   */
+  type SectionPick = SectionType | 'drop' | `${'A' | 'P' | 'B' | 'C'}${number}` | number;
+
+  interface Block {
+    /** Length in bars (a multiple of 4). Sections go to the block their middle falls in. */
+    bars?: number;
+    /** Instead of bars: the sections this block colours (on top of the block they are in). */
+    sections?: SectionPick[] | string;
+    /**
+     * The block's mood: its mode on the same tonic (C major -> C minor for 'tense'), chords
+     * from its idioms, the tune moved up or down and held longer or shorter, and its drum level.
+     * The tune and the tempo stay the song's.
+     */
+    mood?: Mood | 'auto';
+    /** The block's mode (instead of the mood's). */
+    mode?: Mode | 'auto';
+    /** Instruments and playing in this block: one value per part (no lists, together, arrange, sometimes). */
+    parts?: Partial<Parts>;
   }
 
   interface RenderOptions {
@@ -160,10 +189,16 @@ declare namespace MusicComposition {
     start: number;
     /** Key of this section (after a key change, the new key). */
     key: string;
-    /** Mode of this section: the song's, or the other colour's in a contrasting section. */
+    /** Mode of this section: the song's, the other colour's in a contrasting section, or its block's. */
     mode: Mode;
     /** In the parallel key of the other colour (compose({ contrast: true })). */
     contrast: boolean;
+    /** The mood of this section: its block's, else the song's (null when there is none). */
+    mood: Mood | null;
+    /** Index of the block (with bars) this section is in, or null without blocks of that kind. */
+    block: number | null;
+    /** The instruments a block set for this section, when it set any. */
+    parts?: Partial<Parts>;
     /** Semitones above the song's key (a final chorus may move up). */
     shift: number;
     /** A quiet chorus (chords and melody only) before the last one. */

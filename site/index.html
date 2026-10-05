@@ -267,14 +267,14 @@
   }
   .icon-btn:hover { background: var(--surface-2); }
   details.parts { border: 1px solid var(--line); background: var(--surface); }
-  details.parts summary {
+  details.parts > summary {
     cursor: pointer; list-style: none; padding: 11px 12px; font-size: 13.5px; font-weight: 400;
     display: flex; justify-content: space-between; align-items: center; gap: 8px;
   }
-  details.parts summary::-webkit-details-marker { display: none; }
-  details.parts summary::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
-  details.parts[open] summary::after { transform: rotate(-135deg); }
-  details.parts summary small { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 700; }
+  details.parts > summary::-webkit-details-marker { display: none; }
+  details.parts > summary::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+  details.parts[open] > summary::after { transform: rotate(-135deg); }
+  details.parts > summary small { margin-left: auto; font-size: 12px; color: var(--accent); font-weight: 700; }
   .parts-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 2px 12px 12px; }
   .part-group { border: 0; padding: 0; margin: 0; min-width: 0; }
   .part-group legend { padding: 0; font-size: 12.5px; font-weight: 400; color: var(--ink); }
@@ -298,6 +298,33 @@
   .cs .parts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @media (max-width: 560px) { .cs .parts-grid { grid-template-columns: minmax(0, 1fr); } }
   .parts-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  /* Blocks */
+  .blocks-body { display: grid; gap: 10px; padding: 0 12px 12px; }
+  .blocks-note { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.55; }
+  .block-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .block-list:empty { display: none; }
+  .block-card { border: 1px solid var(--line); border-left: 3px solid var(--bc, var(--muted)); background: var(--band); padding: 8px 10px 10px; display: grid; gap: 6px; min-width: 0; }
+  .block-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .block-no { font: 500 12px var(--font-mono); color: var(--muted); min-width: 1.4em; }
+  .block-head .seg button { font-size: 11.5px; padding: 4px 8px; }
+  .block-head .spacer { flex: 1; }
+  .block-tool { appearance: none; border: 1px solid transparent; background: none; color: var(--muted); width: 28px; height: 26px; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .block-tool:hover:not(:disabled) { color: var(--ink); border-color: var(--line); background: var(--surface); }
+  .block-tool:disabled { opacity: .3; cursor: default; }
+  .block-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; }
+  .block-row.three { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .block-field { display: grid; gap: 0; min-width: 0; font-size: 11.5px; color: var(--muted); }
+  .block-field select { font-size: 13px; padding: 6px 22px 6px 2px; background-color: transparent; }
+  .block-rest { font-size: 13px; color: var(--ink); padding: 6px 2px; border-bottom: 1px dashed var(--line); }
+  .block-parts summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 2px 0; list-style: none; display: flex; gap: 6px; align-items: baseline; }
+  .block-parts summary::-webkit-details-marker { display: none; }
+  .block-parts summary::before { content: "＋"; font-size: 11px; }
+  .block-parts[open] summary::before { content: "－"; }
+  .block-parts summary b { font-weight: 400; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .block-parts .block-row { margin-top: 4px; }
+  .blocks-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .blocks-foot .spacer { flex: 1; }
+  @media (max-width: 420px) { .block-row.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .parts-foot p { margin: 0; font-size: 12px; color: var(--muted); }
   .link-btn { appearance: none; border: none; background: none; color: var(--accent); font: 400 12.5px var(--font-body); cursor: pointer; padding: 2px 0; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
   .seg { display: inline-flex; border: 1px solid var(--line); overflow: hidden; }
@@ -773,6 +800,20 @@
             <input type="checkbox" id="contrast">
             <span class="track" aria-hidden="true"></span>
           </label>
+          <details class="parts" id="blocks-box">
+            <summary>ブロックごとに変える <small id="blocks-count" hidden></small></summary>
+            <div class="blocks-body">
+              <p class="blocks-note">曲を頭から長さで区切るか、セクションを選んで、雰囲気と楽器を変えます。Aメロ・サビなどの構成はいつもどおり自動で、区切りはいちばん近いセクションの境目に合わせます。</p>
+              <ol class="block-list" id="block-list"></ol>
+              <div class="blocks-foot">
+                <button type="button" class="chip-btn" id="block-add-bars">＋ 長さで区切る</button>
+                <button type="button" class="chip-btn" id="block-add-pick">＋ セクションを選ぶ</button>
+                <span class="spacer"></span>
+                <button type="button" class="link-btn" id="block-example">例を入れる</button>
+                <button type="button" class="link-btn" id="block-clear" hidden>すべて消す</button>
+              </div>
+            </div>
+          </details>
         </div>
 
         <div class="field">
@@ -1227,7 +1268,7 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=6f9a17"></script>
+<script src="music-composition.js?h=50f84c"></script>
 <script src="video.js?h=9ab2d4"></script>
 <script src="midi.js?h=6568c4"></script>
 <script>
@@ -1371,6 +1412,153 @@
     $('#mood-desc').textContent = MOOD_INFO[state.mood] ? MOOD_INFO[state.mood][1] : '';
     updateSnippet();
   }
+
+  // Blocks ------------------------------------------------------------------
+  // state.blocks: [{ kind: 'bars' | 'pick', bars, pick, nth, mood, parts }], as
+  // the library's blocks option: 'bars' ones cut the song from the start (the
+  // last takes the rest), 'pick' ones colour sections by kind (and number).
+  var MOOD_COLOR = { bright: '--guitar', dark: '--drums', sad: '--bass', calm: '--chords', energetic: '--accent', dreamy: '--arp', tense: '--error' };
+  var PICK_NAMES = [['A', 'Aメロ'], ['P', 'Bメロ'], ['B', 'サビ'], ['C', 'ブリッジ'], ['drop', '落ちサビ'], ['intro', 'イントロ'], ['outro', 'アウトロ']];
+  var BLOCK_PARTS = ['lead', 'chords', 'drums', 'bass', 'pad', 'guitar', 'arp', 'groove', 'comping'];
+  state.blocks = [];
+  var blockList = $('#block-list');
+  function newBlock(kind) { return { kind: kind, bars: 16, pick: 'B', nth: 0, mood: 'auto', parts: {} }; }
+  function lastBarsBlock() {
+    for (var i = state.blocks.length - 1; i >= 0; i--) if (state.blocks[i].kind === 'bars') return state.blocks[i];
+    return null;
+  }
+  function blocksOption() {
+    if (!state.blocks.length) return null;
+    var last = lastBarsBlock();
+    return state.blocks.map(function (b) {
+      var x = {};
+      if (b.kind === 'pick') x.sections = [b.pick + (b.nth && b.pick !== 'intro' && b.pick !== 'outro' && b.pick !== 'drop' ? b.nth : '')];
+      else if (b !== last) x.bars = b.bars;
+      if (b.mood !== 'auto') x.mood = b.mood;
+      var p = {}, any = false;
+      for (var k in b.parts) if (b.parts[k]) { p[k] = b.parts[k]; any = true; }
+      if (any) x.parts = p;
+      return x;
+    });
+  }
+  // From the option (the history, a link) back to the editor. A block that picks
+  // several sections becomes one block per section (the same colour on each);
+  // a pick by index is left out.
+  function setBlocks(list) {
+    state.blocks = [];
+    (Array.isArray(list) ? list : []).forEach(function (x) {
+      if (!x || typeof x !== 'object') return;
+      var picks = x.sections ? [].concat(typeof x.sections === 'string' ? x.sections.split(/[,\s]+/) : x.sections) : [null];
+      picks.forEach(function (pk) {
+        var b = newBlock(x.sections ? 'pick' : 'bars');
+        if (x.sections) {
+          var m = /^(intro|outro|drop|[APBC])(\d*)$/.exec(String(pk));
+          if (!m) return;
+          b.pick = m[1]; b.nth = m[2] ? +m[2] : 0;
+        } else if (x.bars) b.bars = Math.max(4, Math.min(64, Math.round(x.bars / 4) * 4));
+        if (MOODS.indexOf(x.mood) >= 0) b.mood = x.mood;
+        if (x.parts) BLOCK_PARTS.forEach(function (k) { if (x.parts[k] && MusicComposition.parts[k].indexOf(x.parts[k]) >= 0) b.parts[k] = x.parts[k]; });
+        state.blocks.push(b);
+      });
+    });
+    renderBlocks();
+  }
+  function blockSelect(cls, options, value, label) {
+    return '<label class="block-field">' + label + '<select data-f="' + cls + '">' + options.map(function (o) {
+      return '<option value="' + o[0] + '"' + (String(o[0]) === String(value) ? ' selected' : '') + '>' + escapeHtml(o[1]) + '</option>';
+    }).join('') + '</select></label>';
+  }
+  var ICON_UP = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+  var ICON_DOWN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  var ICON_X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  function partsSummary(b) {
+    return BLOCK_PARTS.filter(function (k) { return b.parts[k]; }).map(function (k) { return PART_LABELS[k][0] + ' ' + partLabel(k, b.parts[k]); }).join('・');
+  }
+  function renderBlocks() {
+    var last = lastBarsBlock(), n = state.blocks.length;
+    blockList.innerHTML = state.blocks.map(function (b, i) {
+      var head = '<div class="block-head"><span class="block-no">' + (i + 1) + '</span>' +
+        '<span class="seg" role="group" aria-label="ブロックの決め方">' +
+        '<button type="button" data-kind="bars" aria-pressed="' + (b.kind === 'bars') + '">長さ</button>' +
+        '<button type="button" data-kind="pick" aria-pressed="' + (b.kind === 'pick') + '">セクション</button></span>' +
+        '<span class="spacer"></span>' +
+        '<button type="button" class="block-tool" data-act="up" aria-label="上へ" title="上へ"' + (i === 0 ? ' disabled' : '') + '>' + ICON_UP + '</button>' +
+        '<button type="button" class="block-tool" data-act="down" aria-label="下へ" title="下へ"' + (i === n - 1 ? ' disabled' : '') + '>' + ICON_DOWN + '</button>' +
+        '<button type="button" class="block-tool" data-act="del" aria-label="削除" title="削除">' + ICON_X + '</button></div>';
+      var where;
+      if (b.kind === 'pick') {
+        var single = b.pick === 'intro' || b.pick === 'outro' || b.pick === 'drop';
+        where = blockSelect('pick', PICK_NAMES, b.pick, 'セクション') +
+          (single ? '<span class="block-field">何番目<span class="block-rest">—</span></span>'
+            : blockSelect('nth', [[0, 'すべて'], [1, '1 つ目'], [2, '2 つ目'], [3, '3 つ目'], [4, '4 つ目']], b.nth, '何番目'));
+      } else if (b === last) {
+        where = '<span class="block-field">長さ<span class="block-rest">残りすべて</span></span>';
+      } else {
+        var lens = [];
+        for (var L = 4; L <= 64; L += 4) lens.push([L, L + ' 小節']);
+        where = blockSelect('bars', lens, b.bars, '長さ');
+      }
+      var moodSel = blockSelect('mood', [['auto', '曲のまま']].concat(MOODS.map(function (m) { return [m, MOOD_INFO[m] ? MOOD_INFO[m][0] : m]; })), b.mood, '雰囲気');
+      var row = '<div class="block-row' + (b.kind === 'pick' ? ' three' : '') + '">' + where + moodSel + '</div>';
+      var ps = partsSummary(b);
+      var parts = '<details class="block-parts"' + (b.open ? ' open' : '') + '><summary>楽器と演奏' + (ps ? '<b>' + escapeHtml(ps) + '</b>' : '') + '</summary><div class="block-row">' +
+        BLOCK_PARTS.map(function (k) {
+          return blockSelect('part:' + k, [['', 'そのまま']].concat(MusicComposition.parts[k].map(function (v) { return [v, partLabel(k, v)]; })), b.parts[k] || '', PART_LABELS[k][0]);
+        }).join('') + '</div></details>';
+      var color = b.mood !== 'auto' && MOOD_COLOR[b.mood] ? ' style="--bc: var(' + MOOD_COLOR[b.mood] + ')"' : '';
+      return '<li class="block-card" data-i="' + i + '"' + color + '>' + head + row + parts + '</li>';
+    }).join('');
+    $('#blocks-count').hidden = !n;
+    $('#blocks-count').textContent = n ? n + ' ブロック' : '';
+    $('#block-clear').hidden = !n;
+    $('#block-example').hidden = !!n;
+  }
+  function blocksChanged(rerender) {
+    if (rerender) renderBlocks();
+    updateSnippet();
+  }
+  blockList.addEventListener('click', function (e) {
+    var card = e.target.closest('.block-card');
+    if (!card) return;
+    var i = +card.dataset.i, b = state.blocks[i];
+    var kindBtn = e.target.closest('[data-kind]'), act = e.target.closest('[data-act]');
+    if (kindBtn && b.kind !== kindBtn.dataset.kind) { b.kind = kindBtn.dataset.kind; blocksChanged(true); }
+    else if (act && !act.disabled) {
+      var j = act.dataset.act === 'up' ? i - 1 : act.dataset.act === 'down' ? i + 1 : -1;
+      if (act.dataset.act === 'del') state.blocks.splice(i, 1);
+      else { state.blocks[i] = state.blocks[j]; state.blocks[j] = b; }
+      blocksChanged(true);
+    }
+  });
+  blockList.addEventListener('change', function (e) {
+    var sel = e.target.closest('select[data-f]'), card = e.target.closest('.block-card');
+    if (!sel || !card) return;
+    var b = state.blocks[+card.dataset.i], f = sel.dataset.f;
+    if (f.indexOf('part:') === 0) { b.parts[f.slice(5)] = sel.value; b.open = true; }
+    else if (f === 'bars' || f === 'nth') b[f] = +sel.value;
+    else b[f] = sel.value;
+    // (The colour bar and the instruments' summary; a pick of the intro has no number.)
+    blocksChanged(f === 'mood' || f === 'pick' || f.indexOf('part:') === 0);
+  });
+  blockList.addEventListener('toggle', function (e) {
+    var card = e.target.closest && e.target.closest('.block-card');
+    if (card && e.target.classList.contains('block-parts')) state.blocks[+card.dataset.i].open = e.target.open;
+  }, true);
+  $('#block-add-bars').addEventListener('click', function () {
+    // A new cut goes before the picks, after the other cuts.
+    var at = 0;
+    state.blocks.forEach(function (b, i) { if (b.kind === 'bars') at = i + 1; });
+    state.blocks.splice(at, 0, newBlock('bars'));
+    blocksChanged(true);
+  });
+  $('#block-add-pick').addEventListener('click', function () { state.blocks.push(newBlock('pick')); blocksChanged(true); });
+  $('#block-clear').addEventListener('click', function () { state.blocks = []; blocksChanged(true); });
+  // 明るい → 緊迫 → 切ない（ピアノ）
+  $('#block-example').addEventListener('click', function () {
+    setBlocks([{ bars: 24, mood: 'bright' }, { bars: 16, mood: 'tense' }, { mood: 'sad', parts: { lead: 'piano', chords: 'piano', drums: 'none' } }]);
+    if (state.unit === 'bars' && +$('#bars').value < 64) { $('#bars').value = '64'; }
+    updateSnippet();
+  });
   function currentCustom() { return state.style.indexOf('custom:') === 0 ? findCustom(state.style.slice(7)) : null; }
   function setStyle(name) {
     if (name.indexOf('custom:') === 0 && !findCustom(name.slice(7))) name = 'auto';
@@ -1848,6 +2036,8 @@
     if (modeSel.value) o.mode = modeSel.value;
     if (state.mood !== 'auto') o.mood = state.mood;
     if ($('#contrast').checked) o.contrast = true;
+    var blocks = blocksOption();
+    if (blocks) o.blocks = blocks;
     var bpm = parseInt($('#bpm').value, 10);
     if (bpm >= 40 && bpm <= 240) o.bpm = bpm;
     if (state.unit === 'sec') o.duration = Math.max(10, Math.min(600, parseInt($('#sec').value, 10) || 60));
@@ -1935,6 +2125,7 @@
       song.mood ? ['mood', MOOD_INFO[song.mood] ? MOOD_INFO[song.mood][0] : song.mood] : null,
       ['key', song.key + ' ' + (MODE_JA[song.mode] || song.mode)],
       song.sections.some(function (x) { return x.contrast; }) ? ['contrast', MODE_JA[song.sections.filter(function (x) { return x.contrast; })[0].mode]] : null,
+      opts.blocks && opts.blocks.length ? ['blocks', opts.blocks.length] : null,
       ['bpm', song.bpm],
       ['meter', song.meter],
       ['bars', song.bars],
@@ -2168,6 +2359,8 @@
     applyStyle(o.style);
     setMood(o.mood);
     $('#contrast').checked = !!o.contrast;
+    setBlocks(o.blocks);
+    if (o.blocks && o.blocks.length) $('#blocks-box').open = true;
     keySel.value = o.key || '';
     modeSel.value = o.mode || '';
     $('#bpm').value = o.bpm || '';
@@ -2600,7 +2793,8 @@
       if (s1 < t0 || s0 > t1) return;
       var x0 = X(s0), x1 = X(s1);
       if (i % 2 === 1) { g.fillStyle = C.band; g.fillRect(x0, 0, x1 - x0, h); }
-      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '') + (s.contrast ? ' · ' + (s.mode === 'minor' ? '短調' : '長調') : '');
+      var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '') + (s.contrast ? ' · ' + (s.mode === 'minor' ? '短調' : '長調') : '') +
+        (s.mood && s.mood !== song.mood && MOOD_INFO[s.mood] ? ' · ' + MOOD_INFO[s.mood][0] : '');
       g.font = R.font;
       var lw = g.measureText(label).width, lx = Math.max(x0 + 6, 6);
       if (lx + lw > x1 - 6) lx = x1 - 6 - lw;
@@ -2846,7 +3040,8 @@
         el.style.setProperty('--c', 'var(' + (SEC_COLOR[s.type] || '--muted') + ')');
         el.dataset.t = s.start;
         if (map) {
-          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '') + (s.contrast ? ' · ' + s.mode.toUpperCase() : '');
+          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '') + (s.contrast ? ' · ' + s.mode.toUpperCase() : '') +
+            (s.mood && s.mood !== song.mood ? ' · ' + s.mood.toUpperCase() : '');
           el.lastChild.textContent = label;
           el.title = (SEC_NAME[s.type] || s.type) + '（' + fmt(s.start) + '）から再生';
           el.setAttribute('aria-label', el.title);
@@ -2894,6 +3089,7 @@
     if (o.mode) parts.push('mode: ' + s(o.mode));
     if (o.mood) parts.push('mood: ' + s(o.mood));
     if (o.contrast) parts.push('contrast: <span class="k">true</span>');
+    if (o.blocks) parts.push('blocks: ' + styleObj(o.blocks));
     if (o.bpm) parts.push('bpm: <span class="n">' + o.bpm + '</span>');
     if (o.bars && o.bars !== 32) parts.push('bars: <span class="n">' + o.bars + '</span>');
     if (o.duration) parts.push('duration: <span class="n">' + o.duration + '</span>');
@@ -3205,6 +3401,12 @@
     if (o.mode) q.set('mode', o.mode);
     if (o.mood) q.set('mood', o.mood);
     if (o.contrast) q.set('contrast', '1');
+    // blocks=16.bright;16.tense;.sad.lead:piano|chords:piano;@B3.dark
+    // (a block: its length, or @ and the section; its mood; its parts)
+    if (o.blocks) q.set('blocks', o.blocks.map(function (b) {
+      var p = b.parts ? Object.keys(b.parts).map(function (k) { return k + ':' + b.parts[k]; }).join('|') : '';
+      return (b.sections ? '@' + [].concat(b.sections).join('+') : b.bars || '') + '.' + (b.mood || '') + (p ? '.' + p : '');
+    }).join(';'));
     if (o.bpm) q.set('bpm', String(o.bpm));
     if (o.bars && o.bars !== 32) q.set('bars', String(o.bars)); // 32 is the default
     else if (!o.bars && o.duration) q.set('sec', String(o.duration));
@@ -3215,7 +3417,27 @@
     // parts=lead:violin|flute,drums:brush (a list: all of them, by section),
     // sometimes:arp (left out of some songs), together:lead (the list layered)
     if (o.parts) q.set('parts', Object.keys(o.parts).map(function (k) { return k + ':' + [].concat(o.parts[k]).join('|'); }).join(','));
-    return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%2F/g, '/').replace(/%7C/g, '|');
+    return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%2F/g, '/').replace(/%7C/g, '|').replace(/%3B/g, ';').replace(/%40/g, '@').replace(/%2B/g, '+');
+  }
+  function blocksFromParam(v) {
+    var out = [];
+    (v || '').split(';').forEach(function (s) {
+      if (!s) return;
+      var f = s.split('.'), b = {};
+      if (f[0].charAt(0) === '@') b.sections = f[0].slice(1).split(/[+ ]/).filter(function (x) { return /^(intro|outro|drop|[APBC])\d*$/.test(x); });
+      else if (+f[0] > 0) b.bars = Math.max(4, Math.min(256, Math.round(+f[0] / 4) * 4));
+      if (b.sections && !b.sections.length) return;
+      if (MOODS.indexOf(f[1]) >= 0) b.mood = f[1];
+      (f[2] || '').split('|').forEach(function (kv) {
+        var k = kv.split(':')[0], val = kv.split(':')[1];
+        if (MusicComposition.parts[k] && MusicComposition.parts[k].indexOf(val) >= 0) { b.parts = b.parts || {}; b.parts[k] = val; }
+      });
+      out.push(b);
+    });
+    // Only the last block cut by length may go without one.
+    var cuts = out.filter(function (b) { return !b.sections; });
+    cuts.slice(0, -1).forEach(function (b) { if (!b.bars) b.bars = 16; });
+    return out.length ? out : null;
   }
   function partsFromParam(v) {
     var p = {}, any = false;
@@ -3259,6 +3481,8 @@
     if (MusicComposition.modes.indexOf(p.get('mode')) >= 0) o.mode = p.get('mode');
     if (MOODS.indexOf(p.get('mood')) >= 0) o.mood = p.get('mood');
     if (p.get('contrast') === '1') o.contrast = true;
+    var blocks = blocksFromParam(p.get('blocks'));
+    if (blocks) o.blocks = blocks;
     var bpm = parseInt(p.get('bpm'), 10);
     if (bpm >= 40 && bpm <= 240) o.bpm = bpm;
     var bars = parseInt(p.get('bars'), 10), sec = parseInt(p.get('sec'), 10);

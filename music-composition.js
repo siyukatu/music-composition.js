@@ -432,6 +432,55 @@
     return p;
   }
 
+  // Blocks: stretches of the song with a colour of their own (a mood, a mode,
+  // instruments). A block with `bars` follows the one before it from the start
+  // of the song (the last may leave `bars` out and take the rest); a block with
+  // `sections` picks sections wherever they are: 'C' (every bridge), 'B3' (the
+  // third chorus), 'drop', 'intro', 'outro', or an index into song.sections.
+  // Returns { spans, picks }, each block as { bars?, sections?, mood, mode, parts }.
+  var SECTION_PICKS = ['intro', 'A', 'P', 'B', 'C', 'drop', 'outro'];
+  function parseBlocks(spec) {
+    var err = function (m) { throw new Error('music-composition.js: ' + m); };
+    if (!Array.isArray(spec)) err('blocks must be a list');
+    var spans = [], picks = [];
+    spec.forEach(function (b, i) {
+      var at = 'blocks[' + i + ']';
+      if (!b || typeof b !== 'object') err(at + ' must be an object');
+      var x = {};
+      var mood = b.mood === undefined || b.mood === null || b.mood === '' || b.mood === 'auto' ? null : String(b.mood);
+      if (mood && !MOODS[mood]) err(at + ': unknown mood "' + b.mood + '" (use ' + MOOD_NAMES.join(', ') + ')');
+      var mode = b.mode === undefined || b.mode === null || b.mode === '' || b.mode === 'auto' ? null : String(b.mode);
+      if (mode && !MODES[mode]) err(at + ': unknown mode "' + b.mode + '" (use ' + Object.keys(MODES).join(', ') + ')');
+      x.mood = mood; x.mode = mode;
+      if (b.parts !== undefined && b.parts !== null) {
+        var p = resolveParts({}, b.parts);
+        ['together', 'arrange', 'sometimes'].forEach(function (k) { if (p[k]) err(at + ': parts.' + k + ' is for the whole song, not a block'); });
+        for (var k in p) if (Array.isArray(p[k])) err(at + ': parts.' + k + ' takes one value in a block');
+        if (Object.keys(p).length) x.parts = p;
+      }
+      if (b.sections !== undefined && b.sections !== null) {
+        if (b.bars !== undefined && b.bars !== null) err(at + ' has both bars and sections (use one)');
+        var sel = Array.isArray(b.sections) ? b.sections : String(b.sections).split(/[,\s]+/).filter(Boolean);
+        x.sections = sel.map(function (v) {
+          if (typeof v === 'number' && v >= 0 && v === Math.floor(v)) return v;
+          var m = /^(intro|outro|drop|[APBC])(\d*)$/.exec(String(v));
+          if (!m || (m[2] && +m[2] < 1)) err(at + ': unknown section "' + v + '" (use ' + SECTION_PICKS.join(', ') + ', with a number for the nth one, or an index)');
+          return { type: m[1], nth: m[2] ? +m[2] : 0 };
+        });
+        picks.push(x);
+      } else {
+        if (b.bars !== undefined && b.bars !== null) {
+          if (!(+b.bars > 0)) err(at + ': bars must be a positive number');
+          x.bars = Math.max(4, Math.round(+b.bars / 4) * 4);
+        } else if (i < spec.length - 1 && spec.slice(i + 1).some(function (q) { return q && (q.sections === undefined || q.sections === null); })) {
+          err(at + ': only the last block may leave out bars');
+        }
+        spans.push(x);
+      }
+    });
+    return { spans: spans, picks: picks };
+  }
+
   // Style mixes: 'jpop+lofi', 'jpop:2+lofi', 'jpop,lofi', ['jpop', 'lofi'] or
   // { jpop: 2, lofi: 1 }. Returns the styles with weights summing to 1, and a
   // canonical name ('jpop+lofi', or 'jpop:2+lofi:1' when the weights differ).
@@ -1473,6 +1522,9 @@
    * @param {string} [options.mode]          'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian'
    * @param {string} [options.mood]          'bright' | 'dark' | 'sad' | 'calm' | 'energetic' | 'dreamy' | 'tense' | 'auto'
    * @param {boolean} [options.contrast]     Pre-choruses (or later verses) and the bridge in the parallel key of the other colour.
+   * @param {object[]} [options.blocks]      Stretches with a mood, mode and instruments of their own:
+   *                                          { bars, mood, mode, parts } one after another from the start,
+   *                                          or { sections: ['C', 'B3', 5], mood, mode, parts } (see parseBlocks).
    * @param {number} [options.bars]          Length in bars (rounded to a multiple of 4, 8–256). Default 32.
    *                                          A song that changes key gets one more chorus in the new key (8 bars).
    * @param {number} [options.duration]      Target length in seconds, including the reverb tail (used when bars is omitted).
@@ -1513,7 +1565,9 @@
     var moodName = o.mood === undefined || o.mood === null || o.mood === '' || o.mood === 'auto' ? null : String(o.mood);
     if (moodName && !MOODS[moodName]) throw new Error('music-composition.js: unknown mood "' + o.mood + '" (use ' + MOOD_NAMES.join(', ') + ')');
     var md = moodName ? MOODS[moodName] : null;
+    var plainSt = st; // (a block's mood goes on top of the style, not the song's mood)
     if (md) st = moodStyle(st, md);
+    var blocks = o.blocks === undefined || o.blocks === null ? { spans: [], picks: [] } : parseBlocks(o.blocks);
     var chosen = resolveParts(styleParts(st, BEATS === 3), o.parts);
     // Each part as a list of what it plays (in order: verse, chorus, bridge,
     // pre-chorus); parts.sometimes may leave a part out of this song.
@@ -1576,6 +1630,10 @@
     var bars;
     if (o.bars) bars = Math.round(+o.bars / 4) * 4;
     else if (o.duration) bars = Math.round((+o.duration - (loop ? 0 : st.fx.tail)) / barDur / 4) * 4;
+    // Blocks laid end to end make the song as long as they are (16 bars more for a last one without a length).
+    else if (blocks.spans.some(function (b) { return b.bars; })) {
+      bars = blocks.spans.reduce(function (a, b) { return a + (b.bars || 16); }, 0);
+    }
     else bars = 32;
     bars = clamp(bars || 32, 8, 256);
 
@@ -1583,11 +1641,14 @@
     // The sounds of the section being written (useSounds switches them).
     var kit, bassPatch, bassOct, chordPatch, padPatch, leadPatch, arpPatch, guitarPatch, swing, snareKind;
     var soundCache = {};
-    function soundsOf(type) {
-      var S = soundCache[type];
+    // (A key 'B|2' is a chorus in colour 2, a block with instruments of its own.)
+    var colourById = {};
+    function soundsOf(key) {
+      var S = soundCache[key];
       if (!S) {
-        var q = sectionParts(type);
-        S = soundCache[type] = {
+        var kc = key.split('|'), q = sectionParts(kc[0]), own = kc[1] ? colourById[kc[1]].parts : null;
+        if (own) for (var pk in own) q[pk] = own[pk];
+        S = soundCache[key] = {
           parts: q, kit: SOUND.drums[q.drums] || null, bassPatch: SOUND.bass[q.bass] || null, bassOct: q.bass === 'chip' ? 12 : 0,
           chordPatch: SOUND.chords[q.chords] || null, padPatch: SOUND.pad[q.pad] || null, leadPatch: SOUND.lead[q.lead],
           arpPatch: SOUND.arp[q.arp] || null, guitarPatch: q.guitar === 'fingerpick' || q.guitar === 'bossa' ? 'nylon' : 'guitar', swing: q.swing,
@@ -1716,9 +1777,59 @@
       var verses = 0;
       sections.forEach(function (s) {
         if (s.type === 'A') verses++;
-        if (s.type === 'P' || s.type === 'C' || (s.type === 'A' && !usePre && verses > 1)) s.contrast = true;
+        if (s.type === 'P' || s.type === 'C' || (s.type === 'A' && !usePre && verses > 1)) { s.contrast = true; s.mode = contrastMode; }
       });
     }
+    // Blocks: a section takes the colour of the block its middle falls in, then
+    // that of every block that picks it by name (their mood and mode replace,
+    // their instruments add up). A mood plays in its own first mode, on the
+    // same tonic (C major -> C minor for a tense block), unless the song's mode
+    // is that mode already; a block's mood and mode replace contrast. Sections
+    // of the same colour share one object (and their chords, see Harmony).
+    function moodMode(m) {
+      var best = null;
+      for (var mk in m.modes) if (best === null || m.modes[mk] > m.modes[best]) best = mk;
+      return m.modes[modeName] === m.modes[best] ? modeName : best;
+    }
+    if (blocks.spans.length || blocks.picks.length) {
+      var spanEnd = [], acc = 0, seenType = {}, colourIds = {}, nColours = 0;
+      blocks.spans.forEach(function (b, i) { acc += b.bars || 0; spanEnd.push(i === blocks.spans.length - 1 || !b.bars ? Infinity : acc); });
+      sections.forEach(function (s, si) {
+        seenType[s.type] = (seenType[s.type] || 0) + 1;
+        var layers = [], mid = s.startBar + s.bars / 2;
+        if (blocks.spans.length) {
+          var k = 0;
+          while (mid >= spanEnd[k]) k++;
+          s.block = k;
+          layers.push(blocks.spans[k]);
+        }
+        blocks.picks.forEach(function (b) {
+          if (b.sections.some(function (p) {
+            if (typeof p === 'number') return p === si;
+            if (p.type === 'drop') return !!s.drop;
+            return p.type === s.type && (!p.nth || p.nth === seenType[s.type]);
+          })) layers.push(b);
+        });
+        var mood = null, mode = null, own = null;
+        layers.forEach(function (b) {
+          if (b.mood || b.mode) { mood = b.mood; mode = b.mode; }
+          if (b.parts) { own = own || {}; for (var pk in b.parts) own[pk] = b.parts[pk]; }
+        });
+        var cmd = mood ? MOODS[mood] : md;
+        mode = mode || (mood ? moodMode(cmd) : null);
+        // (Harmony of its own only when it differs from the song's.)
+        var hk = (mood && mood !== moodName) || (mode && mode !== modeName) ? (mood || moodName || '') + '/' + (mode || modeName) : null;
+        if (!hk && !own && !mood) return;
+        var id = JSON.stringify([hk, mood, own]);
+        if (!colourIds[id]) {
+          colourIds[id] = { id: String(++nColours), hk: hk, mood: mood || moodName, md: cmd, mode: mode || modeName, parts: own };
+          colourById[colourIds[id].id] = colourIds[id];
+        }
+        s.colour = colourIds[id];
+        if (mood || mode) { s.contrast = false; s.mode = s.colour.mode === modeName ? null : s.colour.mode; }
+      });
+    }
+    sections.forEach(function (s) { s.patKey = (s.drop ? 'drop' : s.type) + (s.colour && s.colour.parts ? '|' + s.colour.id : ''); });
 
     // Harmony ----------------------------------------------------------------
     var hr = R('harmony');
@@ -1965,10 +2076,55 @@
       if (!planCache[key]) planCache[key] = embellish(basePlan(progs[type], L));
       return planCache[key].map(function (b) { return { segs: b.segs.map(function (sg) { return { s: sg.s, c: sg.c }; }), cont: b.cont }; });
     }
+    // A block's colour (see Blocks): fn runs as if the song were in the block's
+    // mood and mode, on the same tonic: its scale, idioms, chord colour and
+    // cadences. Afterwards the chords outside the song's own scale count as
+    // borrowed (nothing of the song's aims a secondary dominant at them).
+    var songScale = scale;
+    function inColour(cl, fn) {
+      if (!cl || !cl.hk) return fn();
+      var keep = [scale, modeName, bright, CANDIDATE_SCALES, idiomList, moodName, md, spice, st, pool, markov];
+      modeName = cl.mode; scale = MODES[modeName];
+      bright = modeName === 'major' || modeName === 'lydian' || modeName === 'mixolydian';
+      CANDIDATE_SCALES = bright
+        ? [scale, MODES.minor, MODES.mixolydian, MODES.major, MODES.dorian, HARMONIC_MINOR, MELODIC_MINOR, MODES.lydian, PHRYGIAN]
+        : [scale, HARMONIC_MINOR, MODES.dorian, MODES.minor, MELODIC_MINOR, MODES.major, MODES.mixolydian, MODES.lydian, PHRYGIAN];
+      idiomList = IDIOMS[modeName] || IDIOMS[bright ? 'major' : 'minor'];
+      moodName = cl.mood; md = cl.md;
+      st = md ? moodStyle(plainSt, md) : plainSt;
+      spice = st.spice;
+      pool = (PROGRESSIONS[modeName] || []).concat(bright ? PROGRESSIONS.bright : PROGRESSIONS.dark);
+      if (modeName === 'lydian') pool = PROGRESSIONS.lydian.concat(PROGRESSIONS.bright.filter(function (p) { return p.indexOf(3) < 0; }));
+      pool = pool.filter(function (p) { return !p.some(isDim); });
+      markov = MARKOV[modeName];
+      var out;
+      try { out = fn(); } finally {
+        scale = keep[0]; modeName = keep[1]; bright = keep[2]; CANDIDATE_SCALES = keep[3]; idiomList = keep[4];
+        moodName = keep[5]; md = keep[6]; spice = keep[7]; st = keep[8]; pool = keep[9]; markov = keep[10];
+      }
+      if (Array.isArray(out)) out.forEach(function (b) { b.segs.forEach(function (sg) { if (sg.c.kind === 'dia' && sg.c.scale !== songScale) sg.c.kind = 'bor'; }); });
+      return out;
+    }
+    // A colour's plan for a section type, from streams named after the colour
+    // (so blocks of the same colour share their chords, and a longer song keeps them).
+    var colourProgs = {};
+    function colourPlan(type, L, cl) {
+      var key = 'colour' + cl.hk + type + L;
+      if (!planCache[key]) {
+        var shared = hr;
+        planCache[key] = inColour(cl, function () {
+          if (!colourProgs[cl.hk + type]) { hr = R('colour-' + cl.hk + '-' + type); colourProgs[cl.hk + type] = progression(type, LEN[type]); }
+          hr = R('colour-plan-' + cl.hk + '-' + type + L);
+          return embellish(basePlan(colourProgs[cl.hk + type], L));
+        });
+        hr = shared;
+      }
+      return planCache[key].map(function (b) { return { segs: b.segs.map(function (sg) { return { s: sg.s, c: sg.c }; }), cont: b.cont }; });
+    }
     // The intro is the first half of the chorus (its hook is played over it, see
     // Melody), so the song opens with what it is about.
-    function introPlan() { return planFor('B', 4); }
-    function outroPlan(L) {
+    function introPlan(cl) { return cl ? colourPlan('B', 4, cl) : planFor('B', 4); }
+    function outroPlan(L, cl) {
       // IV-V-I / VI-VII-i, using the mode's own colour where that degree is diminished
       // (lydian's II instead of #iv, dorian's IV instead of vi).
       var degs = (bright ? [3, 4, 0, 0] : [5, 6, 0, 0]).map(function (d) { return isDim(d) ? (bright ? 1 : 3) : d; });
@@ -1981,10 +2137,14 @@
       cs[3] = last;
       var close = cs.map(function (c) { return { segs: [{ s: 0, c: c }], cont: false }; });
       // An 8-bar outro: the intro (the chorus's first half, with its hook) comes back, then the close.
-      return L > 4 ? introPlan().concat(close) : close;
+      return L > 4 ? introPlan(cl).concat(close) : close;
     }
     sections.forEach(function (sec) {
-      var pl = sec.type === 'intro' ? introPlan() : sec.type === 'outro' ? outroPlan(sec.bars) :sec.contrast ? contrastPlan(sec.type, sec.bars) : planFor(sec.type, sec.bars);
+      var cl = sec.colour && sec.colour.hk ? sec.colour : null;
+      var pl = sec.type === 'intro' ? introPlan(cl)
+        : sec.type === 'outro' ? inColour(cl, function () { return outroPlan(sec.bars, cl); })
+        : sec.contrast ? contrastPlan(sec.type, sec.bars)
+        : cl ? colourPlan(sec.type, sec.bars, cl) : planFor(sec.type, sec.bars);
       if (sec.shift) pl = pl.map(function (b) { return { cont: b.cont, segs: b.segs.map(function (sg) { return { s: sg.s, c: withProps(sg.c, { shift: sec.shift }) }; }) }; });
       sec.plan = pl;
     });
@@ -1995,7 +2155,9 @@
     sections.forEach(function (sec, si) {
       var shared = hr;
       hr = R('leadin-' + si);
-      leadIn(sec, si);
+      // (In the section's own colour; inColour marks what it borrows.)
+      if (sec.colour && sec.colour.hk) inColour(sec.colour, function () { leadIn(sec, si); return sec.plan; });
+      else leadIn(sec, si);
       hr = shared;
     });
     function leadIn(sec, si) {
@@ -2023,7 +2185,8 @@
         } else if (hr.chance(0.35 + 0.5 * spice)) {
           b.segs = [{ s: 0, c: last }, { s: 8, c: sh(dominant(hr.chance(0.6))) }];
         }
-      } else if (x.deg !== last.deg && !isDim(x.deg) && hr.chance(0.15 + 0.4 * spice)) {
+      // (Into a block of another mode, a degree names a different chord: no secondary dominant then.)
+      } else if (x.deg !== last.deg && !isDim(x.deg) && !(next.colour !== sec.colour && x.scale !== scale) && hr.chance(0.15 + 0.4 * spice)) {
         b.segs = [{ s: 0, c: last }, { s: 8, c: sh(secondaryDominant(scale, x.deg, true)) }];
       }
     }
@@ -2068,11 +2231,11 @@
     var barInfo = [];
     sections.forEach(function (sec, si) {
       var next = sections[si + 1];
-      useSounds(sec.drop ? 'drop' : sec.type);
+      useSounds(sec.patKey);
       for (var j = 0; j < sec.bars; j++) {
         var info = {
           sec: sec, secIndex: si, j: j, segs: sec.plan[j].segs, cont: sec.plan[j].cont, parts: partsOf(sec),
-          patKey: sec.drop ? 'drop' : sec.type,
+          patKey: sec.patKey,
           energy: (sec.drop ? 0.72 : ENERGY[sec.type]) + (sec.type === 'P' ? 0.14 * j / Math.max(1, sec.bars - 1) : 0) + (sec.shift ? 0.05 : 0)
         };
         // A drum fill (or a sudden stop) leads into the next section.
@@ -2197,13 +2360,18 @@
     // Patterns per section type, generated for this song, so repeats sound
     // like the same section.
     var pat = {};
-    ['intro', 'A', 'P', 'B', 'C', 'outro', 'drop'].forEach(function (type) {
-      useSounds(type);
+    ['intro', 'A', 'P', 'B', 'C', 'outro', 'drop'].forEach(function (type) { makePatterns(type, gr); });
+    // A block with instruments of its own gets its own patterns, from a stream
+    // of their own (the rest of the song keeps its patterns).
+    sections.forEach(function (sec) { if (!pat[sec.patKey]) makePatterns(sec.patKey, R('patterns-' + sec.patKey)); });
+    function makePatterns(key, gr) {
+      useSounds(key);
+      var type = key.split('|')[0];
       var level = { intro: 0, A: 1, P: 1, B: 2, C: 1, outro: 0, drop: 0 }[type];
       var fam = type === 'C' && parts.groove !== 'fourfloor' && parts.groove !== 'halftime' && gr.chance(0.6) ? 'halftime' : parts.groove;
       var three = BEATS === 3;
       var groove = kit ? (three ? makeGroove3 : makeGroove)(gr, fam, level, st.expr.ghost) : null;
-      pat[type] = {
+      pat[key] = {
         drums: groove,
         drumsVar: groove ? (three ? grooveVariation3 : grooveVariation)(gr, groove) : null,
         // Oom-pah-pah: when the chords take beats 2 and 3, the bass keeps to the downbeat.
@@ -2212,9 +2380,10 @@
         guitar: parts.guitar !== 'none' ? (three ? makeGuitar3 : makeGuitar)(gr, parts.guitar, level) : null,
         arpShape: gr.pick(['up', 'updown', 'down', 'skip'])
       };
-    });
+    }
 
-    var E = 1, drumMood = md && md.drums || 1;
+    // (A block's mood sets how hard its drums play.)
+    var E = 1, songDrums = md && md.drums || 1, drumMood = songDrums;
     function drum(bar, step, kind, vel, pan) {
       notes.push({ t: T(bar, step), d: stepDur, midi: { kick: 36, snare: 38, clap: 39, hat: 42, pedal: 44, open: 46, crash: 49 }[kind], vel: V(Math.min(1, vel * E * drumMood)), inst: 'drums', drum: kind, kit: kit, pan: pan || 0 });
     }
@@ -2229,6 +2398,7 @@
       var lastOfSong = bar === bars - 1;
       var stopAt = info.stopAt || SPB;
       E = info.energy;
+      drumMood = info.sec.colour ? info.sec.colour.md && info.sec.colour.md.drums || 1 : songDrums;
       var span = spanOf(bar);
       var segs = info.segs;
       var segEnd = function (k) { return k + 1 < segs.length ? segs[k + 1].s : SPB * span; };
@@ -2238,7 +2408,7 @@
       if (!info.cont) {
         segs.forEach(function (sg) {
           chords.push({
-            bar: bar, time: T(bar, sg.s), name: chordName(sg.c, tonicName(sg.c.shift, info.sec.contrast ? contrastMode : null), keyPc), degree: sg.c.deg,
+            bar: bar, time: T(bar, sg.s), name: chordName(sg.c, tonicName(sg.c.shift, info.sec.mode), keyPc), degree: sg.c.deg,
             // Pitch classes (0 = C), root first.
             tones: sg.c.tones.map(function (t) { return ((keyPc + chordPitch(sg.c, sg.c.deg + t)) % 12 + 12) % 12; })
           });
@@ -2280,7 +2450,7 @@
         }
       }
       var prevSec = info.secIndex > 0 ? sections[info.secIndex - 1] : null;
-      if (kit && info.j === 0 && prevSec && !info.sec.drop && (type === 'B' || type === 'outro' || type === 'C' || prevSec.type === 'intro' || info.sec.shift !== prevSec.shift)) {
+      if (kit && info.j === 0 && prevSec && !info.sec.drop && (type === 'B' || type === 'outro' || type === 'C' || prevSec.type === 'intro' || info.sec.shift !== prevSec.shift || info.sec.colour !== prevSec.colour)) {
         drum(bar, 0, 'crash', 0.8, 0.3);
       }
 
@@ -2463,7 +2633,7 @@
     function pitch(bar, step, d) { return leadBase + chordPitch(chordAt(bar, step), d); }
     sections.forEach(function (sec, si) {
       var prt = partsOf(sec);
-      useSounds(sec.drop ? 'drop' : sec.type);
+      useSounds(sec.patKey);
       if (!prt.lead) return;
       // The intro and the outro play the chorus's hook (its theme, over its
       // chords), plainly: no high point, no lift; the intro stays open towards the verse.
@@ -2472,7 +2642,12 @@
       if (!themes[key]) themes[key] = makeTheme(R('motif-' + key), st.melody, key, BEATS, bpm);
       var th = themes[key];
       var mr = R('melody-' + key);
-      var base = BASE[key];
+      // A block's mood moves its tune up or down and holds its notes longer or
+      // shorter (the tune itself is the song's: the same melody in another colour).
+      var cmd = sec.colour ? sec.colour.md : md;
+      var regShift = (cmd && cmd.register || 0) - (md && md.register || 0);
+      var legato = clamp(st.melody.legato + (cmd && cmd.legato || 0) - (md && md.legato || 0), 0.5, 1);
+      var base = BASE[key] + regShift;
       var plan = hook ? [0, 1, 1, 0] : sec.bars >= 8 ? REG[key] : key === 'P' ? REG.P : [0, 1, 1, 0];
       var nextSec = sections[si + 1];
       var harmonize = st.expr.harmony && sec.type === 'B' && !sec.drop && (si === lastChorus || sec.shift);
@@ -2653,7 +2828,7 @@
         for (var i = 0; i < rh.length; i++) {
           var n = rh[i];
           var vel = (n[0] % 4 === 0 ? 0.88 : 0.72) + (n[0] === 0 ? 0.08 : 0);
-          var len = n[1] * stepDur * Math.min(0.97, st.melody.legato + 0.12);
+          var len = n[1] * stepDur * Math.min(0.97, legato + 0.12);
           // The song's last note is held over the final chord.
           if (sec.type === 'outro' && j === sec.bars - 1 && i === rh.length - 1) len = (SPB - n[0]) * stepDur;
           var note = { t: T(barIdx, n[0]), d: len, midi: pitch(barIdx, n[0], degs[i]), vel: V(Math.min(1, vel * barInfo[barIdx].energy)), inst: 'lead', patch: leadPatch };
@@ -3031,8 +3206,10 @@
       loopEnd: body,
       mood: moodName,
       sections: sections.map(function (s) {
-        var m = s.contrast ? contrastMode : modeName;
-        return { type: s.type, startBar: s.startBar, bars: s.bars, start: s.start, key: tonicName(s.shift, m), mode: m, shift: s.shift, drop: !!s.drop, contrast: !!s.contrast };
+        var m = s.mode || modeName;
+        var x = { type: s.type, startBar: s.startBar, bars: s.bars, start: s.start, key: tonicName(s.shift, m), mode: m, shift: s.shift, drop: !!s.drop, contrast: !!s.contrast, mood: s.colour ? s.colour.mood : moodName, block: s.block === undefined ? null : s.block };
+        if (s.colour && s.colour.parts) x.parts = copy(s.colour.parts);
+        return x;
       }),
       chords: chords,
       notes: notes,

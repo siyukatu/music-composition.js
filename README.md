@@ -98,6 +98,7 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 | `mode` | `major` `minor` `dorian` `mixolydian` `lydian` | スタイル（`mood` があればムード）に合わせて決定 |
 | `mood` | `bright` `dark` `sad` `calm` `energetic` `dreamy` `tense` `auto`。曲の雰囲気（下の表） | `auto`（スタイルのまま） |
 | `contrast` | `true` にすると、曲の途中を同主調の反対の色に変える（明るい曲なら短調、暗い曲なら長調。下を参照） | `false` |
+| `blocks` | 曲をブロックに分け、ブロックごとに雰囲気・旋法・楽器を変える（下を参照） | — |
 | `bpm` | 40〜240 | スタイルに合わせて決定 |
 | `bars` | 8〜256（4 の倍数に丸め） | `32` |
 | `duration` | 目安の秒数（残響を含む。`bars` 未指定時。4 小節単位に丸め） | — |
@@ -128,6 +129,37 @@ TypeScript の型定義（`music-composition.d.ts`）を同梱しています。
 MusicComposition.generate({ seed: 'rain', style: 'pop', mood: 'dark' });
 MusicComposition.generate({ seed: 'rain', style: 'jpop', mood: 'bright', contrast: true }); // 明るい曲の中に短調の場面
 song.sections[2]  // { type: 'P', key: 'F', mode: 'minor', contrast: true, ... }
+```
+
+### `blocks`（ブロックごとに色を変える）
+
+`contrast` よりも細かく、曲の流れをブロックで指定します。ブロックには 2 種類あります。
+
+- **長さで並べるブロック**（`bars`）: 曲の頭から順に区切ります。最後のブロックは `bars` を省くと残りすべてになります。`bars` も `duration` も指定しなければ、ブロックの合計が曲の長さになります（最後のブロックに長さがなければ +16 小節）。Aメロ・サビなどの構成はいつもどおり自動で組まれ、各セクションは真ん中の小節が入っているブロックに属します。
+- **セクションを選ぶブロック**（`sections`）: `'C'`（すべてのブリッジ）、`'B3'`（3 つ目のサビ。落ちサビも数えます）、`'drop'`（落ちサビ）、`'intro'` `'outro'`、または `song.sections` の番号で選びます。長さのブロックの上に重なり、`mood` と `mode` は置き換え、`parts` は足し合わされます。
+
+ブロックに指定できるもの:
+
+| キー | 内容 |
+|---|---|
+| `mood` | そのブロックの雰囲気（`mood` と同じ値）。ムードが最も好む旋法に同主調で変わり（ハ長調の曲に `tense` ならハ短調）、そのムードの進行からコードを選び直し、メロディの高さと音の長さ、ドラムの強さも変わります。曲の旋法がすでにそのムードの第一候補なら旋法はそのまま |
+| `mode` | 旋法を直接指定（`mood` の旋法より優先） |
+| `parts` | そのブロックの楽器と演奏（`parts` と同じキー。値は 1 つずつ） |
+
+メロディの節（モチーフとリズム）とテンポは曲全体で共通なので、同じサビが別の色で歌われます。同じ色のブロックは同じコード進行を共有します。ブロックの境目ではクラッシュが入り、前のセクションの最後のコードが次のブロックへつなぎます。
+
+```js
+MusicComposition.generate({
+  seed: 'story', style: 'jpop',
+  blocks: [
+    { bars: 32, mood: 'bright' },                                            // 明るいブロック
+    { bars: 16, mood: 'tense' },                                             // 緊迫のブロック
+    { mood: 'sad', parts: { lead: 'piano', chords: 'piano', drums: 'none' } } // 切ないブロック（ピアノ）
+  ]
+});
+// セクションを選ぶ: 3 つ目のサビとブリッジだけ切なく、2 番目のセクションはバイオリンで
+MusicComposition.generate({ seed: 'story', bars: 64, blocks: [{ sections: ['B3', 'C'], mood: 'sad' }, { sections: [1], parts: { lead: 'violin' } }] });
+song.sections.find(x => x.mood === 'sad')  // { type: 'B', mood: 'sad', mode: 'minor', block: null, ... }
 ```
 
 ### `parts`（楽器と演奏）
@@ -210,7 +242,8 @@ song.bpm       // 70
 song.duration  // 秒数（ループ時は loopEnd と同じ）
 song.parts     // 使われた楽器と演奏 { drums: 'lofi', groove: 'shuffle', ... }
 song.mood      // 'dark'（指定しなかったときは null）
-song.sections  // [{ type: 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro', startBar, bars, start, key, mode, shift, drop, contrast }]
+song.sections  // [{ type: 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro', startBar, bars, start, key, mode, shift, drop, contrast, mood, block, parts? }]
+               // mood: そのセクションの雰囲気（ブロックのもの、なければ曲の）, block: 長さで並べたブロックの番号（なければ null）, parts: ブロックが変えた楽器
                // A = Aメロ, P = プレコーラス, B = サビ（drop: true は落ちサビ）, C = ブリッジ。最後のサビで転調することがあります
                // contrast: true のセクションは同主調の反対の色（mode がそのセクションの旋法）
 song.meter     // '4/4' | '3/4'
@@ -256,6 +289,7 @@ http://localhost:8765 を開きます。
 - **ミックス**: スタイル欄の「ミックス」で、スタイルごとの割合（0〜3）をスライダーで決めます
 - **カスタムスタイル**: 「＋ カスタム」で、元にするスタイル（ミックスも可）・BPM の範囲・モード・和声（彩り、7th、自由な進行、コードの長さ）・メロディ（音の数、シンコペーション、しゃくり、ハモり）・構成（Bメロ、ブリッジ、落ちサビ、転調の確率）・揺らぎと音づくり（残響、ディレイ、サイドチェイン、テープ）・楽器と演奏を決めて保存します。保存先はブラウザ（localStorage）で、変えた項目だけを保存します。共有 URL に入るので、開いた人のブラウザにも追加されます。連続再生でも選べます
 - **楽器と演奏**: パートごとに、使ってよい楽器・弾き方をチェックボックスで選びます。何も選ばなければスタイルどおり（点線で表示）、1 つならそれ、複数なら 1 曲の中で使い分けます（Aメロ・サビ・ブリッジ・Bメロの順に割り当て、最後のサビは 2 つを重ねます）。メロディ・ベース・コード・パッド・アルペジオは「重ねる」に切り替えると、選んだ楽器を最初から最後まで同時に鳴らします。「重ねて出し入れ」では盛り上がりに合わせて楽器が加わり、メロディでは対旋律やハモリも受け持ちます。「なし」だけならそのパートを鳴らさず、ほかと一緒に選ぶと入らないセクションができます。「曲によっては使わない」をオンにしたパートは、半分ほどの曲で抜けます
+- **ブロックごとに変える**: 雰囲気の下の欄。「長さで区切る」で曲を頭から区切り（最後のブロックは残りすべて）、「セクションを選ぶ」でサビの何番目・ブリッジなどを選んで、それぞれの雰囲気と楽器・演奏を決めます。並べ替え・削除ができ、「例を入れる」で「明るい → 緊迫 → 切ない（ピアノ）」が入ります。セクションの帯にはブロックの雰囲気が表示されます
 - **区切りのいいところまで延長**: 長さの下のスイッチ（連続再生にもあります）。曲がサビの途中やAメロのあとでいきなりアウトロに入らないよう、丸ごとのサビで終わるところまで延ばします（最大 30 秒）
 
 ### 曲の共有
@@ -272,6 +306,7 @@ https://mcj.siyukatu.me/?seed=sakura-2026&style=lofi&bpm=80&sec=60
 | `style` `key` `mode` `bpm` | 省略するとシードから決まる。ミックスは `style=jpop,lofi`（重みは `jpop:2,lofi`） |
 | `mood` | 雰囲気（`mood=dark` など） |
 | `contrast=1` | 途中で色を変える（`contrast: true`） |
+| `blocks` | ブロック。`;` 区切りで 1 つずつ「長さ（または `@` とセクション）`.` 雰囲気 `.` 楽器」: `blocks=24.bright;16.tense;.sad.lead:piano|drums:none;@B3+C.dark`（長さを省いた最後のブロックは残りすべて） |
 | `cs` | カスタムスタイル（設定を JSON にして Base64URL にしたもの） |
 | `bars` / `sec` | 長さ（小節 / 秒）。どちらもなければ 32 小節 |
 | `loop=1` | ループ用 |
