@@ -298,12 +298,34 @@
   .cs .parts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @media (max-width: 560px) { .cs .parts-grid { grid-template-columns: minmax(0, 1fr); } }
   .parts-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  /* Blocks */
-  .blocks-body { display: grid; gap: 10px; padding: 0 12px 12px; }
-  .blocks-note { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.55; }
-  .block-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  /* Blocks: a summary in the sidebar; the editor in a dialog wide enough for it. */
+  .blocks-box { border: 1px solid var(--line); background: var(--surface); }
+  .blocks-open {
+    appearance: none; border: 0; background: none; color: var(--ink); cursor: pointer; width: 100%; text-align: left;
+    display: flex; align-items: center; gap: 8px; padding: 11px 12px; font: 400 13.5px/1.3 var(--font-body);
+  }
+  .blocks-open:hover { background: var(--surface-2); }
+  .blocks-open > span { flex: 1; min-width: 0; }
+  .blocks-open small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 300; }
+  .blocks-open b { font-size: 12px; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .blocks-open::after { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); flex: none; }
+  .block-sum { list-style: none; margin: 0; padding: 0 12px 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; cursor: pointer; }
+  .block-sum li { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font-size: 12px; padding: 3px 0 3px 8px; border-left: 3px solid var(--bc, var(--muted)); min-width: 0; }
+  .block-sum .w { color: var(--muted); font-family: var(--font-mono); font-size: 11.5px; }
+  .block-sum .m { color: var(--ink); }
+  .block-sum .p { color: var(--muted); flex-basis: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  dialog.share.blocks-dlg { width: min(780px, calc(100vw - 32px)); }
+  dialog.share.code-dlg { width: min(760px, calc(100vw - 32px)); }
+  .code-tabs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  .code-tabs .seg button { font-size: 12.5px; padding: 6px 10px; }
+  .code-dlg .code { margin: 0; max-height: min(52vh, 460px); overflow: auto; white-space: pre; font-size: 12.5px; }
+  .code-note { margin: 0; font-size: 12px; color: var(--muted); }
+  .blocks-dlg .share-body { max-height: calc(100dvh - 40px); overflow-y: auto; }
+  .blocks-empty { margin: 0; font-size: 13px; color: var(--muted); padding: 18px; border: 1px dashed var(--line); text-align: center; }
+  .blocks-foot .btn { padding: 9px 18px; font-size: 13.5px; background: var(--accent); color: var(--accent-ink); }
+  .block-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .block-list:empty { display: none; }
-  .block-card { border: 1px solid var(--line); border-left: 3px solid var(--bc, var(--muted)); background: var(--band); padding: 8px 10px 10px; display: grid; gap: 6px; min-width: 0; }
+  .block-card { border: 1px solid var(--line); border-left: 3px solid var(--bc, var(--muted)); background: var(--band); padding: 8px 10px 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
   .block-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .block-no { font: 500 12px var(--font-mono); color: var(--muted); min-width: 1.4em; }
   .block-head .seg button { font-size: 11.5px; padding: 4px 8px; }
@@ -316,15 +338,19 @@
   .block-field { display: grid; gap: 0; min-width: 0; font-size: 11.5px; color: var(--muted); }
   .block-field select { font-size: 13px; padding: 6px 22px 6px 2px; background-color: transparent; }
   .block-rest { font-size: 13px; color: var(--ink); padding: 6px 2px; border-bottom: 1px dashed var(--line); }
-  .block-parts summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 2px 0; list-style: none; display: flex; gap: 6px; align-items: baseline; }
+  .block-parts { min-width: 0; }
+  .block-parts summary { min-width: 0; overflow: hidden; cursor: pointer; font-size: 12px; color: var(--muted); padding: 2px 0; list-style: none; display: flex; gap: 6px; align-items: baseline; }
   .block-parts summary::-webkit-details-marker { display: none; }
   .block-parts summary::before { content: "＋"; font-size: 11px; }
   .block-parts[open] summary::before { content: "－"; }
   .block-parts summary b { font-weight: 400; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .block-parts .block-row { margin-top: 4px; }
-  .blocks-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .block-parts .block-row { margin-top: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .blocks-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; position: sticky; bottom: -18px; background: var(--surface); padding: 10px 0 2px; border-top: 1px solid var(--line); }
   .blocks-foot .spacer { flex: 1; }
-  @media (max-width: 420px) { .block-row.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) {
+    .block-parts .block-row, .block-row.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .blocks-foot .spacer { flex-basis: 100%; height: 0; }
+  }
   .parts-foot p { margin: 0; font-size: 12px; color: var(--muted); }
   .link-btn { appearance: none; border: none; background: none; color: var(--accent); font: 400 12.5px var(--font-body); cursor: pointer; padding: 2px 0; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
   .seg { display: inline-flex; border: 1px solid var(--line); overflow: hidden; }
@@ -526,6 +552,8 @@
   }
   .secmap .s.on b, .secmap .s:hover b { color: var(--ink); }
   .secmap .s:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* A block's mood: a thin line of its colour above the section. */
+  .secmap .s.mood::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; height: 2px; background: var(--mc); }
 
   /* Share */
   dialog.share {
@@ -800,20 +828,13 @@
             <input type="checkbox" id="contrast">
             <span class="track" aria-hidden="true"></span>
           </label>
-          <details class="parts" id="blocks-box">
-            <summary>ブロックごとに変える <small id="blocks-count" hidden></small></summary>
-            <div class="blocks-body">
-              <p class="blocks-note">曲を頭から長さで区切るか、セクションを選んで、雰囲気と楽器を変えます。Aメロ・サビなどの構成はいつもどおり自動で、区切りはいちばん近いセクションの境目に合わせます。</p>
-              <ol class="block-list" id="block-list"></ol>
-              <div class="blocks-foot">
-                <button type="button" class="chip-btn" id="block-add-bars">＋ 長さで区切る</button>
-                <button type="button" class="chip-btn" id="block-add-pick">＋ セクションを選ぶ</button>
-                <span class="spacer"></span>
-                <button type="button" class="link-btn" id="block-example">例を入れる</button>
-                <button type="button" class="link-btn" id="block-clear" hidden>すべて消す</button>
-              </div>
-            </div>
-          </details>
+          <div class="blocks-box">
+            <button type="button" class="blocks-open" id="blocks-open" aria-haspopup="dialog">
+              <span>ブロックごとに変える<small>曲の途中で雰囲気や楽器を変える</small></span>
+              <b id="blocks-count" hidden></b>
+            </button>
+            <ol class="block-sum" id="block-sum" hidden></ol>
+          </div>
         </div>
 
         <div class="field">
@@ -1007,6 +1028,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>
           共有
         </button>
+        <button type="button" class="btn btn-ghost" id="code-open" disabled title="この曲を作る JavaScript を表示してコピー">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5"/></svg>
+          コード
+        </button>
       </div>
 
       <div class="roll-wrap">
@@ -1151,6 +1176,55 @@
         </div>
       </div>
     </div>
+  </div>
+</dialog>
+
+<dialog class="share blocks-dlg" id="blocks-dlg" aria-labelledby="blocks-h">
+  <div class="share-body">
+    <div class="share-head">
+      <div>
+        <h2 id="blocks-h">ブロックごとに変える</h2>
+        <p>曲を頭から長さで区切るか、セクションを選んで、雰囲気と楽器を変えます。Aメロ・サビなどの構成はいつもどおり自動で、区切りはいちばん近いセクションの境目に合わせます。</p>
+      </div>
+      <button type="button" class="icon-btn" id="blocks-close" aria-label="閉じる" style="height:36px;width:36px;flex:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <ol class="block-list" id="block-list"></ol>
+    <p class="blocks-empty" id="blocks-empty">まだブロックはありません。下のボタンで足すか、「例を入れる」で「明るい → 緊迫 → 切ない（ピアノ）」を入れてみてください。</p>
+    <div class="blocks-foot">
+      <button type="button" class="chip-btn" id="block-add-bars">＋ 長さで区切る</button>
+      <button type="button" class="chip-btn" id="block-add-pick">＋ セクションを選ぶ</button>
+      <span class="spacer"></span>
+      <button type="button" class="link-btn" id="block-example">例を入れる</button>
+      <button type="button" class="link-btn" id="block-clear" hidden>すべて消す</button>
+      <button type="button" class="btn" id="blocks-done">完了</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="share code-dlg" id="code-dlg" aria-labelledby="code-h">
+  <div class="share-body">
+    <div class="share-head">
+      <div>
+        <h2 id="code-h">JavaScript で使う</h2>
+        <p>表示中の曲を、自分のページやプログラムで作るコードです。同じオプションとシードなら、いつでも同じ曲になります。</p>
+      </div>
+      <button type="button" class="icon-btn" id="code-close" aria-label="閉じる" style="height:36px;width:36px;flex:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="code-tabs">
+      <span class="seg" role="tablist" aria-label="コードの種類" id="code-tabs">
+        <button type="button" role="tab" data-kind="browser" aria-pressed="true" aria-selected="true">ブラウザ</button>
+        <button type="button" role="tab" data-kind="node" aria-pressed="false" aria-selected="false">Node.js</button>
+        <button type="button" role="tab" data-kind="esm" aria-pressed="false" aria-selected="false">ES モジュール</button>
+        <button type="button" role="tab" data-kind="options" aria-pressed="false" aria-selected="false">オプションだけ</button>
+      </span>
+      <button class="copy" id="code-copy" type="button">コピー</button>
+    </div>
+    <pre class="code" id="code-out" role="tabpanel" tabindex="0"></pre>
+    <p class="code-note" id="code-note"></p>
   </div>
 </dialog>
 
@@ -1512,9 +1586,36 @@
     $('#blocks-count').textContent = n ? n + ' ブロック' : '';
     $('#block-clear').hidden = !n;
     $('#block-example').hidden = !!n;
+    $('#blocks-empty').hidden = !!n;
+    renderBlockSum();
   }
+  // The sidebar shows each block on a line: where, mood, instruments.
+  function renderBlockSum() {
+    var last = lastBarsBlock(), n = state.blocks.length;
+    $('#block-sum').hidden = !n;
+    $('#block-sum').innerHTML = state.blocks.map(function (b) {
+      var where = b.kind === 'pick'
+        ? PICK_NAMES.filter(function (x) { return x[0] === b.pick; })[0][1] + (b.nth && b.pick !== 'intro' && b.pick !== 'outro' && b.pick !== 'drop' ? ' ' + b.nth + ' つ目' : '')
+        : b === last ? '残り' : b.bars + ' 小節';
+      var ps = BLOCK_PARTS.filter(function (k) { return b.parts[k]; }).map(function (k) { return partLabel(k, b.parts[k]); }).join('・');
+      var color = b.mood !== 'auto' && MOOD_COLOR[b.mood] ? ' style="--bc: var(' + MOOD_COLOR[b.mood] + ')"' : '';
+      return '<li' + color + '><span class="w">' + escapeHtml(where) + '</span><span class="m">' + escapeHtml(b.mood === 'auto' ? '曲のまま' : MOOD_INFO[b.mood][0]) + '</span>' +
+        (ps ? '<span class="p">' + escapeHtml(ps) + '</span>' : '') + '</li>';
+    }).join('');
+  }
+  var blocksDlg = $('#blocks-dlg');
+  function openBlocks() {
+    renderBlocks();
+    blocksDlg.showModal();
+  }
+  $('#blocks-open').addEventListener('click', openBlocks);
+  $('#block-sum').addEventListener('click', openBlocks);
+  ['#blocks-close', '#blocks-done'].forEach(function (s) { $(s).addEventListener('click', function () { closeDialog(blocksDlg); }); });
+  blocksDlg.addEventListener('click', function (e) { if (e.target === blocksDlg) closeDialog(blocksDlg); });
+  blocksDlg.addEventListener('cancel', function (e) { e.preventDefault(); closeDialog(blocksDlg); });
   function blocksChanged(rerender) {
     if (rerender) renderBlocks();
+    else renderBlockSum();
     updateSnippet();
   }
   blockList.addEventListener('click', function (e) {
@@ -2111,6 +2212,7 @@
     state.opts = opts;
     if (!longer) state.baseOpts = opts; // "next" makes a new song of the original length
     $('#share-open').disabled = false;
+    $('#code-open').disabled = false;
     state.url = MusicComposition.toURL(wav);
     if (longer) handover(state.url, oldUrl);
     else {
@@ -2360,7 +2462,6 @@
     setMood(o.mood);
     $('#contrast').checked = !!o.contrast;
     setBlocks(o.blocks);
-    if (o.blocks && o.blocks.length) $('#blocks-box').open = true;
     keySel.value = o.key || '';
     modeSel.value = o.mode || '';
     $('#bpm').value = o.bpm || '';
@@ -2794,7 +2895,7 @@
       var x0 = X(s0), x1 = X(s1);
       if (i % 2 === 1) { g.fillStyle = C.band; g.fillRect(x0, 0, x1 - x0, h); }
       var label = (SECTION_JA[s.type] || s.type) + (s.shift && (!song.sections[i - 1] || song.sections[i - 1].shift !== s.shift) ? ' → ' + s.key : '') + (s.contrast ? ' · ' + (s.mode === 'minor' ? '短調' : '長調') : '') +
-        (s.mood && s.mood !== song.mood && MOOD_INFO[s.mood] ? ' · ' + MOOD_INFO[s.mood][0] : '');
+        (s.mood && s.mood !== song.mood && MOOD_INFO[s.mood] && (!song.sections[i - 1] || song.sections[i - 1].mood !== s.mood) ? ' · ' + MOOD_INFO[s.mood][0] : '');
       g.font = R.font;
       var lw = g.measureText(label).width, lx = Math.max(x0 + 6, 6);
       if (lx + lw > x1 - 6) lx = x1 - 6 - lw;
@@ -3040,10 +3141,13 @@
         el.style.setProperty('--c', 'var(' + (SEC_COLOR[s.type] || '--muted') + ')');
         el.dataset.t = s.start;
         if (map) {
-          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '') + (s.contrast ? ' · ' + s.mode.toUpperCase() : '') +
-            (s.mood && s.mood !== song.mood ? ' · ' + s.mood.toUpperCase() : '');
+          var label = (SEC_EN[s.type] || s.type) + (s.shift && (!secs[i - 1] || secs[i - 1].shift !== s.shift) ? ' ↑' + s.key : '') + (s.contrast ? ' · ' + s.mode.toUpperCase() : '');
           el.lastChild.textContent = label;
-          el.title = (SEC_NAME[s.type] || s.type) + '（' + fmt(s.start) + '）から再生';
+          // A block's mood: a line in its colour, and its name in the tooltip.
+          var ownMood = s.mood && s.mood !== song.mood && MOOD_INFO[s.mood];
+          el.classList.toggle('mood', !!ownMood);
+          if (ownMood) el.style.setProperty('--mc', 'var(' + (MOOD_COLOR[s.mood] || '--muted') + ')');
+          el.title = (SEC_NAME[s.type] || s.type) + (ownMood ? '・' + MOOD_INFO[s.mood][0] : '') + '（' + fmt(s.start) + '）から再生';
           el.setAttribute('aria-label', el.title);
         }
         secFill.push({ el: el, s0: s.start, s1: end, f: -1, on: null });
@@ -3079,55 +3183,107 @@
   new MutationObserver(function () { drawStatic(true); drawFrame(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   // Snippet -----------------------------------------------------------------
+  // Code for the options, highlighted: 'browser' (a script tag), 'node',
+  // 'esm' (an import from the CDN) or 'options' (the object alone).
+  // Options go one per line; a value that fits stays on its line.
+  var CDN = 'https://cdn.jsdelivr.net/npm/music-composition.js@beta';
+  function optionsOf(o) {
+    var x = {};
+    ['style', 'seed', 'key', 'mode', 'mood', 'contrast', 'blocks', 'bpm', 'bars', 'duration', 'meter', 'loop', 'extend', 'parts', 'sampleRate'].forEach(function (k) {
+      if (o[k] === undefined || o[k] === null || o[k] === false || (k === 'bars' && o[k] === 32)) return;
+      x[k] = o[k];
+    });
+    return x;
+  }
+  function codeHtml(kind, o) {
+    var opts = codeVal(optionsOf(o), '');
+    var K = function (t) { return '<span class="k">' + t + '</span>'; }, N = function (t) { return '<span class="n">' + t + '</span>'; };
+    var C = function (t) { return '<span class="c">' + t + '</span>'; }, S = function (t) { return '<span class="s">' + escapeHtml(t) + '</span>'; };
+    if (kind === 'options') return opts;
+    var file = (o.seed || 'music').replace(/[^\w-]+/g, '-') + '.wav';
+    if (kind === 'node') {
+      return C('// npm install music-composition.js@beta') + '\n' +
+        K('const') + ' MusicComposition = ' + N('require') + '(' + S("'music-composition.js'") + ');\n' +
+        K('const') + ' fs = ' + N('require') + '(' + S("'fs'") + ');\n\n' +
+        K('const') + ' wav = MusicComposition.' + N('generate') + '(' + opts + ');\n' +
+        'fs.' + N('writeFileSync') + '(' + S("'" + file + "'") + ', Buffer.' + N('from') + '(wav));';
+    }
+    var body = function (ind) {
+      return ind + C('// WAV (ArrayBuffer) が返ります') + '\n' +
+        ind + K('const') + ' wav = MusicComposition.' + N('generate') + '(' + codeVal(optionsOf(o), ind) + ');\n' +
+        ind + K('const') + ' audio = ' + K('new') + ' ' + N('Audio') + '(MusicComposition.' + N('toURL') + '(wav));\n' +
+        (o.loop ? ind + 'audio.loop = ' + K('true') + ';\n' : '') +
+        ind + 'audio.' + N('play') + '();';
+    };
+    if (kind === 'esm') {
+      return '&lt;' + K('script') + ' type=' + S('"module"') + '&gt;\n' +
+        '  ' + K('import') + ' MusicComposition ' + K('from') + ' ' + S("'" + CDN + "/+esm'") + ';\n\n' +
+        body('  ') + '\n&lt;/' + K('script') + '&gt;';
+    }
+    return '&lt;' + K('script') + ' src=' + S('"' + CDN + '"') + '&gt;&lt;/' + K('script') + '&gt;\n' +
+      '&lt;' + K('script') + '&gt;\n' + body('  ') + '\n&lt;/' + K('script') + '&gt;';
+  }
+  // A value as code; objects and lists that are long break onto lines indented from ind.
+  function codeVal(v, ind) {
+    if (Array.isArray(v) || (v && typeof v === 'object')) {
+      var arr = Array.isArray(v), keys = arr ? v.map(function (_, i) { return i; }) : Object.keys(v);
+      if (!keys.length) return arr ? '[]' : '{}';
+      var flat = keys.map(function (k) { return (arr ? '' : k + ': ') + codeVal(v[k], ''); });
+      var open = arr ? '[' : '{ ', close = arr ? ']' : ' }';
+      var plain = flat.join(', ').replace(/<[^>]+>/g, '');
+      if (plain.length + ind.length < 64 && plain.indexOf('\n') < 0) return open + flat.join(', ') + close;
+      var in2 = ind + '  ';
+      return (arr ? '[' : '{') + '\n' + keys.map(function (k) { return in2 + (arr ? '' : k + ': ') + codeVal(v[k], in2); }).join(',\n') + '\n' + ind + (arr ? ']' : '}');
+    }
+    if (typeof v === 'string') return '<span class="s">\'' + escapeHtml(v).replace(/'/g, "\\'") + '\'</span>';
+    return '<span class="' + (typeof v === 'boolean' ? 'k' : 'n') + '">' + v + '</span>';
+  }
   function updateSnippet(optsIn) {
     var o = (optsIn && optsIn.seed) ? optsIn : readOptions();
-    var parts = [];
-    if (o.style && typeof o.style === 'object') parts.push('style: ' + styleObj(o.style));
-    else if (o.style) parts.push('style: ' + s(o.style));
-    parts.push('seed: ' + s(o.seed));
-    if (o.key) parts.push('key: ' + s(o.key));
-    if (o.mode) parts.push('mode: ' + s(o.mode));
-    if (o.mood) parts.push('mood: ' + s(o.mood));
-    if (o.contrast) parts.push('contrast: <span class="k">true</span>');
-    if (o.blocks) parts.push('blocks: ' + styleObj(o.blocks));
-    if (o.bpm) parts.push('bpm: <span class="n">' + o.bpm + '</span>');
-    if (o.bars && o.bars !== 32) parts.push('bars: <span class="n">' + o.bars + '</span>');
-    if (o.duration) parts.push('duration: <span class="n">' + o.duration + '</span>');
-    if (o.meter) parts.push('meter: ' + s(o.meter));
-    if (o.loop) parts.push('loop: <span class="k">true</span>');
-    if (o.extend) parts.push('extend: <span class="k">true</span>');
-    if (o.parts) parts.push('parts: { ' + Object.keys(o.parts).map(function (k) {
-      return k + ': ' + styleObj(o.parts[k]);
-    }).join(', ') + ' }');
-    if (o.sampleRate) parts.push('sampleRate: <span class="n">' + o.sampleRate + '</span>');
-    var html =
-      '&lt;<span class="k">script</span> src=<span class="s">"https://cdn.jsdelivr.net/npm/music-composition.js@beta"</span>&gt;&lt;/<span class="k">script</span>&gt;\n' +
-      '&lt;<span class="k">script</span>&gt;\n' +
-      '  <span class="c">// WAV (ArrayBuffer) が返ります</span>\n' +
-      '  <span class="k">const</span> wav = MusicComposition.<span class="n">generate</span>({ ' + parts.join(', ') + ' });\n' +
-      '  <span class="k">const</span> audio = <span class="k">new</span> <span class="n">Audio</span>(MusicComposition.<span class="n">toURL</span>(wav));\n' +
-      (o.loop ? '  audio.loop = <span class="k">true</span>;\n' : '') +
-      '  audio.<span class="n">play</span>();\n' +
-      '&lt;/<span class="k">script</span>&gt;';
-    $('#snippet').innerHTML = html;
-    function s(v) { return '<span class="s">\'' + escapeHtml(String(v)).replace(/'/g, "\\'") + '\'</span>'; }
-    function styleObj(v) {
-      if (Array.isArray(v)) return '[' + v.map(styleObj).join(', ') + ']';
-      if (v && typeof v === 'object') return '{ ' + Object.keys(v).map(function (k) { return k + ': ' + styleObj(v[k]); }).join(', ') + ' }';
-      return typeof v === 'string' ? s(v) : '<span class="' + (typeof v === 'boolean' ? 'k' : 'n') + '">' + v + '</span>';
-    }
+    $('#snippet').innerHTML = codeHtml('browser', o);
+    if ($('#code-dlg').open) renderCode();
   }
-  $('#copy').addEventListener('click', function () {
-    var text = $('#snippet').textContent;
-    var btn = this;
-    var done = function (ok) { btn.textContent = ok ? 'コピーしました' : 'テキストを選択しました'; setTimeout(function () { btn.textContent = 'コピー'; }, 1600); };
-    try {
-      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { selectSnippet(); done(false); });
-    } catch (e) { selectSnippet(); done(false); }
+
+  // The code dialog: the song on screen (or, before there is one, the settings).
+  var codeKind = 'browser';
+  var CODE_NOTE = {
+    browser: 'HTML に貼り付けると、ページを開いたときに作曲して再生します（ブラウザによっては、再生はクリックなどの操作のあとになります）。',
+    node: 'WAV ファイルを書き出します。Node.js 14 以降で動きます。',
+    esm: '<script type="module"> や、import が使えるビルド環境で使います。',
+    options: 'MusicComposition.generate() / compose() に渡すオプションです。'
+  };
+  function renderCode() {
+    var o = state.opts || readOptions();
+    $('#code-out').innerHTML = codeHtml(codeKind, o);
+    $('#code-note').textContent = CODE_NOTE[codeKind];
+    $('#code-tabs').querySelectorAll('button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.kind === codeKind));
+      b.setAttribute('aria-selected', String(b.dataset.kind === codeKind));
+    });
+  }
+  $('#code-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    codeKind = b.dataset.kind;
+    renderCode();
   });
-  function selectSnippet() {
-    var r = document.createRange(); r.selectNodeContents($('#snippet'));
-    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  var codeDlg = $('#code-dlg');
+  $('#code-open').addEventListener('click', function () { renderCode(); codeDlg.showModal(); });
+  $('#code-close').addEventListener('click', function () { closeDialog(codeDlg); });
+  codeDlg.addEventListener('click', function (e) { if (e.target === codeDlg) closeDialog(codeDlg); });
+  codeDlg.addEventListener('cancel', function (e) { e.preventDefault(); closeDialog(codeDlg); });
+  $('#code-copy').addEventListener('click', function () { copyFrom($('#code-out'), this); });
+  $('#copy').addEventListener('click', function () { copyFrom($('#snippet'), this); });
+  // Copy a code block's text; where the clipboard is refused, select it instead.
+  function copyFrom(el, btn) {
+    var done = function (ok) { btn.textContent = ok ? 'コピーしました' : 'テキストを選択しました'; setTimeout(function () { btn.textContent = 'コピー'; }, 1600); };
+    var select = function () {
+      var r = document.createRange(); r.selectNodeContents(el);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    };
+    try {
+      navigator.clipboard.writeText(el.textContent).then(function () { done(true); }, function () { select(); done(false); });
+    } catch (e) { select(); done(false); }
   }
 
   // Continuous play ----------------------------------------------------------
