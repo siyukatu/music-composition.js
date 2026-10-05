@@ -1631,11 +1631,12 @@
     var first = ['A'].concat(usePre ? ['P'] : [], ['B', 'A'], usePre ? ['P'] : [], ['B'],
       useBridge ? ['C'] : [], useDrop ? ['D'] : [], useBridge || useDrop ? ['B'] : []);
     var again = ['A'].concat(usePre ? ['P'] : [], ['B']);
+    // The outro of a longer song plays the hook once more before the closing cadence (8 bars).
     function buildForm(total) {
       var out = [];
       var remaining = total;
-      var io = !loop && total >= 16;
-      if (io) { remaining -= 8; out.push({ type: 'intro', bars: 4 }); }
+      var io = !loop && total >= 16, outroBars = total >= 48 ? 8 : 4;
+      if (io) { remaining -= 4 + outroBars; out.push({ type: 'intro', bars: 4 }); }
       for (var fi = 0; remaining > 0; fi++) {
         var ftype = fi < first.length ? first[fi] : again[(fi - first.length) % again.length];
         if (ftype === 'D' && remaining < 16) continue;
@@ -1645,7 +1646,7 @@
         out.push({ type: ftype === 'D' ? 'B' : ftype, bars: flen, drop: ftype === 'D' });
         remaining -= flen;
       }
-      if (io) out.push({ type: 'outro', bars: 4 });
+      if (io) out.push({ type: 'outro', bars: outroBars });
       // A loop goes from its last section back to its first: a verse there would
       // play the same verse twice in a row (A -> A). It ends on a chorus instead.
       if (loop && out.length > 1 && out[out.length - 1].type === out[0].type) out[out.length - 1].type = 'B';
@@ -1964,8 +1965,10 @@
       if (!planCache[key]) planCache[key] = embellish(basePlan(progs[type], L));
       return planCache[key].map(function (b) { return { segs: b.segs.map(function (sg) { return { s: sg.s, c: sg.c }; }), cont: b.cont }; });
     }
-    function introPlan() { return basePlan(progs[hr.chance(0.5) ? 'B' : 'A'], 4); }
-    function outroPlan() {
+    // The intro is the first half of the chorus (its hook is played over it, see
+    // Melody), so the song opens with what it is about.
+    function introPlan() { return planFor('B', 4); }
+    function outroPlan(L) {
       // IV-V-I / VI-VII-i, using the mode's own colour where that degree is diminished
       // (lydian's II instead of #iv, dorian's IV instead of vi).
       var degs = (bright ? [3, 4, 0, 0] : [5, 6, 0, 0]).map(function (d) { return isDim(d) ? (bright ? 1 : 3) : d; });
@@ -1976,10 +1979,12 @@
       var last = makeChord(0, scale, {});
       if (!bright && hr.chance(0.3) && !(md && md.dark)) last = makeChord(0, modeName === 'dorian' ? MODES.mixolydian : MODES.major, { kind: 'bor' }); // Picardy third
       cs[3] = last;
-      return cs.map(function (c) { return { segs: [{ s: 0, c: c }], cont: false }; });
+      var close = cs.map(function (c) { return { segs: [{ s: 0, c: c }], cont: false }; });
+      // An 8-bar outro: the intro (the chorus's first half, with its hook) comes back, then the close.
+      return L > 4 ? introPlan().concat(close) : close;
     }
     sections.forEach(function (sec) {
-      var pl = sec.type === 'intro' ? introPlan() : sec.type === 'outro' ? outroPlan() : sec.contrast ? contrastPlan(sec.type, sec.bars) : planFor(sec.type, sec.bars);
+      var pl = sec.type === 'intro' ? introPlan() : sec.type === 'outro' ? outroPlan(sec.bars) :sec.contrast ? contrastPlan(sec.type, sec.bars) : planFor(sec.type, sec.bars);
       if (sec.shift) pl = pl.map(function (b) { return { cont: b.cont, segs: b.segs.map(function (sg) { return { s: sg.s, c: withProps(sg.c, { shift: sec.shift }) }; }) }; });
       sec.plan = pl;
     });
@@ -2048,13 +2053,13 @@
 
     // Arrangement --------------------------------------------------------------
     var PARTS = {
-      intro: { drums: 0, pad: true, chords: true, arp: true, guitar: true },
+      intro: { drums: 0, pad: true, chords: true, arp: true, guitar: true, lead: true },
       A: { drums: 1, bass: true, chords: true, lead: true, guitar: true },
       P: { drums: 1, build: true, bass: true, chords: true, pad: true, lead: true, guitar: true },
       B: { drums: 2, bass: true, chords: true, pad: true, arp: true, lead: true, guitar: true },
       C: { drums: 1, bass: 'long', chords: true, pad: true, lead: true },
       drop: { chords: 'still', pad: true, lead: true },
-      outro: { pad: true, chords: true, bass: 'long', end: true }
+      outro: { drums: 0, pad: true, chords: true, bass: 'long', lead: true, end: true }
     };
     function partsOf(sec) { return sec.drop ? PARTS.drop : PARTS[sec.type]; }
     var ENERGY = { intro: 0.78, A: 0.84, P: 0.86, B: 1, C: 0.8, outro: 0.8 };
@@ -2241,7 +2246,9 @@
       }
 
       // Drums --------------------------------------------------------------
-      if (kit && prt.drums !== undefined && P.drums) {
+      // The last chord of the song gets one kick and a crash, nothing more.
+      if (kit && prt.end && lastOfSong) { drum(bar, 0, 'kick', 0.9); drum(bar, 0, 'crash', 0.75, 0.3); }
+      else if (kit && prt.drums !== undefined && P.drums) {
         var G = info.j % 4 === 3 && !info.fill && info.j < info.sec.bars - 1 ? P.drumsVar : P.drums;
         if (G.alt && info.j % 2 === 1) G = G.alt; // a two-bar pattern (the bossa clave)
         var buildBar = prt.build && parts.groove !== 'shuffle' && parts.groove !== 'bossa' ?info.j - (info.sec.bars - 2) : -1;
@@ -2458,19 +2465,22 @@
       var prt = partsOf(sec);
       useSounds(sec.drop ? 'drop' : sec.type);
       if (!prt.lead) return;
-      var key = sec.type;
+      // The intro and the outro play the chorus's hook (its theme, over its
+      // chords), plainly: no high point, no lift; the intro stays open towards the verse.
+      var hook = sec.type === 'intro' || sec.type === 'outro';
+      var key = hook ? 'B' : sec.type;
       if (!themes[key]) themes[key] = makeTheme(R('motif-' + key), st.melody, key, BEATS, bpm);
       var th = themes[key];
       var mr = R('melody-' + key);
       var base = BASE[key];
-      var plan = sec.bars >= 8 ? REG[key] : key === 'P' ? REG.P : [0, 1, 1, 0];
+      var plan = hook ? [0, 1, 1, 0] : sec.bars >= 8 ? REG[key] : key === 'P' ? REG.P : [0, 1, 1, 0];
       var nextSec = sections[si + 1];
-      var harmonize = st.expr.harmony && key === 'B' && !sec.drop && (si === lastChorus || sec.shift);
+      var harmonize = st.expr.harmony && sec.type === 'B' && !sec.drop && (si === lastChorus || sec.shift);
       var prev = null;
       var entry = null;
       // Enter the chorus above the previous line: a 3rd to a 5th higher.
       // (The first chorus sets the height; later ones keep it so the hook repeats.)
-      if (key === 'B' && lastLead !== null && !sec.drop) {
+      if (sec.type === 'B' && lastLead !== null && !sec.drop) {
         var lift = mr.int(2, 4);
         if (th.entry === undefined) th.entry = Math.min(hi - 3, Math.max(base, lastLead + lift));
         entry = Math.min(hi - 3, Math.max(th.entry, lastLead + 1));
@@ -2522,7 +2532,7 @@
           var endChord = cAt(rh[rh.length - 1]);
           // A full close on the tonic at the end of a section (not from the
           // pre-chorus, which stays open towards the chorus), a half close elsewhere.
-          var full = j === sec.bars - 1 && key !== 'P';
+          var full = j === sec.bars - 1 && key !== 'P' && sec.type !== 'intro';
           var gc = prev === null ? target : prev + clamp(target - prev, -3, 3);
           var goal = null;
           if (full) {
@@ -2564,7 +2574,7 @@
       // The high point: one note, on a strong beat of the peak bar, reached from
       // below; nothing else in the section goes as high.
       var pb = barsData[peakBar];
-      if (pb && !sec.drop) {
+      if (pb && !sec.drop && !hook) {
         var pi = -1, best = -1;
         pb.rh.forEach(function (n, i) {
           var score = (isStrong(n) ? 10 : 0) + n[1] + (i === 0 ? 0 : 1);
@@ -2644,11 +2654,13 @@
           var n = rh[i];
           var vel = (n[0] % 4 === 0 ? 0.88 : 0.72) + (n[0] === 0 ? 0.08 : 0);
           var len = n[1] * stepDur * Math.min(0.97, st.melody.legato + 0.12);
+          // The song's last note is held over the final chord.
+          if (sec.type === 'outro' && j === sec.bars - 1 && i === rh.length - 1) len = (SPB - n[0]) * stepDur;
           var note = { t: T(barIdx, n[0]), d: len, midi: pitch(barIdx, n[0], degs[i]), vel: V(Math.min(1, vel * barInfo[barIdx].energy)), inst: 'lead', patch: leadPatch };
           notes.push(note);
           var entry = {
             n: note, phrase: sec.startBar + Math.floor(j / 4) * 4, last: b.role === 'cadence' && i === rh.length - 1,
-            deg: degs[i], bar: barIdx, step: n[0], strong: isStrong(n), top: key === 'B' || key === 'P' ? pitch(barIdx, n[0], peak) : 999,
+            deg: degs[i], bar: barIdx, step: n[0], strong: isStrong(n), top: sec.type === 'B' || key === 'P' ? pitch(barIdx, n[0], peak) : 999,
             fixed: b.peak === i || (b.role === 'cadence' && i === rh.length - 1) || (i === 0 && b.pickedUp)
           };
           leadNotes.push(entry);
