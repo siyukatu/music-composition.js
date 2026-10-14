@@ -164,8 +164,8 @@
       tracks.push(track(ev));
     });
 
-    // Drums on channel 10.
-    var drums = song.notes.filter(function (n) { return n.inst === 'drums' && n.t < end; });
+    // Drums on channel 10. (A cymbal swell has no General MIDI drum: left out.)
+    var drums = song.notes.filter(function (n) { return n.inst === 'drums' && n.drum !== 'swell' && n.t < end; });
     if (drums.length) {
       var dev = [[0, 0, meta(0x03, utf8('Drums (' + (drums[0].kit || 'std') + ')'))]];
       drums.forEach(function (n) {

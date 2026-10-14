@@ -198,8 +198,9 @@ test('3/4: 12-step bars, downbeat kick, chords change on beat 1 or 3, melody phr
     assert.strictEqual(song.beatsPerBar, 3);
     assert.ok(Math.abs(song.barDuration - song.stepDuration * 12) < 1e-9);
     const step = t => Math.round((t % song.barDuration) / song.stepDuration) % 12;
-    for (const c of song.chords) assert.ok([0, 8].includes(step(c.time)), style + ': chord ' + c.name + ' at step ' + step(c.time));
-    for (const n of song.notes.filter(x => x.drum === 'kick')) {
+    // (The ending slows down over its last two bars.)
+    for (const c of song.chords) if (c.bar < song.bars - 2) assert.ok([0, 8].includes(step(c.time)), style + ': chord ' + c.name + ' at step ' + step(c.time));
+    for (const n of song.notes.filter(x => x.drum === 'kick' && x.t < (song.bars - 2) * song.barDuration)) {
       const bar = Math.floor(n.t / song.barDuration + 0.02); // humanized timing may land a hair early
       assert.ok(song.notes.some(k => k.drum === 'kick' && Math.abs(k.t - bar * song.barDuration) < 0.03), style + ': bar ' + bar + ' has no downbeat kick');
     }
@@ -463,7 +464,9 @@ for (const meter of ['4/4', '3/4']) {
           const isStrong = spb === 12 ? p === 0 || len >= 5.5 : p % 8 === 0 || len >= 3.8 || (p % 4 === 0 && len >= 2.8);
           if (!isStrong) return;
           strong++;
-          if (chordAt(n.t).includes(n.midi % 12)) return;
+          // An anticipation (an eighth before the bar line, tied over it) belongs to the chord it anticipates.
+          const at = p >= spb - 2 && len > 2 ? n.t + (spb - p) * sd : n.t;
+          if (chordAt(at).includes(n.midi % 12)) return;
           const nx = lead[k + 1]; // an appoggiatura resolving down by step is allowed
           if (nx && n.midi - nx.midi >= 1 && n.midi - nx.midi <= 2 && chordAt(nx.t).includes(nx.midi % 12)) return;
           off++;
@@ -687,6 +690,43 @@ test('invalid options throw readable errors', () => {
   assert.throws(() => MusicComposition.compose({ mode: 'phrygian' }), /unknown mode/);
   assert.throws(() => MusicComposition.compose({ key: 'H' }), /unknown key/);
   assert.throws(() => MusicComposition.generate({ seed: 'x', bars: 8, sampleRate: 1000 }), /sampleRate/);
+});
+
+test('played, not looped: grooves vary bar to bar, later verses differ, fills use toms, the band answers the tune', () => {
+  let drumSame = 0, drumPairs = 0, verseSame = 0, verses = 0, toms = 0, answers = 0, kime = 0;
+  for (const style of ['pop', 'jpop', 'lofi', 'dance']) for (let i = 0; i < 6; i++) {
+    const s = MusicComposition.compose({ seed: 'played' + i, style, bars: 64 });
+    const sd = s.stepDuration, bd = s.barDuration;
+    const bar = n => Math.floor(n.t / bd + 0.01);
+    const sig = (b, f) => s.notes.filter(n => bar(n) === b && f(n)).map(n => Math.round((n.t - b * bd) / sd) + (n.drum || n.midi)).sort().join();
+    for (let b = 1; b < s.bars; b++) {
+      const a = sig(b - 1, n => n.inst === 'drums' && n.drum !== 'crash'), c = sig(b, n => n.inst === 'drums' && n.drum !== 'crash');
+      if (a && c) { drumPairs++; if (a === c) drumSame++; }
+    }
+    const vs = s.sections.filter(x => x.type === 'A');
+    if (vs.length >= 2) {
+      verses++;
+      const tune = x => { const out = []; for (let b = 0; b < x.bars; b++) out.push(sig(x.startBar + b, n => n.inst === 'lead' && !n.harmony)); return out.join('|'); };
+      if (tune(vs[0]) === tune(vs[1])) verseSame++;
+    }
+    toms += s.notes.filter(n => n.drum === 'tom').length;
+    answers += s.notes.filter(n => n.answer).length;
+    kime += s.notes.some(n => n.drum === 'crash' && Math.round((n.t % bd) / sd) === 10) ? 1 : 0;
+  }
+  assert.ok(drumSame / drumPairs < 0.35, drumSame + ' of ' + drumPairs + ' drum bars repeat the bar before');
+  assert.ok(verseSame / verses < 0.2, verseSame + ' of ' + verses + ' second verses copy the first');
+  assert.ok(toms > 50 && answers > 50 && kime > 0, toms + ' toms, ' + answers + ' answers, ' + kime + ' kime');
+});
+
+test('an ending rings on into the tail and fades; a loop does not', () => {
+  const s = MusicComposition.compose({ seed: 'end', style: 'pop', bars: 32 });
+  const last = s.notes.filter(n => n.inst === 'chords' && n.t > s.loopEnd - s.barDuration);
+  assert.ok(last.some(n => n.t + n.d > s.loopEnd + 1), 'the last chord rings past the last bar');
+  const w = readWav(MusicComposition.render(s, { sampleRate: 8000 }));
+  const rms = (t0, t1) => { let r = 0, k = 0; for (let i = Math.floor(t0 * 8000); i < t1 * 8000; i++, k++) r += w.samples[2 * i] ** 2; return Math.sqrt(r / k); };
+  assert.ok(rms(s.loopEnd + 0.5, s.loopEnd + 1) > rms(s.duration - 0.5, s.duration) * 4 && rms(s.loopEnd + 0.5, s.loopEnd + 1) > 300, 'audible after the last bar, then fading');
+  const l = MusicComposition.compose({ seed: 'end', style: 'pop', bars: 32, loop: true });
+  assert.ok(l.notes.every(n => n.t < l.loopEnd), 'a loop has no ending');
 });
 
 function asyncTest(name, fn) {

@@ -26,7 +26,7 @@
   var SECTION_COLOR = { intro: 'muted', A: 'bass', P: 'arp', B: 'accent', C: 'chords', outro: 'muted' };
   var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient', jazz: 'Jazz', bossa: 'Bossa Nova' };
   var ALPHA = { chords: 0.45, guitar: 0.55, arp: 0.7, bass: 0.95, lead: 0.95 };
-  var DRUM_ROW = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
+  var DRUM_ROW = { kick: 2, snare: 1, clap: 1, tom: 1, hat: 0, pedal: 0, open: 0, crash: 0, swell: 0 };
 
   // cubic-bezier(x1, y1, x2, y2) as a function of time (0..1), like CSS.
   function bezier(x1, y1, x2, y2) {

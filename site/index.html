@@ -1342,9 +1342,9 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=50f84c"></script>
-<script src="video.js?h=9ab2d4"></script>
-<script src="midi.js?h=6568c4"></script>
+<script src="music-composition.js?h=805f13"></script>
+<script src="video.js?h=69339c"></script>
+<script src="midi.js?h=e66bc6"></script>
 <script>
 (function () {
   'use strict';
@@ -2864,7 +2864,7 @@
   }
 
   var ALPHA = { chords: 0.45, guitar: 0.55, arp: 0.7, bass: 0.95, lead: 0.95 };
-  var DRUM_ROW = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
+  var DRUM_ROW = { kick: 2, snare: 1, clap: 1, tom: 1, hat: 0, pedal: 0, open: 0, crash: 0, swell: 0 };
   function drawFrame() {
     var song = state.song; if (!song || !roll) return;
     var R = roll, C = R.c, g = canvas.getContext('2d');
@@ -3860,7 +3860,7 @@
         g.fillStyle = C[n.inst];
         g.fillRect(X(n.t), bottom - (n.midi - lo + 1) * rowH, Math.max(2, X(Math.min(n.d, total - n.t)) - X(0) - 1), Math.max(2, rowH - 1));
       });
-      var rows = { kick: 2, snare: 1, clap: 1, hat: 0, pedal: 0, open: 0, crash: 0 };
+      var rows = { kick: 2, snare: 1, clap: 1, tom: 1, hat: 0, pedal: 0, open: 0, crash: 0, swell: 0 };
       g.fillStyle = C.drums;
       song.notes.forEach(function (n) {
         if (n.inst !== 'drums' || n.t >= total) return;

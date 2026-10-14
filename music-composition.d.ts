@@ -10,7 +10,7 @@ declare namespace MusicComposition {
   type SectionType = 'intro' | 'A' | 'P' | 'B' | 'C' | 'outro';
   type Instrument = 'lead' | 'bass' | 'chords' | 'guitar' | 'arp' | 'drums';
   /** 'hat' is the ride cymbal in the jazz and brush kits; 'pedal' is the hi-hat played with the foot. */
-  type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'pedal' | 'open' | 'crash';
+  type Drum = 'kick' | 'snare' | 'clap' | 'hat' | 'pedal' | 'open' | 'crash' | 'tom' | 'swell';
 
   /**
    * What plays and how. Every field is optional; the style supplies the rest.
@@ -240,8 +240,12 @@ declare namespace MusicComposition {
     harmony?: boolean;
     /** A second instrument doubling this part (the last chorus, parts.together, parts.arrange). */
     layer?: boolean;
-    /** A counter-line under the lead (parts.arrange). */
+    /** A counter-line under the lead (parts.arrange; strings in the last chorus). */
     counter?: boolean;
+    /** Which tom (drum === 'tom'): 0 high, 1 middle, 2 low. */
+    tom?: number;
+    /** A short figure answering the tune where it holds a note at the end of a phrase. */
+    answer?: boolean;
   }
 
   interface Song {
