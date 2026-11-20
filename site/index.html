@@ -470,7 +470,6 @@
   /* A new song: the title wipes in, letter by letter; its facts and chords follow. */
   .song-title .ch { display: inline-block; animation: fade-in-lr .5s var(--ease) both; animation-delay: calc(var(--i) * 22ms); white-space: pre; }
   .chips.enter .chip { animation: fade-in-bt .45s var(--ease) both; animation-delay: calc(150ms + var(--i) * 45ms); }
-  .progression .c.enter { animation: fade-in-lr .4s var(--ease) both; animation-delay: calc(250ms + var(--i) * 22ms); }
 
   /* Buttons respond to the press. */
   .btn:active, .style-btn:active, .chip-btn:active, .np-btn:active, .np-play:active, .play:active, .icon-btn:active { transform: scale(.96); }
@@ -502,7 +501,7 @@
   .btn-danger::before { background: #7A1710; }
 
   @media (prefers-reduced-motion: reduce) {
-    .song-title .ch, .chips.enter .chip, .progression .c.enter, dialog[open], dialog[open]::backdrop, dialog.closing, .busy-veil, .busy-veil *, .veil-line i { animation: none !important; }
+    .song-title .ch, .chips.enter .chip, .cv-bar.enter, dialog[open], dialog[open]::backdrop, dialog.closing, .busy-veil, .busy-veil *, .veil-line i { animation: none !important; }
   }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -510,29 +509,61 @@
   .stats { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin: 0; }
   .error { color: var(--error); font-size: 14px; margin: 0; }
 
-  .progression { position: relative; display: flex; gap: 0; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; border-left: 1px solid var(--line); }
-  .progression .c {
-    appearance: none; font-family: var(--font-mono); font-size: 13px; padding: 6px 12px; border: 1px solid var(--line); border-left: 0;
-    white-space: nowrap; color: var(--muted); background: var(--surface); cursor: pointer; flex: none;
-    position: relative; isolation: isolate; transition: color .3s var(--ease), background .3s var(--ease);
+  /* Chords: what sounds now (its name, the notes on a keyboard, what comes
+     next) over a chart of the song, one cell to a bar, a row to four bars, a
+     block to a section. Nothing here is tweened towards the music: the bar and
+     the chord turn on the beat, and the line in the bar is the playhead itself. */
+  .chordview { --rowh: 46px; border: 1px solid var(--line); background: var(--surface); }
+  .cv-now { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--line); min-height: 62px; }
+  .cv-cur { font: 600 28px/1.1 var(--font-mono); color: var(--ink); letter-spacing: -0.01em; white-space: nowrap; }
+  .cv-cur.idle { color: var(--muted); }
+  .cv-next { font: 12px/1.3 var(--font-mono); color: var(--muted); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .cv-next b { font-weight: 500; color: var(--ink); margin-left: 6px; }
+  .cv-keys { position: relative; flex: none; width: 98px; height: 34px; display: flex; }
+  .cv-keys i { display: block; flex: 1; border: 1px solid var(--line); border-left-width: 0; background: var(--surface); }
+  .cv-keys i:first-child { border-left-width: 1px; }
+  .cv-keys i.b { position: absolute; top: 0; flex: none; width: 9px; height: 20px; margin-left: -4.5px; border: 0; background: var(--ink); }
+  .cv-keys i.t { background: var(--accent-2); border-color: var(--accent-2); }
+  .cv-keys i.r { background: var(--accent); border-color: var(--accent); }
+  .cv-keys i.b.t, .cv-keys i.b.r { box-shadow: 0 0 0 1px var(--surface); }
+  .cv-toggle { appearance: none; flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 12px var(--font-body); padding: 6px 10px; cursor: pointer; }
+  .cv-toggle:hover { background: var(--surface-2); }
+  .cv-window { overflow: hidden; height: calc(var(--rowh) * 3); }
+  .chordview.open .cv-window { height: auto; }
+  .cv-inner { position: relative; transition: transform .4s var(--ease); will-change: transform; }
+  .chordview.open .cv-inner { transform: none !important; }
+  .cv-sec { display: grid; grid-template-columns: 4.6em minmax(0, 1fr); }
+  .cv-lab { font-size: 11px; line-height: 1.2; color: var(--muted); padding: 7px 6px 0 8px; border-left: 3px solid var(--sc, var(--line)); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  .cv-sec.on .cv-lab { color: var(--ink); font-weight: 600; }
+  .cv-bars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cv-bar {
+    appearance: none; position: relative; display: flex; align-items: flex-end; height: var(--rowh); box-sizing: border-box; padding: 0 0 8px;
+    border: 0; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); background: transparent; cursor: pointer;
+    font: 13px/1.2 var(--font-mono); color: var(--ink); text-align: left; overflow: hidden;
   }
-  /* The current chord fills in from the left, like the buttons, and empties out
-     to the right; its name turns with the fill (a copy in the fill's colour,
-     uncovered the same way). */
-  .progression .c::before {
-    content: ""; position: absolute; inset: -1px 0 -1px -1px; z-index: -1; background: var(--accent);
-    clip-path: inset(0 100% 0 0);
+  .cv-bar:hover { background: var(--surface-2); }
+  .cv-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cv-bar .n { position: absolute; top: 4px; left: 7px; font-size: 9.5px; color: var(--muted); opacity: .8; }
+  .cv-bar .ch { min-width: 0; padding-left: 7px; white-space: nowrap; }
+  .cv-bar .ch.held { color: var(--muted); opacity: .55; }
+  .cv-bar.done .ch { color: var(--muted); }
+  .cv-bar.on { background: var(--accent-soft); }
+  .cv-bar.on .ch { color: var(--ink); opacity: 1; }
+  .cv-bar .ch.on { color: var(--accent); font-weight: 600; opacity: 1; }
+  .cv-bar.on::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: var(--accent); transform: translateX(var(--x, 0px)); }
+  .cv-bar.enter { animation: fade-in-bt .4s var(--ease) both; animation-delay: calc(200ms + var(--i) * 16ms); }
+  @media (max-width: 560px) {
+    .chordview { --rowh: 44px; }
+    .cv-sec { grid-template-columns: 3.9em minmax(0, 1fr); }
+    .cv-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cv-window { height: calc(var(--rowh) * 4); }
+    .cv-toggle { padding: 6px 8px; }
+    .cv-bar { font-size: 12px; }
+    .cv-bar .ch { padding-left: 5px; }
+    .cv-cur { font-size: 24px; }
+    .cv-keys { width: 84px; }
   }
-  .progression .c::after {
-    content: attr(data-name); position: absolute; inset: -1px 0 -1px -1px; padding: 7px 12px 7px 13px; color: var(--accent-ink);
-    clip-path: inset(0 100% 0 0); pointer-events: none;
-  }
-  .progression .c:hover { background: var(--surface-2); color: var(--ink); }
-  /* (The fill is clipped like the name, not scaled from one side and then the other:
-     a chord that is left before it has filled goes on from where it is.) */
-  .progression .c.on::before, .progression .c.on::after { clip-path: inset(0 0 0 0); transition: clip-path .45s var(--ease); }
-  .progression .c.out::before, .progression .c.out::after { clip-path: inset(0 0 0 100%); transition: clip-path .45s var(--ease); }
-  @media (prefers-reduced-motion: reduce) { .progression .c::before, .progression .c::after { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .cv-inner { transition: none; } }
 
   /* The song as a line of sections (like the shared video's): each one in its
      own colour, pale ahead of the playhead and full behind it. */
@@ -1065,7 +1096,17 @@
 
       <div class="field">
         <div class="label">コード進行</div>
-        <div class="progression" id="progression"><span class="c sk">Am7</span><span class="c sk">D7</span><span class="c sk">Gmaj7</span><span class="c sk">Cmaj7</span><span class="c sk">F#m7b5</span><span class="c sk">B7</span><span class="c sk">Em</span><span class="c sk">E7</span></div>
+        <div class="chordview" id="chordview">
+          <div class="cv-now">
+            <span class="cv-cur idle" id="cv-cur" aria-hidden="true">–</span>
+            <span class="cv-next" id="cv-next" aria-hidden="true"></span>
+            <span class="cv-keys" id="cv-keys" aria-hidden="true"></span>
+            <button type="button" class="cv-toggle" id="cv-toggle" aria-expanded="false" aria-controls="progression">全体を表示</button>
+          </div>
+          <div class="cv-window">
+            <div class="cv-inner" id="progression" role="group" aria-label="コード譜。小節を選ぶとそこから再生します"></div>
+          </div>
+        </div>
       </div>
 
       <p class="stats" id="stats"><span class="sk" aria-hidden="true">生成 1.50 秒 · 44.1 kHz · 19.0 MB · 音符 927 個</span></p>
@@ -2963,76 +3004,68 @@
     }
     $('#t-cur').textContent = fmt(t);
     updateSections(t);
-    // Highlight current chord. While playing, the fill sets off a little before the
-    // chord does (STRIP_LEAD), so that the name turns as the chord sounds and not
-    // after it; a loop's first chord, before the song comes round again.
-    // (No fill to wait for with reduced motion: the name turns on the chord.)
-    var idx = stripIndex(t + 0.01), ahead = t + (reduceMotion.matches ? 0.01 : STRIP_LEAD);
-    if (playing && audio.loop && ahead >= playLength()) ahead -= playLength();
-    ahead = stripIndex(ahead);
-    if (playing || ahead === state.chordIdx) idx = ahead; // (paused: what is lit stays lit)
-    if (idx !== state.chordIdx) {
-      // The name leaves to the right (.out), then goes back, unseen, to wait on the left.
-      var prev = document.querySelector('.progression .c.on');
-      if (prev) {
-        prev.classList.remove('on');
-        prev.classList.add('out');
-        clearTimeout(prev.outTimer);
-        prev.outTimer = setTimeout(function () { prev.classList.remove('out'); }, STRIP_MS + 50);
-      }
-      var cur = document.querySelector('.progression .c[data-i="' + idx + '"]');
-      if (cur) {
-        clearTimeout(cur.outTimer);
-        // (Still leaving? It is back on the left at once, to come in from there.)
-        if (cur.classList.contains('out')) { cur.classList.remove('out'); void cur.offsetWidth; }
-        cur.classList.add('on');
-        // The strip follows, with the same timing as the fill (paused too; a strip just
-        // drawn is there at once, like its fill) — unless the listener has just scrolled
-        // it themselves (a seek, more than a chord away, takes it back).
-        var stepped = typeof state.chordIdx === 'number' && Math.abs(idx - state.chordIdx) <= 1;
-        if (!stepped || performance.now() - stripUserAt > 2500) centreChord(cur, state.chordIdx == null || reduceMotion.matches);
-      }
-      state.chordIdx = idx;
-    }
+    updateChords(t);
   }
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // cubic-bezier(x1, y1, x2, y2) as a function of time (0..1), like CSS.
-  function bezier(x1, y1, x2, y2) {
-    function at(a, b, s) { return 3 * a * s * (1 - s) * (1 - s) + 3 * b * s * s * (1 - s) + s * s * s; }
-    return function (x) {
-      if (x <= 0) return 0;
-      if (x >= 1) return 1;
-      var lo = 0, hi = 1, s = x;
-      for (var i = 0; i < 24; i++) { s = (lo + hi) / 2; if (at(x1, x2, s) < x) lo = s; else hi = s; }
-      return at(y1, y2, s);
-    };
+  // The chord view follows the time it is given, with nothing of its own to
+  // run: the bar it is in (with the playhead across it), the chord that has
+  // begun, and - folded to three rows - the row of the bar at the top.
+  var CV_EARLY = 0.03; // seconds: a name that turns a frame early reads as on the beat; one that is late does not
+  function updateChords(t) {
+    var cv = state.cv;
+    if (!cv || !cv.bars.length) return;
+    var bi = Math.max(0, Math.min(cv.bars.length - 1, Math.floor(t / cv.bd + 1e-6)));
+    while (bi > 0 && cv.bars[bi].t > t + 1e-6) bi--; // (a bar that begins late, as the song slows to its end)
+    var bar = cv.bars[bi], len = cv.bars[bi + 1] ? cv.bars[bi + 1].t - bar.t : cv.bd;
+    if (bi !== cv.bi) {
+      cv.bars.forEach(function (b, i) { b.el.classList.toggle('done', i < bi); b.el.classList.toggle('on', i === bi); });
+      cv.secs.forEach(function (el, i) { el.classList.toggle('on', i === bar.sec); });
+      cv.bi = bi;
+      cvFollow(cv.y === undefined);
+    }
+    var x = Math.max(0, Math.min(1, (t - bar.t) / len)) * bar.el.clientWidth;
+    bar.el.style.setProperty('--x', x.toFixed(1) + 'px');
+    var ci = -1;
+    for (var i = 0; i < cv.chords.length; i++) if (cv.chords[i].time <= t + CV_EARLY) ci = i;
+    if (ci !== cv.ci) {
+      if (cv.chords[cv.ci]) cv.chords[cv.ci].el.classList.remove('on');
+      var c = cv.chords[ci];
+      if (c) c.el.classList.add('on');
+      cv.ci = ci;
+      var cur = $('#cv-cur'), next = null;
+      for (var k = ci + 1; k < cv.chords.length; k++) if (!c || cv.chords[k].name !== c.name) { next = cv.chords[k]; break; }
+      cur.textContent = c ? c.name : '–';
+      cur.classList.toggle('idle', !c);
+      $('#cv-next').innerHTML = next ? '次<b>' + escapeHtml(next.name) + '</b>' : '';
+      cvKeys(c ? c.tones : []);
+    }
   }
-  var EASE_OUT = bezier(0, 0, 0.58, 1); // CSS ease-out: the strip sets off at once and settles
-  var STRIP_MS = 450; // .progression .c::before's transition
-  var STRIP_LEAD = 0.2; // seconds: the fill moves most at its middle, which is where the chord should sound
-  var stripAnim = 0, stripUserAt = 0;
-  // The strip's chords (state.strip, see renderProgression): the last one that has begun by t.
-  function stripIndex(t) {
-    var c = state.strip || [], idx = -1;
-    for (var i = 0; i < c.length; i++) if (c[i].time <= t) idx = i;
-    return idx;
+  // The notes of the chord on one octave of keys (C to B): the root, and the rest.
+  var CV_BLACK = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 }; // pitch class -> the white key it sits before
+  function cvKeys(tones) {
+    var box = $('#cv-keys');
+    if (!box.firstChild) {
+      var h = '';
+      [0, 2, 4, 5, 7, 9, 11].forEach(function (pc) { h += '<i data-pc="' + pc + '"></i>'; });
+      Object.keys(CV_BLACK).forEach(function (pc) { h += '<i class="b" data-pc="' + pc + '" style="left:' + (CV_BLACK[pc] / 7 * 100) + '%"></i>'; });
+      box.innerHTML = h;
+    }
+    Array.prototype.forEach.call(box.children, function (k) {
+      var at = tones.indexOf(+k.dataset.pc);
+      k.classList.toggle('r', at === 0);
+      k.classList.toggle('t', at > 0);
+    });
   }
-  // Keep the current chord in the middle of the strip (.progression is its offsetParent).
-  function centreChord(cur, now) {
-    var box = cur.parentElement;
-    scrollStrip(box, Math.max(0, Math.min(box.scrollWidth - box.clientWidth, cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2)), now);
-  }
-  function scrollStrip(box, left, now) {
-    cancelAnimationFrame(stripAnim);
-    var from = box.scrollLeft;
-    if (now || Math.abs(left - from) <= 1) { box.scrollLeft = left; return; }
-    var t0 = performance.now();
-    (function step() {
-      var p = Math.min(1, (performance.now() - t0) / STRIP_MS);
-      box.scrollLeft = from + (left - from) * EASE_OUT(p);
-      if (p < 1) stripAnim = requestAnimationFrame(step);
-    })();
+  // Folded: the row of the current bar is the first of the three shown (the last rows stay in view at the end).
+  function cvFollow(now) {
+    var cv = state.cv, inner = $('#progression');
+    if (!cv || cv.bi == null || !cv.bars[cv.bi]) return;
+    var win = inner.parentElement, y = Math.max(0, Math.min(inner.offsetHeight - win.clientHeight, cv.bars[cv.bi].el.offsetTop));
+    if (y === cv.y) return;
+    cv.y = y;
+    if (now) { inner.style.transition = 'none'; inner.style.transform = 'translateY(' + -y + 'px)'; void inner.offsetHeight; inner.style.transition = ''; }
+    else inner.style.transform = 'translateY(' + -y + 'px)';
   }
 
   // While playing, the roll keeps the playhead about a third of the way in —
@@ -3092,17 +3125,60 @@
   });
   rollScroll.addEventListener('scroll', wake, { passive: true });
 
-  // longer: the chords of the added bars pop in; the strip stays where it is.
+  // The chart: a block for each section, a cell for each bar, the chords of a
+  // bar set out across it where they fall. A bar that only holds the chord
+  // before it shows that name, faintly.
+  // longer: the bars that were there stay as they are; the added ones come in.
   function renderProgression(song, longer) {
-    var box = $('#progression'), had = longer ? box.children.length : 0;
-    // One cell for each change of chord: a chord written again (the same one, a bar or half a bar on) stays lit.
-    state.strip = song.chords.filter(function (c, i, a) { return !i || a[i - 1].name !== c.name; });
-    box.innerHTML = state.strip.map(function (c, i) {
-      var enter = !reduceMotion.matches && (longer ? i >= had : i < 24);
-      return '<button type="button" class="c' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(i - had, 24) : i) + '" data-i="' + i + '" data-name="' + escapeHtml(c.name) + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
-    }).join('');
-    if (!longer) { cancelAnimationFrame(stripAnim); box.scrollLeft = 0; }
-    state.chordIdx = null;
+    var box = $('#progression'), bd = song.barDuration, total = playLength();
+    var had = longer && state.cv ? state.cv.bars.length : 0;
+    var cv = { bd: bd, bars: [], chords: [], secs: [], bi: null, ci: null };
+    var byBar = {}, last = null, html = '';
+    // Where in its bar a chord falls, to the beat. A chord pushed ahead of the
+    // bar line is written at the head of the bar it belongs to; the last two
+    // bars slow down, so there the bar begins where its first chord does.
+    var beats = song.beatsPerBar || 4, lastBar = song.loop ? Infinity : Math.round(total / bd) - 3, starts = {};
+    song.chords.forEach(function (c) {
+      if (c.time >= total - 0.01) return;
+      var b = c.bar, f = (c.time - b * bd) / bd;
+      if (b >= lastBar && starts[b] === undefined && f < 0.5) starts[b] = c.time;
+      if (starts[b] !== undefined) f = (c.time - starts[b]) / bd;
+      f = Math.round(f * beats) / beats;
+      if (f >= 1) { b++; f = 0; }
+      (byBar[b] = byBar[b] || []).push({ name: c.name, time: c.time, tones: c.tones, f: Math.max(0, f) });
+    });
+    song.sections.forEach(function (sec, si) {
+      if (sec.start >= total - 0.01) return;
+      var cells = '';
+      for (var b = sec.startBar; b < sec.startBar + sec.bars && b * bd < total - 0.01; b++) {
+        var list = [], names = [];
+        (byBar[b] || []).forEach(function (c) {
+          if (list.length && (list[list.length - 1].name === c.name || list[list.length - 1].f === c.f)) return; // struck again: the same name
+          list.push({ name: c.name, time: c.time, tones: c.tones, f: c.f, held: !c.f && last === c.name && b > sec.startBar });
+        });
+        if ((!list.length || list[0].f > 0) && last) list.unshift({ name: last, f: 0, held: true });
+        var inner = list.map(function (c, k) {
+          var w = (k + 1 < list.length ? list[k + 1].f : 1) - c.f;
+          if (!c.held || c.time !== undefined) names.push(c.name);
+          return '<span class="ch' + (c.held ? ' held' : '') + '" style="flex:' + w.toFixed(3) + ' 1 0"' + (c.time !== undefined ? ' data-c="' + cv.chords.length + '"' : '') + '>' + escapeHtml(c.name) + '</span>' +
+            (c.time !== undefined ? (cv.chords.push({ name: c.name, time: c.time, tones: c.tones || [] }), '') : '');
+        }).join('');
+        if (list.length) last = list[list.length - 1].name;
+        var n = cv.bars.length, enter = !reduceMotion.matches && (longer ? n >= had : n < 12);
+        cells += '<button type="button" class="cv-bar' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(n - had, 16) : n) + '" data-b="' + n + '" aria-label="' + (b + 1) + ' 小節目 ' + escapeHtml(names.join(' ') || last || '') + '（' + fmt(b * bd) + ' から再生）"><span class="n" aria-hidden="true">' + (b + 1) + '</span>' + inner + '</button>';
+        cv.bars.push({ t: starts[b] !== undefined ? starts[b] : b * bd, sec: cv.secs.length });
+      }
+      if (!cells) return;
+      cv.secs.push(null);
+      html += '<div class="cv-sec" style="--sc:var(' + (SEC_COLOR[sec.type] || '--line') + ')"><div class="cv-lab">' + (SEC_NAME[sec.type] || '') + '</div><div class="cv-bars">' + cells + '</div></div>';
+    });
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll('.cv-bar'), function (el, i) { cv.bars[i].el = el; });
+    Array.prototype.forEach.call(box.querySelectorAll('.ch[data-c]'), function (el) { cv.chords[+el.dataset.c].el = el; });
+    Array.prototype.forEach.call(box.children, function (el, i) { cv.secs[i] = el; });
+    if (longer && state.cv) cv.y = state.cv.y; // (the fold stays on its row)
+    else box.style.transform = '';
+    state.cv = cv;
   }
 
   // The section bars (the player's, and the seek bar's): same colours as the shared video.
@@ -3201,28 +3277,27 @@
     seekTo(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * playLength());
   });
   $('#progression').addEventListener('click', function (e) {
-    var b = e.target.closest('.c');
-    if (!b || !state.song || !state.strip[+b.dataset.i]) return;
-    stripUserAt = 0;
-    seekTo(state.strip[+b.dataset.i].time);
+    var b = e.target.closest('.cv-bar');
+    if (!b || !state.song || !state.cv || !state.cv.bars[+b.dataset.b]) return;
+    seekTo(state.cv.bars[+b.dataset.b].t);
   });
-  // The listener scrolls the strip (sideways: the wheel, a finger, its scrollbar): it is theirs for a moment, as the roll is.
-  (function (box) {
-    var touch = null;
-    var mine = function () { stripUserAt = performance.now(); cancelAnimationFrame(stripAnim); };
-    box.addEventListener('wheel', function (e) { if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) mine(); }, { passive: true });
-    box.addEventListener('touchstart', function (e) { touch = e.touches[0] && [e.touches[0].clientX, e.touches[0].clientY]; }, { passive: true });
-    box.addEventListener('touchmove', function (e) {
-      var p = e.touches[0];
-      if (touch && p && Math.abs(p.clientX - touch[0]) > Math.max(4, Math.abs(p.clientY - touch[1]))) mine();
-    }, { passive: true });
-    box.addEventListener('pointerdown', function (e) { if (e.target === box) mine(); });
-  })($('#progression'));
-  // A resized strip: the current chord is in the middle again.
-  window.addEventListener('resize', function () {
-    var cur = document.querySelector('.progression .c.on');
-    if (cur) centreChord(cur, true);
-  });
+  // The whole chart, or three rows of it that follow the song.
+  (function (view, btn) {
+    var set = function (open) {
+      view.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      btn.textContent = open ? 'たたむ' : '全体を表示';
+      if (state.cv) { state.cv.y = undefined; cvFollow(true); }
+    };
+    btn.addEventListener('click', function () {
+      var open = !view.classList.contains('open');
+      set(open);
+      try { localStorage.setItem('mcj-chart-open', open ? '1' : ''); } catch (e) {}
+    });
+    try { if (localStorage.getItem('mcj-chart-open')) set(true); } catch (e) {}
+  })($('#chordview'), $('#cv-toggle'));
+  // A resized chart: rows are a different width (and, on a phone, hold two bars).
+  window.addEventListener('resize', function () { if (state.cv) { state.cv.y = undefined; cvFollow(true); } });
 
   if (window.ResizeObserver) new ResizeObserver(function () { drawStatic(true); drawFrame(); }).observe(rollScroll);
   var mq = window.matchMedia('(prefers-color-scheme: dark)');
