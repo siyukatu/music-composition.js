@@ -82,22 +82,6 @@
     lydian:     [0, 2, 4, 6, 7, 9, 11]
   };
 
-  // Progressions as 0-based scale degrees. "bright" suits major-type modes,
-  // "dark" suits minor-type modes.
-  var PROGRESSIONS = {
-    bright: [
-      [0, 4, 5, 3], [0, 5, 3, 4], [5, 3, 0, 4], [0, 3, 4, 3], [0, 2, 3, 4],
-      [3, 4, 2, 5], [0, 3, 0, 4], [0, 5, 1, 4], [3, 0, 4, 5], [0, 1, 3, 4]
-    ],
-    dark: [
-      [0, 5, 2, 6], [0, 5, 6, 0], [0, 6, 5, 6], [0, 3, 5, 4], [5, 6, 0, 0],
-      [0, 2, 6, 3], [0, 3, 6, 2], [5, 3, 0, 6], [0, 6, 3, 4], [0, 3, 0, 6]
-    ],
-    lydian: [[0, 1, 0, 1], [0, 1, 5, 4], [0, 1, 2, 1], [0, 4, 1, 0]],
-    mixolydian: [[0, 6, 3, 0], [0, 3, 6, 3], [0, 6, 5, 3]],
-    dorian: [[0, 3, 0, 3], [0, 6, 3, 0], [0, 3, 6, 4], [0, 1, 3, 0]]
-  };
-
   function parseKey(key) {
     if (typeof key === 'number') return ((Math.round(key) % 12) + 12) % 12;
     var s = String(key).trim();
@@ -672,7 +656,7 @@
     flute:      { wave: 'add', partials: [[1, 1, 0], [2, 0.2, 0], [3, 0.09, 0], [4, 0.03, 0]], breath: 0.05, a: 0.05, d: 0.3, s: 0.85, r: 0.12, cutoff: 0, gain: 0.24, pan: 0.06, rev: 0.35, dly: 0.2, vib: 0.26 },
     brass:      { wave: 'saw', unison: 2, detune: 5, a: 0.03, d: 0.4, s: 0.7, r: 0.15, cutoff: 600, env: 2800, fd: 0.2, res: 0.12, gain: 0.26, pan: 0.05, rev: 0.28, dly: 0.2, vib: 0.14 },
     pianoLead:  { wave: 'add', partials: [[1, 1, 1.6], [2, 0.55, 0.9], [3, 0.3, 0.5], [4, 0.15, 0.35], [5, 0.08, 0.25], [6, 0.05, 0.2]], inh: 0.0004, a: 0.002, d: 3, s: 0, r: 0.3, cutoff: 0, gain: 0.3, pan: 0.05, rev: 0.3, dly: 0.15, vib: 0 },
-    bell:       { wave: 'fm', ratio: 3.5, index: 2.2, idecay: 0.5, a: 0.004, d: 2.2, s: 0, r: 1.6, cutoff: 0, gain: 0.2, pan: 0.15, rev: 0.6, dly: 0.35, vib: 0 },
+    bell:       { wave: 'fm', ratio: 3.5, index: 2.2, idecay: 0.5, a: 0.004, d: 2.2, s: 0, r: 1.6, cutoff: 0, gain: 0.2, pan: 0, rev: 0.6, dly: 0.35, vib: 0 },
     bellSoft:   { wave: 'fm', ratio: 2, index: 1.4, idecay: 0.3, a: 0.004, d: 1.6, s: 0, r: 1.2, cutoff: 0, gain: 0.07, pan: -0.3, rev: 0.7, dly: 0.4, vib: 0 },
     epiano:     { wave: 'fm', roll: 0.012, ratio: 1, index: 1.6, idecay: 0.35, a: 0.003, d: 1.6, s: 0.3, r: 0.35, cutoff: 2600, env: 0, res: 0, gain: 0.12, pan: 0, rev: 0.3, dly: 0, vib: 0.05 },
     piano:      { wave: 'add', roll: 0.012, lh: true, partials: [[1, 1, 1.8], [2, 0.5, 1], [3, 0.26, 0.6], [4, 0.13, 0.4], [5, 0.07, 0.3], [6, 0.04, 0.22]], inh: 0.0004, a: 0.002, d: 3, s: 0, r: 0.25, cutoff: 0, gain: 0.1, pan: -0.08, rev: 0.3, dly: 0.04, vib: 0 },
@@ -709,7 +693,7 @@
 
     // Jazz: a saxophone (a sawtooth through the horn's formants, breathy vibrato
     // that comes in late) and a vibraphone (mallet partials with the motor's tremolo).
-    sax:        { wave: 'saw', unison: 1, formants: [[520, 4, 1], [1200, 5, 0.6], [2500, 6, 0.35]], a: 0.035, d: 0.4, s: 0.85, r: 0.1, cutoff: 2400, env: 1600, fd: 0.25, res: 0.1, gain: 0.42, pan: 0.05, rev: 0.3, dly: 0.1, vib: 0.28 },
+    sax:        { wave: 'saw', unison: 1, formants: [[520, 4, 1], [1200, 5, 0.6], [2500, 6, 0.35]], a: 0.035, d: 0.4, s: 0.85, r: 0.1, cutoff: 2400, env: 1600, fd: 0.25, res: 0.1, gain: 0.6, pan: 0.05, rev: 0.3, dly: 0.1, vib: 0.28 },
     vibes:      { wave: 'add', roll: 0.01, partials: [[1, 1, 2.2], [4, 0.22, 0.5], [10, 0.05, 0.1]], trem: { rate: 5.5, depth: 0.3 }, a: 0.001, d: 3, s: 0, r: 0.6, cutoff: 0, gain: 0.1, pan: -0.1, rev: 0.4, dly: 0.05, vib: 0 },
     vibesLead:  { wave: 'add', partials: [[1, 1, 2.2], [4, 0.22, 0.5], [10, 0.05, 0.1]], trem: { rate: 5.5, depth: 0.3 }, a: 0.001, d: 3, s: 0, r: 0.6, cutoff: 0, gain: 0.3, pan: 0.05, rev: 0.4, dly: 0.15, vib: 0 },
 
@@ -728,7 +712,7 @@
     harpArp:    { wave: 'ks', bright: 0.45, body: 2200, ring: 2.5, a: 0.001, d: 1, s: 1, r: 1, cutoff: 0, gain: 0.52, pan: -0.35, rev: 0.45, dly: 0.25, vib: 0 },
     pizzicato:  { wave: 'ks', roll: 0.006, bright: 0.3, body: 1800, ring: 0.45, a: 0.001, d: 1, s: 1, r: 0.05, cutoff: 0, gain: 0.76, pan: -0.1, rev: 0.4, dly: 0, vib: 0 },
     nylon:      { wave: 'ks', bright: 0.3, body: 1500, ring: 2.6, a: 0.001, d: 1, s: 1, r: 0.3, cutoff: 0, gain: 0.23, pan: 0.25, rev: 0.3, dly: 0.05, vib: 0 },
-    bassUpright: { wave: 'ks', bright: 0.12, body: 420, ring: 1.1, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 2.8, pan: 0, rev: 0.05, dly: 0, vib: 0 }
+    bassUpright: { wave: 'ks', bright: 0.12, body: 420, ring: 1.1, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 2.3, pan: 0, rev: 0.05, dly: 0, vib: 0 }
   };
 
   // Progression idioms, in Roman numerals relative to the key (major-key
@@ -855,126 +839,322 @@
     }
   }
 
-  // A one-bar groove: velocity (0..1) per 16th for kick, snare, closed and open hat.
-  // level 0 = intro (light), 1 = verse, 2 = chorus.
-  function makeGroove(rng, family, level, ghost) {
-    var g = { kick: steps16(), snare: steps16(), hat: steps16(), open: steps16() };
-    var hats8 = function (on, off) { for (var s = 0; s < 16; s += 2) g.hat[s] = s % 4 === 0 ? on : off; };
-    var hats16 = function (accent) { for (var s = 0; s < 16; s++) g.hat[s] = s % 4 === 0 ? accent : s % 2 === 0 ? accent * 0.7 : accent * 0.45; };
-    switch (family) {
-      case 'fourfloor':
-        hit(g.kick, [0, 4, 8, 12], 1);
-        hit(g.snare, [4, 12], 1);
-        if (level >= 2 || rng.chance(0.5)) hit(g.open, [2, 6, 10, 14], 0.7); else hit(g.hat, [2, 6, 10, 14], 0.85);
-        if (level >= 2) hit(g.hat, [1, 3, 5, 7, 9, 11, 13, 15], 0.35);
-        else if (rng.chance(0.5)) hit(g.hat, [0, 4, 8, 12], 0.35);
-        if (rng.chance(0.35)) sprinkle(rng, g.kick, [14, 15, 7, 11], 1, 0.55);
-        break;
-      case 'halftime':
-        hit(g.kick, [0], 1);
-        hit(g.snare, [8], 1);
-        sprinkle(rng, g.kick, [10, 11, 14, 3, 6], rng.int(1, 2), 0.8);
-        if (level >= 2 && rng.chance(0.5)) hats16(0.7); else hats8(0.7, 0.45);
-        break;
-      case 'swing':
-        // Ride "ding, ding-a-ding" (the a is the swung eighth), hi-hat pedal on 2 and 4,
-        // a feathered kick on every beat, and the snare comping on off-beats.
-        hit(g.hat, [0, 8], 0.75); hit(g.hat, [4, 12], 0.9); hit(g.hat, [6, 14], 0.5);
-        g.pedal = steps16(); hit(g.pedal, [4, 12], 0.55);
-        hit(g.kick, [0, 4, 8, 12], 0.22);
-        sprinkle(rng, g.snare, [2, 6, 10, 14], level >= 2 ? 2 : 1, 0.35);
-        if (level >= 2 && rng.chance(0.4)) g.kick[rng.pick([6, 14])] = 0.6; // a "bomb"
-        break;
-      case 'bossa':
-        // Bass drum on 1, the "and" of 2, 3 and the "and" of 4 (with the bass);
-        // the rim click plays the bossa clave across two bars (g.alt is the second);
-        // a shaker on the eighths, sixteenths in a chorus.
-        hit(g.kick, [0, 8], 0.8); hit(g.kick, [6, 14], 0.5);
-        hit(g.snare, [0, 6, 12], 0.6);
-        if (level >= 2) hats16(0.5); else hats8(0.5, 0.32);
-        g.alt = { kick: g.kick.slice(), snare: steps16(), hat: g.hat.slice(), open: steps16() };
-        hit(g.alt.snare, [4, 10], 0.6);
-        if (level === 0) { g.alt.snare = steps16(); g.alt.kick = steps16(); for (var ai = 0; ai < 16; ai++) g.alt.hat[ai] *= 0.7; }
-        break;
-      case 'shuffle':
-        hit(g.kick, [0], 1);
-        sprinkle(rng, g.kick, [7, 8, 10, 11, 14], rng.int(1, 2), 0.85);
-        hit(g.snare, [4, 12], 1);
-        hats8(0.75, rng.chance(0.5) ? 0.5 : 0.35);
-        if (rng.chance(0.4)) sprinkle(rng, g.hat, [3, 7, 11, 15], 1, 0.3);
-        break;
-      case 'breakbeat':
-        hit(g.kick, [0, 10], 1);
-        sprinkle(rng, g.kick, [2, 3, 6, 11, 14], rng.int(1, 2), 0.8);
-        hit(g.snare, [4, 12], 1);
-        sprinkle(rng, g.snare, [7, 9, 15], 1, 0.4);
-        if (level >= 2) hats16(0.7); else hats8(0.75, 0.5);
-        break;
-      case 'sixteenbeat':
-        hit(g.kick, [0], 1);
-        sprinkle(rng, g.kick, [3, 6, 7, 8, 10, 11, 13, 14], level >= 2 ? 3 : 2, 0.85);
-        hit(g.snare, [4, 12], 1);
-        hats16(0.8);
-        if (level >= 2 && rng.chance(0.6)) { g.open[rng.pick([6, 14])] = 0.65; }
-        break;
-      case 'chip':
-        hit(g.kick, [0, 8], 1);
-        sprinkle(rng, g.kick, [6, 10, 14, 3], 1, 0.9);
-        hit(g.snare, [4, 12], 1);
-        if (rng.chance(0.4)) sprinkle(rng, g.snare, [14, 15, 7], 1, 0.5);
-        if (level >= 2 && rng.chance(0.5)) hats16(0.6); else hats8(0.8, 0.55);
-        break;
-      default: // eightbeat
-        hit(g.kick, [0], 1);
-        if (rng.chance(0.7)) hit(g.kick, [8], 0.95);
-        sprinkle(rng, g.kick, [6, 7, 10, 11, 14, 3], level >= 2 ? 2 : 1, 0.85);
-        hit(g.snare, [4, 12], 1);
-        if (level >= 2 && rng.chance(0.35)) hats16(0.75); else hats8(0.85, 0.55);
-        if (level >= 2 && rng.chance(0.55)) { var o = rng.pick([6, 14]); g.open[o] = 0.65; g.hat[o] = 0; }
+  // Drums are composed for each song, not picked from stock beats. A song has
+  // one drummer (makeDrummer): for each groove family the drummer settles on
+  // where the kick likes to fall (the family's weights, bent by taste), a kick
+  // figure drawn from them (often a two-bar one: the second bar answers the
+  // first), how time is kept on the hats (quarters, eighths, eighths with
+  // sixteenth pairs, a gallop, sixteenths, offbeats; which hand is accented),
+  // an extra snare stroke and where the ghost notes sit. Every section's groove
+  // grows from that core, so a song sounds like one player, and no two songs
+  // share a drummer.
+  //
+  // A groove: velocity (0..1) per 16th for kick, snare, closed and open hat;
+  // g.alt is the second bar of a two-bar groove. level 0 = intro (light),
+  // 1 = verse, 2 = chorus.
+
+  // Where a family's kick likes to fall, as a weight per 16th (1 = always).
+  var KICKS = {
+    eightbeat:   [1, 0, 0, 0.08, 0, 0, 0.4, 0.15, 0.75, 0, 0.45, 0.2, 0, 0, 0.3, 0.06],
+    sixteenbeat: [1, 0, 0, 0.35, 0, 0, 0.35, 0.4, 0.5, 0, 0.4, 0.4, 0, 0.25, 0.3, 0.1],
+    shuffle:     [1, 0, 0, 0.12, 0, 0, 0.15, 0.4, 0.45, 0, 0.5, 0.35, 0, 0, 0.25, 0.1],
+    breakbeat:   [1, 0, 0.25, 0.3, 0, 0, 0.3, 0.12, 0.12, 0, 0.9, 0.35, 0, 0, 0.3, 0.1],
+    chip:        [1, 0, 0, 0.1, 0, 0, 0.35, 0.05, 0.9, 0, 0.35, 0.1, 0, 0, 0.3, 0.05],
+    halftime:    [1, 0, 0, 0.2, 0, 0, 0.3, 0.15, 0, 0, 0.45, 0.35, 0, 0.1, 0.35, 0.15],
+    fourfloor:   [1, 0, 0, 0, 1, 0, 0, 0.12, 1, 0, 0, 0.12, 1, 0, 0.2, 0.15]
+  };
+  // How many kicks a verse adds to the fixed ones.
+  var KICK_N = {
+    eightbeat: { 1: 2, 2: 4, 3: 1.5 }, sixteenbeat: { 2: 3, 3: 4, 4: 1.5 }, shuffle: { 1: 2, 2: 4, 3: 1 }, breakbeat: { 2: 4, 3: 3 },
+    chip: { 1: 2, 2: 4, 3: 1 }, halftime: { 1: 3, 2: 4, 3: 1 }, fourfloor: { 0: 5, 1: 3 }
+  };
+  // How time is kept.
+  var HAT_FEELS = {
+    eightbeat: { eighths: 5, pairs: 2.5, quarters: 1, sixteenths: 0.8, gallop: 0.7 },
+    sixteenbeat: { sixteenths: 4, gallop: 2.5, pairs: 2.5, eighths: 1 },
+    shuffle: { eighths: 5, pairs: 2.5, quarters: 1.5 },
+    breakbeat: { eighths: 3, sixteenths: 2, pairs: 2.5, gallop: 1 },
+    chip: { eighths: 4, sixteenths: 1.5, gallop: 1.5, quarters: 1, offbeats: 1, pairs: 1.5 },
+    halftime: { eighths: 3.5, quarters: 1.5, sixteenths: 1.5, pairs: 2.5 },
+    fourfloor: { offbeats: 5, eighths: 2, sixteenths: 2, gallop: 1 }
+  };
+  // An extra, softer snare stroke beside the backbeat: [how often, where].
+  var SNARE_EXTRA = {
+    eightbeat: [0.25, [15, 7, 14]], sixteenbeat: [0.45, [7, 9, 15]], shuffle: [0.3, [7, 15, 11]], breakbeat: [0.8, [7, 9, 15]],
+    chip: [0.4, [14, 15, 7]], halftime: [0.35, [14, 15, 7]]
+  };
+  var HAT_GAIN = { halftime: 0.86, shuffle: 0.9, breakbeat: 0.92 };
+
+  // n different entries of a list.
+  function pickSome(rng, list, n) {
+    var c = list.filter(function (x, i) { return list.indexOf(x) === i; }), out = [];
+    while (out.length < n && c.length) out.push(c.splice(Math.floor(rng.next() * c.length), 1)[0]);
+    return out;
+  }
+  // Add n kicks by weight: never on a snare stroke (dance music's kick
+  // excepted), never three sixteenths in a row.
+  function addKicks(rng, kick, w, n, snare, four) {
+    for (var i = 0; i < n; i++) {
+      var cands = [], ws = [], tot = 0;
+      for (var s = 1; s < kick.length; s++) {
+        if (kick[s] || !w[s] || (!four && snare[s])) continue;
+        var l = kick[s - 1] ? 1 : 0, r = kick[s + 1] ? 1 : 0;
+        if ((l && r) || (l && kick[s - 2]) || (r && kick[s + 2])) continue;
+        cands.push(s); ws.push(w[s]); tot += w[s];
+      }
+      if (!cands.length) return;
+      var x = rng.next() * tot, k = 0;
+      while (k < cands.length - 1 && (x -= ws[k]) >= 0) k++;
+      kick[cands[k]] = cands[k] % 8 === 0 ? 0.95 : cands[k] % 2 ? 0.75 : 0.85;
     }
-    // Ghost notes between the backbeats (not in swing, where 16ths don't belong,
-    // nor on the bossa clave).
-    if (ghost && level >= 1 && family !== 'swing' && family !== 'bossa') {
-      for (var s = 1; s < 16; s += 2) if (!g.snare[s] && rng.chance(ghost * 0.25)) g.snare[s] = 0.2;
+  }
+  // The second bar of a two-bar kick figure: one kick moved, added or left out.
+  function kickAnswer(rng, kick, w, snare, four) {
+    var b = kick.slice(), movable = [], op = rng.next();
+    for (var s = 1; s < b.length; s++) if (b[s] && w[s] < 1) movable.push(s);
+    if (movable.length && op < 0.55) {
+      var x = rng.pick(movable), w2 = w.slice();
+      b[x] = 0; w2[x] = 0;
+      addKicks(rng, b, w2, 1, snare, four);
+    } else if (movable.length > 1 && op > 0.85) b[rng.pick(movable)] = 0;
+    else addKicks(rng, b, w, 1, snare, four);
+    return b;
+  }
+  // The hats of one bar of n sixteenths.
+  function hatLine(n, feel, accent, extra) {
+    var h = [];
+    for (var s = 0; s < n; s++) {
+      var b = s % 4, v;
+      if (feel === 'quarters') v = b === 0 ? 0.8 : 0;
+      else if (feel === 'offbeats') v = b === 2 ? 0.85 : 0;
+      else if (feel === 'sixteenths') v = b === 0 ? 0.8 : b === 2 ? 0.56 : 0.36;
+      else if (feel === 'gallop') v = b === 0 ? 0.8 : b === 2 ? 0.5 : b === 3 ? 0.4 : 0;
+      else v = b === 0 ? 0.84 : b === 2 ? 0.55 : 0; // eighths (and pairs)
+      if (v && b % 2 === 0 && feel !== 'quarters' && feel !== 'offbeats') {
+        if (accent === 'up') v = b === 0 ? 0.56 : 0.85;
+        else if (accent === 'flat') v = 0.7;
+      }
+      h.push(v);
     }
+    (extra || []).forEach(function (x) { if (x < n && !h[x]) h[x] = 0.34; });
+    return h;
+  }
+  function drumCore(rng, family, ghost) {
+    var c = {}, s;
+    if (family === 'swing') {
+      // The ride's skip notes, the feathered kick.
+      var SK = [[6, 14], [6, 14], [6, 14], [6, 14], [14], [6]];
+      c.skips = rng.pick(SK);
+      c.skipsB = rng.chance(0.35) ? rng.pick(SK.slice(3)) : null;
+      c.feather = rng.pick([[0, 4, 8, 12], [0, 4, 8, 12], [0, 4, 8, 12], [0, 8], [0, 8], [0]]);
+      return c;
+    }
+    if (family === 'bossa') {
+      c.kick = wpick(rng, { std: 6, surdo: 2, push: 2 });
+      c.accent = rng.chance(0.35) ? 'up' : 'down';
+      c.shaker = wpick(rng, { eighths: 5, gallop: 2, sixteenths: 1.5 });
+      return c;
+    }
+    var four = family === 'fourfloor';
+    c.w = KICKS[family].map(function (x) { return x >= 1 ? 1 : x * (0.45 + rng.next() * 1.3); });
+    c.snare = steps16();
+    if (family === 'halftime') c.snare[8] = 1; else hit(c.snare, [4, 12], 1);
+    var ex = SNARE_EXTRA[family];
+    if (ex && rng.chance(ex[0])) c.snare[rng.pick(ex[1])] = 0.42;
+    c.n = +wpick(rng, KICK_N[family]);
+    c.kick = c.w.map(function (x) { return x >= 1 ? 1 : 0; });
+    addKicks(rng, c.kick, c.w, c.n, c.snare, four);
+    c.kickB = rng.chance(four ? 0.3 : 0.55) ? kickAnswer(rng, c.kick, c.w, c.snare, four) : null;
+    c.feel = wpick(rng, HAT_FEELS[family]);
+    c.accent = four ? 'up' : wpick(rng, { down: 5, up: 1.2, flat: 1.5 });
+    c.extra = c.feel === 'pairs' ? pickSome(rng, [3, 7, 11, 15, 1, 5, 9, 13], rng.int(1, 2)) : [];
+    c.openOff = rng.chance(0.5); c.under = rng.chance(0.5); c.quarters = rng.chance(0.5);
+    c.ghosts = [];
+    if (ghost) for (s = 1; s < 16; s += 2) if (rng.chance(ghost * 0.25)) c.ghosts.push(s);
+    return c;
+  }
+  // R(name) makes a random stream; ghost = how many ghost notes the style plays.
+  function makeDrummer(R, ghost) {
+    var cores = {};
+    return {
+      core: function (family, three) {
+        var k = family + (three ? '-3' : '');
+        return cores[k] || (cores[k] = (three ? drumCore3 : drumCore)(R('drummer-' + k), family, ghost));
+      }
+    };
+  }
+  // fresh: a beat of its own from the same drummer (a bridge). kit: the drum kit.
+  function makeGroove(rng, family, level, drummer, fresh, kit) {
+    if (family === 'swing') return swingGroove(rng, level, drummer.core('swing'));
+    if (family === 'bossa') return bossaGroove(rng, level, drummer.core('bossa'));
+    if (!KICKS[family]) family = 'eightbeat';
+    var c = drummer.core(family), four = family === 'fourfloor', s;
+    var snare = c.snare.slice(), kickA = c.kick.slice(), kickB = c.kickB && c.kickB.slice();
+    var feel = c.feel, extra = c.extra, opens = [], wash = false, under = c.under, openOff = c.openOff;
+    if (fresh) {
+      kickA = c.w.map(function (x) { return x >= 1 ? 1 : 0; });
+      addKicks(rng, kickA, c.w, c.n, snare, four);
+      kickB = rng.chance(0.5) ? kickAnswer(rng, kickA, c.w, snare, four) : null;
+      feel = wpick(rng, HAT_FEELS[family]);
+      extra = feel === 'pairs' ? pickSome(rng, [3, 7, 11, 15], rng.int(1, 2)) : [];
+    }
+    if (level >= 2) {
+      // A chorus: the verse's beat with more to it. The same kicks are added to both bars.
+      var before = kickA.slice();
+      addKicks(rng, kickA, c.w, +wpick(rng, four ? { 0: 3, 1: 2 } : { 0: 2, 1: 4, 2: family === 'sixteenbeat' ? 3 : 1 }), snare, four);
+      if (kickB) for (s = 1; s < 16; s++) if (kickA[s] && !before[s] && !kickB[s] && !kickB[s - 1] && !kickB[s + 1]) kickB[s] = kickA[s];
+      if (four) {
+        openOff = openOff || rng.chance(0.75); under = under || rng.chance(0.6);
+      } else {
+        var lift = wpick(rng, feel === 'quarters' ? { eighths: 1 }
+          : feel === 'eighths' ? { opens: 3, sixteenths: 1.5, pairs: 1.5, wash: kit === 'std' ? 1.5 : 0, same: 1 }
+          : feel === 'pairs' ? { opens: 3, sixteenths: 2, same: 1 }
+          : feel === 'offbeats' ? { eighths: 2, opens: 2 } : { opens: 3, same: 2 });
+        if (lift === 'eighths' || lift === 'sixteenths') feel = lift;
+        else if (lift === 'pairs') { feel = 'pairs'; extra = pickSome(rng, [3, 7, 11, 15], rng.int(1, 2)); }
+        else if (lift === 'wash') wash = true;
+        if (lift === 'opens' || (lift !== 'wash' && rng.chance(0.3))) opens = pickSome(rng, [14, 6, 14, 6, 2, 10], rng.int(1, 2));
+      }
+    }
+    var gain = HAT_GAIN[family] || 1;
+    var hat = hatLine(16, feel, c.accent, extra).map(function (v) { return v * gain; }), open = steps16();
+    if (four && feel === 'offbeats') {
+      // Dance music: the offbeat hat (open or closed), sixteenths or quarters ticking under it.
+      if (under && level >= 1) for (s = 1; s < 16; s += 2) hat[s] = 0.35;
+      else if (c.quarters) hit(hat, [0, 4, 8, 12], 0.35);
+    }
+    if (four && openOff && level >= 1) for (s = 2; s < 16; s += 4) { open[s] = 0.7; hat[s] = 0; }
+    // (A rock chorus: the hats half open on every beat.)
+    if (wash) for (s = 0; s < 16; s += 4) { open[s] = 0.6; hat[s] = 0; }
+    if (level >= 1) c.ghosts.forEach(function (x) { if (!snare[x]) snare[x] = 0.2; });
     if (level === 0) {
-      // Intro: time only, maybe a soft kick on one.
-      g.snare = steps16();
-      g.kick = family === 'fourfloor' ? g.kick : steps16();
-      g.open = steps16();
-      for (s = 0; s < 16; s++) g.hat[s] *= 0.7;
+      // Intro: time only (dance music keeps its kick).
+      snare = steps16();
+      if (!four) { kickA = steps16(); kickB = null; }
+      hat = hat.map(function (v) { return v * 0.7; });
+      opens = [];
+    }
+    // The open hat may come every bar, or only to close the two-bar figure.
+    var late = opens.length && rng.chance(0.4);
+    var bar = function (kick, op) {
+      var b = { kick: kick, snare: snare.slice(), hat: hat.slice(), open: open.slice() };
+      if (op) opens.forEach(function (x) { b.open[x] = 0.65; b.hat[x] = 0; });
+      return b;
+    };
+    var g = bar(kickA, !late);
+    if (kickB || late) g.alt = bar(kickB || kickA.slice(), true);
+    return g;
+  }
+  // Swing: the ride's "ding, ding-a-ding" (the a is the swung eighth; a drummer
+  // may leave one skip note out), the hi-hat pedal on 2 and 4, a feathered
+  // kick, and the snare comping on off-beats.
+  function swingGroove(rng, level, c) {
+    var ride = function (skips) { var h = steps16(); hit(h, [0, 8], 0.75); hit(h, [4, 12], 0.9); hit(h, skips, 0.5); return h; };
+    var g = { kick: steps16(), snare: steps16(), hat: ride(c.skips), open: steps16(), pedal: steps16() };
+    hit(g.pedal, [4, 12], 0.55);
+    hit(g.kick, c.feather, 0.22);
+    sprinkle(rng, g.snare, [2, 6, 10, 14], level >= 2 ? 2 : 1, 0.35);
+    if (level >= 2 && rng.chance(0.4)) g.kick[rng.pick([6, 14])] = 0.6; // a "bomb"
+    if (c.skipsB) {
+      g.alt = { kick: g.kick.slice(), snare: steps16(), hat: ride(c.skipsB), open: steps16(), pedal: g.pedal.slice() };
+      sprinkle(rng, g.alt.snare, [2, 6, 10, 14], 1, 0.35);
+    }
+    if (level === 0) [g, g.alt].forEach(function (b) {
+      if (!b) return;
+      b.snare = steps16(); b.kick = steps16();
+      for (var s = 0; s < 16; s++) b.hat[s] *= 0.7;
+    });
+    return g;
+  }
+  // Bossa nova: the bass drum on 1, the "and" of 2, 3 and the "and" of 4 (with
+  // the bass; a drummer may leave one of the "ands" out); the rim click plays
+  // the bossa clave across two bars (g.alt is the second); a shaker on the
+  // eighths, sixteenths in a chorus.
+  function bossaGroove(rng, level, c) {
+    var g = { kick: steps16(), snare: steps16(), hat: hatLine(16, level >= 2 && c.shaker === 'eighths' ? 'sixteenths' : c.shaker, c.accent), open: steps16(), clave: true };
+    for (var s = 0; s < 16; s++) g.hat[s] *= level >= 2 && c.shaker !== 'eighths' ? 0.68 : 0.6;
+    hit(g.kick, [0, 8], 0.8);
+    hit(g.kick, c.kick === 'surdo' ? [6] : c.kick === 'push' ? [14] : [6, 14], 0.5);
+    hit(g.snare, [0, 6, 12], 0.6);
+    g.alt = { kick: g.kick.slice(), snare: steps16(), hat: g.hat.slice(), open: steps16() };
+    hit(g.alt.snare, [4, 10], 0.6);
+    if (level === 0) {
+      g.snare = steps16(); g.kick = steps16(); g.alt.snare = steps16(); g.alt.kick = steps16();
+      for (s = 0; s < 16; s++) { g.hat[s] *= 0.7; g.alt.hat[s] *= 0.7; }
     }
     return g;
   }
-  // The same groove with a turnaround for the end of a 4-bar phrase.
-  function grooveVariation(rng, g) {
+  function copyBar(g) {
     var v = { kick: g.kick.slice(), snare: g.snare.slice(), hat: g.hat.slice(), open: g.open.slice() };
+    if (g.pedal) v.pedal = g.pedal.slice();
+    return v;
+  }
+  // The groove with a turnaround for the end of a 4-bar phrase (the fourth bar
+  // is the second bar of a two-bar groove): snare strokes into the next bar, a
+  // kick pickup or an open hat, composed for the song.
+  function grooveVariation(rng, g) {
+    var v = copyBar(g.alt || g), n = v.kick.length, e = n - 4;
     if (g.pedal) {
       // Swing: the snare kicks the band into the next phrase on swung eighths.
-      v.pedal = g.pedal.slice();
+      if (n === 12) { v.snare[10] = 0.55; return v; }
       if (rng.chance(0.5)) { v.snare[10] = 0.5; v.snare[14] = 0.65; } else { v.snare[6] = 0.45; v.snare[14] = 0.6; v.kick[14] = 0.55; }
       return v;
     }
-    if (g.alt) {
+    if (g.clave) {
       // Bossa: the phrase ends on the clave's second bar, with one more rim click into the next.
-      v = { kick: g.alt.kick.slice(), snare: g.alt.snare.slice(), hat: g.alt.hat.slice(), open: g.alt.open.slice() };
       if (v.snare[4]) v.snare[rng.pick([13, 14])] = 0.5;
       return v;
     }
-    switch (rng.int(0, 3)) {
-      case 0: v.snare[14] = 0.55; v.snare[15] = 0.7; break;
-      case 1: v.kick[13] = 0.8; v.kick[14] = 0; v.snare[15] = 0.6; break;
-      case 2: v.open[14] = 0.7; v.hat[14] = 0; v.kick[11] = Math.max(v.kick[11], 0.7); break;
-      default: v.snare[10] = Math.max(v.snare[10], 0.45); v.snare[13] = 0.55; v.snare[15] = 0.5;
+    var kind = rng.next();
+    if (kind < 0.62) {
+      // (Steps of the last beat; a step below 0 is in the beat before.)
+      var cell = rng.pick([[2, 3], [3], [1, 3], [2], [1, 2, 3], [1], [-1, 2], [-2, 3], [-2, 1, 3], [-1, 3]]);
+      cell.forEach(function (x, i) {
+        var s = e + x;
+        v.snare[s] = Math.max(v.snare[s], 0.45 + 0.12 * i + (i === cell.length - 1 ? 0.08 : 0));
+        if (s > 0) v.kick[s] = 0;
+      });
+    } else if (kind < 0.82) {
+      var k = e + rng.pick([1, 3, -1]);
+      if (!v.snare[k]) {
+        // (The kicks on the beats stay.)
+        v.kick[k] = 0.8;
+        if ((k - 1) % 4) v.kick[k - 1] = 0;
+        if (k + 1 < n && (k + 1) % 4) v.kick[k + 1] = 0;
+        if (rng.chance(0.6)) { var p = k === n - 1 ? n - 2 : n - 1; if (!v.kick[p]) v.snare[p] = Math.max(v.snare[p], 0.58); }
+      }
+    } else {
+      v.open[n - 2] = 0.7; v.hat[n - 2] = 0;
+      if (!v.snare[n - 5]) v.kick[n - 5] = Math.max(v.kick[n - 5], 0.7);
     }
+    if (kind < 0.82 && !v.snare[n - 2] && rng.chance(0.25)) { v.open[n - 2] = 0.65; v.hat[n - 2] = 0; }
+    else if (kind < 0.62 && rng.chance(0.2)) for (var s = e + 1; s < n; s++) v.hat[s] = 0; // the hats leave room for the snare
     return v;
   }
 
   // Bass: events [step, length, tone, velocity]. Tones: r root (or the slash-chord
   // bass), 5 fifth, 3 third, o octave, s scale step above, a approach to the next
   // chord, p anticipation (the next chord's root, tied over the bar line).
+  // The lines are composed for each section: a driving bass may play eighths,
+  // quarters, octaves, a 3+3+2 or lock to the kick; a dance bass sits on the
+  // offbeats, pumps octaves or rolls in sixteenths. ev.alt is the second bar of
+  // a two-bar line (the first with one thing changed); ev.noHead: no note is
+  // added on the downbeat (it belongs to the kick).
+  function bassAlt(rng, ev, line) {
+    var b = ev.map(function (e) { return e.slice(); }), late = [];
+    b.noHead = ev.noHead;
+    for (var i = 1; i < b.length; i++) if (b[i][0] >= 6 && b[i][2] !== 'p' && b[i][2] !== 'a') late.push(i);
+    if (!late.length) return null;
+    var k = rng.pick(late), e = b[k], r = rng.next();
+    if (r < 0.4) e[2] = e[2] === 'r' ? rng.pick(['5', 'o', 'o']) : 'r';
+    else if (r < 0.7 && e[1] >= 4 && line !== 'offbeat') { var h = e[1] >> 1; b.splice(k + 1, 0, [e[0] + e[1] - h, h, rng.pick(['r', 'o', '5']), e[3] * 0.85]); e[1] -= h; }
+    else if (r < 0.85 && k + 1 < b.length && b[k + 1][2] !== 'p' && e[0] + e[1] === b[k + 1][0]) { e[1] += b[k + 1][1]; b.splice(k + 1, 1); }
+    else if (b[b.length - 1][2] === 'r') b[b.length - 1][2] = 'a';
+    else e[2] = e[2] === 'o' ? 'r' : 'o';
+    return b;
+  }
   function makeBassLine(rng, line, groove, level, sync) {
-    var ev = [], s;
+    var ev = [], s, kind;
     switch (line) {
       case 'long':
         return [[0, 16, 'r', 0.8]];
@@ -983,16 +1163,40 @@
         if (level >= 2 && rng.chance(0.5)) ev = [[0, 4, 'r', 1], [4, 4, 'r', 0.7], [8, 4, rng.pick(['5', 'r', 'o']), 0.85], [12, 4, 'a', 0.7]];
         return ev;
       case 'offbeat':
-        [2, 6, 10, 14].forEach(function (x) { ev.push([x, 2, 'r', 1]); });
-        if (level >= 2 && rng.chance(0.6)) [3, 7, 11, 15].forEach(function (x) { ev.push([x, 1, rng.chance(0.4) ? 'o' : 'r', 0.55]); });
-        return ev.sort(function (a, b) { return a[0] - b[0]; });
+        kind = level >= 2 ? wpick(rng, { sixteen: 3, pump: 3, rolling: 2, house: 2, plain: 1 }) : level === 1 ? wpick(rng, { plain: 5, pump: 1.5, house: 1 }) : wpick(rng, { plain: 3, held: 2 });
+        if (kind === 'held') return [[0, 16, 'r', 0.85]];
+        if (kind === 'pump') {
+          // Octaves: the root on the beat (under the kick), the octave on the offbeat.
+          for (s = 0; s < 16; s += 2) ev.push([s, 2, s % 4 ? 'o' : 'r', s % 4 ? 1 : 0.78]);
+        } else if (kind === 'rolling') {
+          for (s = 0; s < 16; s++) if (s % 4) ev.push([s, 1, 'r', s % 4 === 2 ? 0.95 : 0.7]);
+        } else if (kind === 'house') {
+          [[3, 2, 'r', 0.8], [6, 2, 'r', 1], [10, 1, 'r', 0.95], [11, 2, rng.chance(0.5) ? 'o' : 'r', 0.75], [14, 2, 'r', 1]].forEach(function (e) { ev.push(e); });
+          if (rng.chance(0.5)) ev.splice(0, 1, [2, 2, 'r', 1]);
+        } else {
+          [2, 6, 10, 14].forEach(function (x) { ev.push([x, 2, 'r', 1]); });
+          if (kind === 'sixteen') { ev.forEach(function (e) { e[1] = 1; }); [3, 7, 11, 15].forEach(function (x) { ev.push([x, 1, rng.chance(0.4) ? 'o' : 'r', 0.55]); }); }
+        }
+        ev.sort(function (a, b) { return a[0] - b[0]; });
+        ev.noHead = kind !== 'pump';
+        if (level >= 1) ev.alt = bassAlt(rng, ev, line);
+        return ev;
       case 'walking':
+        // (The line itself is walked bar by bar, from note to note: see walkBar.)
         return [[0, 4, 'r', 1], [4, 4, rng.pick(['3', '5']), 0.75], [8, 4, rng.pick(['5', 's', 'o']), 0.85], [12, 4, 'a', 0.75]];
       case 'bossa':
         // Root on 1 (a dotted quarter), the fifth on the "and" of 2 and on 3, and on
-        // the "and" of 4 back to the root, or already the next chord's root.
+        // the "and" of 4 back to the root, or already the next chord's root (every
+        // other bar at most: the bar between states its downbeat).
         if (level === 0) return [[0, 8, 'r', 0.85], [8, 8, '5', 0.7]];
-        return [[0, 6, 'r', 0.95], [6, 2, '5', 0.65], [8, 6, '5', 0.85], [14, 2, rng.chance(0.5 + 0.3 * sync) ? 'p' : 'r', 0.7]];
+        kind = wpick(rng, { std: 5, stay: 2, half: level >= 2 ? 0.5 : 2 });
+        var mid = kind === 'stay' ? 'r' : '5';
+        ev = kind === 'half' ? [[0, 6, 'r', 0.95], [8, 6, '5', 0.85], [14, 2, 'r', 0.65]]
+          : [[0, 6, 'r', 0.95], [6, 2, mid, 0.65], [8, 6, '5', 0.85], [14, 2, kind === 'stay' ? '5' : 'r', 0.7]];
+        ev.alt = ev.map(function (e) { return e.slice(); });
+        if (rng.chance(0.5 + 0.3 * sync)) ev.alt[ev.alt.length - 1][2] = 'p';
+        if (rng.chance(0.3)) ev.alt[1][2] = ev.alt[1][2] === 'r' ? '5' : 'r';
+        return ev;
       case 'syncopated':
         // Lock to the kick drum, then fill a little.
         var on = [];
@@ -1005,14 +1209,39 @@
           ev.push([x, Math.min(next - x, 6), i === 0 ? 'r' : rng.pick(['r', 'r', '5', 'o']), i === 0 ? 1 : 0.8]);
         });
         if (ev.length > 1 && ev[ev.length - 1][0] >= 12 && rng.chance(0.5)) ev[ev.length - 1][2] = 'a';
+        ev.alt = rng.chance(0.6) ? bassAlt(rng, ev, line) : null;
         return ev;
-      default: // drive: steady eighths (quarters in quieter sections)
-        var q = level < 2 && rng.chance(0.5) ? 4 : 2;
-        var oct = rng.chance(0.3);
-        for (s = 0; s < 16; s += q) ev.push([s, q, oct && s % 4 === 2 ? 'o' : 'r', s % 4 === 0 ? 0.95 : 0.72]);
-        if (rng.chance(0.4)) ev[ev.length - 1][2] = 'a';
+      default: // drive
+        kind = level >= 2 ? wpick(rng, { eighths: 4, pop: 2, tresillo: 1.2, kick: 1.5 }) : level === 1 ? wpick(rng, { kick: 3, quarters: 2.5, eighths: 3 }) : wpick(rng, { quarters: 3, eighths: 1.5, half: 1.5 });
+        if (kind === 'half') return [[0, 8, 'r', 0.9], [8, 8, rng.chance(0.4) ? '5' : 'r', 0.75]];
+        if (kind === 'kick' && !groove) kind = 'eighths';
+        if (kind === 'kick') {
+          // With the kick: its steps, beats 1 and 3, and eighths between to make five or six notes.
+          var st = [0, 8];
+          for (s = 1; s < 16; s++) if (groove.kick[s] && st.indexOf(s) < 0) st.push(s);
+          var even = pickSome(rng, [2, 4, 6, 10, 12, 14].filter(function (x) { return st.indexOf(x) < 0; }), 6);
+          while (st.length < 5 + (rng.chance(0.5) ? 1 : 0) && even.length) st.push(even.pop());
+          if (rng.chance(0.25 * sync)) { var pk = rng.pick([7, 15]); if (st.indexOf(pk) < 0) st.push(pk); }
+          st.sort(function (a, b) { return a - b; });
+          st.forEach(function (x, i) {
+            var next = i + 1 < st.length ? st[i + 1] : 16, r = rng.next();
+            var tone = i === 0 ? 'r' : x % 4 === 0 ? (r < 0.7 ? 'r' : r < 0.9 ? '5' : 'o') : (r < 0.75 ? 'r' : 'o');
+            ev.push([x, Math.min(next - x, 4), tone, x % 4 === 0 ? 0.95 : 0.76]);
+          });
+        } else if (kind === 'tresillo') {
+          ev = [[0, 6, 'r', 0.95], [6, 6, rng.chance(0.3) ? 'o' : 'r', 0.85], [12, 4, rng.chance(0.4) ? '5' : 'r', 0.9]];
+          if (rng.chance(0.5)) { ev[1][1] = 4; ev.splice(2, 0, [10, 2, 'r', 0.7]); }
+          if (rng.chance(0.4)) { ev[ev.length - 1][1] = 2; ev.push([14, 2, 'r', 0.72]); }
+        } else {
+          var q = kind === 'quarters' ? 4 : 2, oct = kind === 'pop' || rng.chance(0.3);
+          for (s = 0; s < 16; s += q) ev.push([s, q, q === 2 && oct && s % 4 === 2 ? 'o' : 'r', s % 4 === 0 && (q === 2 || s % 8 === 0) ? 0.95 : 0.72]);
+          // (Quarters: root and fifth.)
+          if (q === 4 && rng.chance(0.6)) ev[2][2] = rng.pick(['5', '5', 'o']);
+        }
+        if (rng.chance(kind === 'quarters' ? 0.55 : 0.4)) ev[ev.length - 1][2] = 'a';
         // J-POP style push: the last eighth anticipates the next chord.
-        if (level >= 2 && q === 2 && rng.chance(sync * 0.6)) ev[ev.length - 1][2] = 'p';
+        if (level >= 2 && ev[ev.length - 1][0] === 14 && rng.chance(sync * 0.6)) ev[ev.length - 1][2] = 'p';
+        ev.alt = rng.chance(0.65) ? bassAlt(rng, ev, line) : null;
         return ev;
     }
   }
@@ -1073,7 +1302,7 @@
         return ev;
       case 'arpeggio':
         var rate = rng.chance(0.3) ? 1 : 2;
-        var order = rng.pick([[0, 1, 2, 3], [0, 2, 1, 3], [0, 1, 2, 1], [0, 2, 3, 2], [0, 3, 2, 1], [0, 1, 3, 2]]);
+        var order = rng.pick([[0, 1, 2, 3], [0, 2, 1, 3], [0, 1, 2, 1], [0, 2, 3, 2], [0, 3, 2, 1], [0, 1, 3, 2], [0, 1, 2], [0, 1, 2], [2, 1, 0], [0, 2, 1, 2], [0, 1, 2, 3, 2, 1], [0, 0, 2, 1]]);
         for (var s = 0, i = 0; s < 16; s += rate, i++) ev.push([s, rate, s % 4 === 0 ? 0.85 : 0.6, order[i % order.length]]);
         return ev;
       default: // rhythm: a syncopated pattern on the eighth/sixteenth grid
@@ -1117,12 +1346,31 @@
       // The batida: the thumb on 1 and 3 (root, then fifth), the fingers pluck
       // the upper strings together ('C') on a syncopated figure.
       ev.push([0, 8, 0.8, 0], [8, 8, 0.7, 1]);
-      var fig = level === 0 ? [0, 6, 12] : rng.pick([[0, 3, 6, 10, 12], [0, 3, 6, 10, 14], [2, 6, 8, 12], [0, 4, 6, 10, 14]]);
-      fig.forEach(function (x, i) {
-        var next = i + 1 < fig.length ? fig[i + 1] : 16;
-        ev.push([x, Math.min(3, next - x), x % 4 === 0 ? 0.6 : 0.52, 'C']);
-      });
-      return ev.sort(function (a, b) { return a[0] - b[0]; });
+      // (The fingers' figure is the player's own: four or five plucks, the "and"
+      // of 2 and of 3 the likeliest; a second figure answers in every other bar.)
+      var BW = { 0: 0.9, 2: 0.25, 3: 0.5, 4: 0.3, 6: 0.8, 8: 0.3, 10: 0.7, 12: 0.6, 14: 0.5 };
+      var figure = function () {
+        var on = [], n = rng.int(4, 5);
+        while (on.length < n) {
+          var w = {}, any = false;
+          Object.keys(BW).forEach(function (x) { if (on.every(function (y) { return Math.abs(y - x) >= 2; })) { w[x] = BW[x]; any = true; } });
+          if (!any) break;
+          on.push(+wpick(rng, w));
+        }
+        return on.sort(function (a, b) { return a - b; });
+      };
+      var bar = function (fig) {
+        var b = [[0, 8, 0.8, 0], [8, 8, 0.7, 1]];
+        fig.forEach(function (x, i) {
+          var next = i + 1 < fig.length ? fig[i + 1] : 16;
+          b.push([x, Math.min(3, next - x), x % 4 === 0 ? 0.6 : 0.52, 'C']);
+        });
+        return b.sort(function (a, c) { return a[0] - c[0]; });
+      };
+      if (level === 0) return bar([0, 6, 12]);
+      ev = bar(figure());
+      if (rng.chance(0.7)) ev.alt = bar(figure());
+      return ev;
     }
     if (style === 'arpeggio') {
       var order = rng.pick([[0, 2, 3, 4, 5, 4, 3, 2], [0, 3, 4, 5, 3, 4, 2, 4], [0, 2, 4, 3, 5, 3, 4, 2]]);
@@ -1136,7 +1384,18 @@
       var keep = s === 0 ? 1 : down ? 0.8 : s % 2 === 0 ? 0.65 : 0.35;
       if (rng.chance(keep)) ev.push([s, grid * 2, down ? 0.85 : 0.6, down ? 'D' : 'U']);
     }
-    for (var i = 0; i < ev.length; i++) ev[i][1] = (i + 1 < ev.length ? ev[i + 1][0] : 16) - ev[i][0];
+    var lengths = function (a) { for (var i = 0; i < a.length; i++) a[i][1] = (i + 1 < a.length ? a[i + 1][0] : 16) - a[i][0]; return a; };
+    lengths(ev);
+    // Every other bar the hand does one thing differently: a stroke left out, or an upstroke more.
+    if (rng.chance(0.7)) {
+      var alt = ev.map(function (e) { return e.slice(); }), late = [];
+      for (s = 6; s < 16; s += 2) late.push(s);
+      var x = rng.pick(late), at = -1;
+      alt.forEach(function (e, k) { if (e[0] === x) at = k; });
+      if (at > 0) alt.splice(at, 1);
+      else { alt.push([x, 2, x % 4 === 0 ? 0.85 : 0.6, x % 4 === 0 ? 'D' : 'U']); alt.sort(function (a, b) { return a[0] - b[0]; }); }
+      ev.alt = lengths(alt);
+    }
     return ev;
   }
 
@@ -1261,78 +1520,80 @@
   // chords change on beat 1 (or on beat 3 in a 2+1 split).
   // ---------------------------------------------------------------------------
   function steps12() { return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; }
-  function makeGroove3(rng, family, level, ghost) {
+  // Where a waltz's kick may fall besides the downbeat.
+  var KICKS3 = [1, 0, 0, 0, 0, 0, 0.3, 0, 0.12, 0, 0.45, 0.12];
+  function drumCore3(rng, family, ghost) {
+    var c = { w: KICKS3.map(function (x) { return x >= 1 ? 1 : x * (0.45 + rng.next() * 1.3); }) }, s;
+    // "Boom-chick-chick", a backbeat on three (a ballad), or on two.
+    c.back = wpick(rng, { chick: 5, three: 2, two: 1 });
+    c.n = +wpick(rng, { 0: 3, 1: 3 });
+    c.feel = family === 'sixteenbeat' ? wpick(rng, { sixteenths: 4, pairs: 2, eighths: 1 }) : wpick(rng, { eighths: 5, pairs: 2, quarters: 1.5, sixteenths: 0.6 });
+    c.extra = c.feel === 'pairs' ? pickSome(rng, [3, 7, 11, 5, 9], 1) : [];
+    c.two = rng.chance(0.5);
+    c.a = rng.next(); c.b = rng.next();
+    c.ghosts = [];
+    if (ghost) for (s = 1; s < 12; s += 2) if (rng.chance(ghost * 0.2)) c.ghosts.push(s);
+    return c;
+  }
+  function makeGroove3(rng, family, level, drummer, fresh) {
+    var c = drummer.core(family, true);
     var g = { kick: steps12(), snare: steps12(), hat: steps12(), open: steps12() };
-    var s;
+    var s, kickB = null;
     var hats8 = function (on, off) { for (s = 0; s < 12; s += 2) g.hat[s] = s % 4 === 0 ? on : off; };
     switch (family) {
       case 'fourfloor':
         // A driving waltz: every beat, the first one heaviest.
         hit(g.kick, [0], 1); hit(g.kick, [4, 8], 0.7);
-        hit(g.snare, [4, 8], 0.6);
-        if (level >= 2) hit(g.open, [2, 6, 10], 0.6); else hit(g.hat, [2, 6, 10], 0.75);
+        hit(g.snare, c.a < 0.6 ? [4, 8] : [8], 0.6);
+        if (level >= 2 || (level >= 1 && c.b < 0.35)) hit(g.open, [2, 6, 10], 0.6); else hit(g.hat, [2, 6, 10], 0.75);
+        if (level >= 2 && c.b > 0.5) for (s = 1; s < 12; s += 2) g.hat[s] = 0.3;
         break;
       case 'swing':
         // Jazz waltz with a hi-hat pedal on 2 and 3.
         hit(g.kick, [0], 0.6);
-        hit(g.hat, [0], 0.8); hit(g.hat, [4, 8], 0.6); g.hat[6] = 0.45; g.hat[10] = 0.4;
-        g.pedal = steps12(); hit(g.pedal, [4, 8], 0.5);
+        hit(g.hat, [0], 0.8); hit(g.hat, [4, 8], 0.6);
+        if (c.a < 0.8) g.hat[6] = 0.45;
+        if (c.a > 0.3) g.hat[10] = 0.4;
+        g.pedal = steps12(); hit(g.pedal, c.b < 0.75 ? [4, 8] : [4], 0.5);
         if (rng.chance(0.6)) g.snare[rng.pick([6, 10])] = 0.35;
         break;
       case 'shuffle':
         // Jazz waltz: ride on "1, 2-and, 3", feathered kick, snare comping.
         hit(g.kick, [0], 0.9);
         if (rng.chance(0.4)) g.kick[10] = 0.5;
-        hit(g.hat, [0], 0.8); hit(g.hat, [4, 8], 0.6); g.hat[6] = 0.45;
+        hit(g.hat, [0], 0.8); hit(g.hat, [4, 8], 0.6); g.hat[c.a < 0.7 ? 6 : 10] = 0.45;
         if (rng.chance(0.5)) g.snare[rng.pick([6, 10])] = 0.35;
         break;
       case 'halftime':
         hit(g.kick, [0], 1);
         g.snare[8] = 0.55;
-        for (s = 0; s < 12; s += 4) g.hat[s] = s ? 0.5 : 0.7;
+        if (c.a < 0.5) for (s = 0; s < 12; s += 4) g.hat[s] = s ? 0.5 : 0.7; else hats8(0.65, 0.4);
+        if (level >= 1 && c.b < 0.4) g.kick[10] = 0.6;
         break;
-      case 'chip':
-        hit(g.kick, [0], 1);
-        hit(g.snare, [4, 8], 0.6);
-        if (rng.chance(0.4)) g.kick[10] = 0.7;
-        hats8(0.75, 0.5);
-        break;
-      default: // eightbeat, sixteenbeat, breakbeat: a pop waltz
-        hit(g.kick, [0], 1);
-        if (level >= 2 && rng.chance(0.5)) g.kick[rng.pick([6, 10])] = 0.7;
-        if (level >= 2 && rng.chance(0.5)) {
-          g.snare[8] = 0.85; // ballad 3/4: a backbeat on three
-        } else {
-          hit(g.snare, [4, 8], 0.5); // "boom-chick-chick"
-        }
-        if (family === 'sixteenbeat' || (level >= 2 && rng.chance(0.3))) {
-          for (s = 0; s < 12; s++) g.hat[s] = s % 4 === 0 ? 0.75 : s % 2 === 0 ? 0.5 : 0.32;
-        } else hats8(0.8, 0.5);
+      default: // eightbeat, sixteenbeat, breakbeat, chip: a pop waltz, composed like the 4/4 grooves
+        var back = level >= 2 && rng.chance(0.4) ? 'three' : c.back;
+        if (back === 'three') g.snare[8] = 0.85; else if (back === 'two') g.snare[4] = 0.75; else hit(g.snare, [4, 8], 0.5);
+        g.kick[0] = 1;
+        var kr = fresh ? rng : makeRng('k3' + c.a); // (the verse's kick is the drummer's own)
+        addKicks(kr, g.kick, c.w, c.n, g.snare, false);
+        if (level >= 2) addKicks(rng, g.kick, c.w, +wpick(rng, { 0: 1, 1: 3 }), g.snare, false);
+        if (c.two) kickB = kickAnswer(fresh ? rng : makeRng('k3b' + c.b), g.kick, c.w, g.snare, false);
+        var feel = level >= 2 && c.feel !== 'sixteenths' && rng.chance(0.3) ? 'sixteenths' : level >= 2 && c.feel === 'quarters' ? 'eighths' : c.feel;
+        g.hat = hatLine(12, feel, 'down', c.extra);
+        if (level >= 2 && rng.chance(0.4)) { g.open[10] = 0.6; g.hat[10] = 0; }
     }
-    if (ghost && level >= 1 && family !== 'swing') {
-      for (s = 1; s < 12; s += 2) if (!g.snare[s] && rng.chance(ghost * 0.2)) g.snare[s] = 0.2;
-    }
+    // (A waltz's extra kicks are lighter than the downbeat.)
+    [g.kick, kickB].forEach(function (k) { if (k) for (s = 1; s < 12; s++) if (k[s] && family !== 'fourfloor') k[s] = Math.min(k[s], 0.7); });
+    if (level >= 1 && family !== 'swing') c.ghosts.forEach(function (x) { if (!g.snare[x]) g.snare[x] = 0.2; });
     if (level === 0) {
       g.snare = steps12();
       g.kick = steps12();
       g.open = steps12();
+      kickB = null;
       for (s = 0; s < 12; s++) g.hat[s] *= 0.7;
     }
+    if (kickB) { g.alt = copyBar(g); g.alt.kick = kickB; }
     return g;
-  }
-  function grooveVariation3(rng, g) {
-    var v = { kick: g.kick.slice(), snare: g.snare.slice(), hat: g.hat.slice(), open: g.open.slice() };
-    if (g.pedal) {
-      v.pedal = g.pedal.slice();
-      v.snare[10] = 0.55;
-      return v;
-    }
-    switch (rng.int(0, 2)) {
-      case 0: v.snare[10] = 0.55; v.snare[11] = 0.7; break;
-      case 1: if (g.kick[0]) v.kick[9] = 0.75; v.snare[11] = 0.6; break; // a kick pickup only where the downbeat has one
-      default: v.snare[8] = Math.max(v.snare[8], 0.6); v.snare[10] = 0.5; v.snare[11] = 0.6;
-    }
-    return v;
   }
 
   // A drummer never plays a groove twice exactly the same: each bar the hats
@@ -1373,39 +1634,54 @@
     }
     return v;
   }
-  // Drum fills, as hits [step, drum, velocity] from `from` to the end of the bar:
-  // 'roll' (the snare in 16ths, getting louder), 'synco' (kick and snare
-  // across the last two beats), 'toms' (down the toms over the last beat or
+  // Drum fills, as hits [step, drum, velocity] from `from` to the end of the
+  // bar, composed stroke by stroke: the rhythm from one cell per beat (busier
+  // towards the end), then the drums that play it. 'roll' (the snare, getting
+  // louder, plain or accented in threes), 'synco' (kick and snare in turn
+  // across the last two beats), 'toms' (around the toms over the last beat or
   // two), 'snaretom' (snare then toms), 'flam' (a short pickup into the next
-  // bar, for the middle of a section).
+  // bar, for the middle of a section). eighths: no sixteenths (swung styles).
+  var FILL_CELLS = [[1, 1, 1, 1], [1, 0, 1, 1], [1, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 1], [1, 0, 0, 1], [0, 1, 1, 1], [0, 0, 1, 1], [1, 0, 0, 0]];
+  var FILL_CELLS8 = [[1, 0, 1, 0], [1, 0, 1, 0], [0, 0, 1, 0], [1, 0, 0, 0]];
+  var TOM_PATHS = [['tomH', 'tomM', 'tomL'], ['tomH', 'tomM', 'tomL'], ['tomH', 'tomL'], ['tomM', 'tomL'], ['tomH', 'tomM'], ['tomM', 'tomH', 'tomL'], ['tomH', 'tomH', 'tomM', 'tomL']];
   function drumFill(rng, kind, spb, snare, eighths, short) {
-    var at = {}, from = spb - 4, add = function (s, d, v) { (at[s] = at[s] || []).push([d, v]); };
-    var stepBy = eighths ? 2 : 1;
-    if (kind === 'roll') {
-      for (var s = from; s < spb; s++) add(s, snare, 0.4 + (s - from) * 0.14);
-    } else if (kind === 'synco') {
-      from = spb - 8;
-      var sy = { 0: 'kick', 2: 'snare', 3: 'snare', 5: 'snare', 6: 'kick', 7: 'snare' };
-      for (s = from; s < spb; s++) {
-        var y = sy[s - from];
-        if (y) add(s, y === 'snare' ? snare : 'kick', y === 'kick' ? 0.9 : 0.55 + 0.08 * (s - from - 2));
-        if (s % 2 === 0) add(s, 'hat', 0.4);
-      }
-    } else if (kind === 'toms' || kind === 'snaretom') {
-      var long = !short && (kind === 'snaretom' || rng.chance(0.4));
-      from = spb - (long ? 8 : 4);
-      var toms = ['tomH', 'tomH', 'tomM', 'tomM', 'tomL', 'tomL'], seq = [];
-      for (s = from; s < spb; s += stepBy) seq.push(s);
-      seq.forEach(function (x, i) {
-        var d = kind === 'snaretom' && x < spb - 4 ? snare : toms[Math.min(toms.length - 1, Math.floor(i * toms.length / seq.length))];
-        add(x, d, 0.55 + 0.25 * i / seq.length);
-      });
-      add(from, 'kick', 0.85);
-    } else { // flam
+    var at = {}, from, add = function (s, d, v) { (at[s] = at[s] || []).push([d, v]); };
+    if (kind === 'flam') {
       from = spb - 2;
-      add(from, snare, 0.5);
-      add(spb - 1, rng.chance(0.5) ? snare : 'tomH', 0.62);
+      var fl = rng.pick([[snare, snare], [snare, 'tomH'], [null, snare], ['kick', snare], ['tomH', 'tomM'], [snare, snare], [null, 'tomH']]);
+      if (fl[0]) add(from, fl[0], 0.5);
+      add(spb - 1, fl[1], 0.62);
+      return { from: from, at: at };
     }
+    var beats = short ? 1 : kind === 'synco' ? 2 : +wpick(rng, kind === 'roll' ? { 1: 5, 2: 3 } : kind === 'snaretom' ? { 2: 5, 1: 1.5 } : { 1: 5, 2: 4 });
+    from = spb - 4 * beats;
+    var cells = eighths ? FILL_CELLS8 : FILL_CELLS, steps = [], b, s;
+    for (b = 0; b < beats; b++) {
+      var cell = b === beats - 1 ? rng.pick(cells.slice(0, eighths ? 2 : 5)) : b === 0 && kind !== 'synco' ? rng.pick(cells.slice(0, 6)) : rng.pick(cells);
+      for (s = 0; s < 4; s++) if (cell[s]) steps.push(from + b * 4 + s);
+    }
+    var n = steps.length, path = rng.pick(TOM_PATHS), threes = kind === 'roll' && n >= 5 && rng.chance(0.35), prev = '';
+    var tomAt = function (p) { return path[Math.min(path.length - 1, Math.floor(p * path.length))]; };
+    steps.forEach(function (x, i) {
+      var p = i / n, v = 0.48 + 0.36 * i / Math.max(1, n - 1) + ((x - from) % 4 === 0 ? 0.05 : 0), d;
+      if (kind === 'roll') {
+        d = snare;
+        if (threes) v += i % 3 === 0 ? 0.12 : -0.1;
+      } else if (kind === 'synco') {
+        d = i === 0 || (prev !== 'kick' && i < n - 1 && rng.chance(0.32)) ? 'kick' : snare;
+        if (d === 'kick') v = 0.9;
+      } else if (kind === 'toms') {
+        d = tomAt(p);
+      } else {
+        d = x < spb - 4 || (beats === 1 && i < n / 2) ? snare : tomAt(beats === 1 ? (i - Math.ceil(n / 2)) / Math.max(1, n - Math.ceil(n / 2)) : (x - (spb - 4)) / 4);
+      }
+      prev = d;
+      add(x, d, v);
+    });
+    if (kind === 'synco') { for (s = from; s < spb; s += 4) add(s, 'hat', 0.4); }
+    else if ((kind !== 'roll' || beats > 1) && steps[0] === from) add(from, 'kick', 0.85);
+    // (A roll may end on the floor tom.)
+    if (kind === 'roll' && n >= 3 && rng.chance(0.25)) at[steps[n - 1]] = [['tomL', 0.85]];
     return { from: from, at: at };
   }
   // A bass line varied for one bar: the walking line finds a new way to the
@@ -1414,6 +1690,7 @@
   function varyBass(rng, ev, amt, line, turn) {
     if (line === 'long' || line === 'bossa' || ev.length < 2) return ev;
     var v = ev.map(function (e) { return e.slice(); });
+    v.noHead = ev.noHead;
     if (line === 'walking') {
       for (var i = 1; i < v.length; i++) if (v[i][2] !== 'a' && v[i][2] !== 'p') v[i][2] = rng.pick(['3', '5', '5', 's', 'o']);
       return v;
@@ -1423,7 +1700,11 @@
       if (v[k][2] === 'r') v[k][2] = rng.pick(['o', '5', 'o']);
     }
     var last = v[v.length - 1];
-    if (turn && last[2] !== 'p' && rng.chance(0.6)) last[2] = 'a';
+    // The end of a phrase: an approach note, or (a driving bass) a run up the chord.
+    if (turn && line === 'drive' && v.length === 16 / 2 && rng.chance(0.18 + amt * 0.2)) {
+      v = v.filter(function (e) { return e[0] < 12; });
+      v.push([12, 1, 'r', 0.9], [13, 1, '3', 0.75], [14, 1, '5', 0.8], [15, 1, 'a', 0.85]);
+    } else if (turn && last[2] !== 'p' && rng.chance(0.6)) last[2] = 'a';
     return v;
   }
   function makeBassLine3(rng, line, groove, level, sync) {
@@ -1435,7 +1716,9 @@
         // Waltz bass: the downbeat, sometimes the fifth on three.
         return rng.chance(0.5) ? [[0, 12, 'r', 0.95]] : [[0, 4, 'r', 1], [8, 4, '5', 0.65]];
       case 'offbeat':
-        return [[2, 2, 'r', 1], [6, 2, 'r', 0.9], [10, 2, 'r', 0.9]];
+        ev = [[2, 2, 'r', 1], [6, 2, 'r', 0.9], [10, 2, 'r', 0.9]];
+        ev.noHead = true;
+        return ev;
       case 'walking':
         return [[0, 4, 'r', 1], [4, 4, rng.pick(['3', '5']), 0.75], [8, 4, 'a', 0.75]];
       case 'syncopated':
@@ -1588,10 +1871,22 @@
       [[0, 4], [4, 4], [8, 8]],
       [[0, 12], [12, 4]],
       [[0, 6], [6, 2], [8, 8]],
-      [[4, 4], [8, 8]]
+      [[4, 4], [8, 8]],
+      [[0, 8], [8, 8]],
+      [[0, 4], [4, 8], [12, 4]],
+      [[0, 4], [4, 12]],
+      [[0, 6], [6, 6], [12, 4]],
+      [[0, 10], [10, 6]],
+      [[0, 6], [6, 10]],
+      [[2, 6], [8, 8]],
+      [[0, 4], [4, 4], [8, 4], [12, 4]],
+      [[0, 8], [8, 2], [10, 6]],
+      [[0, 2], [2, 6], [8, 8]],
+      [[4, 4], [8, 4], [12, 4]],
+      [[0, 12]]
     ],
-    slowAnswer: [[[0, 14]], [[0, 8], [8, 6]], [[0, 4], [4, 10]]],
-    slowCadence: [[[0, 14]], [[0, 8], [8, 6]]]
+    slowAnswer: [[[0, 14]], [[0, 8], [8, 6]], [[0, 4], [4, 10]], [[0, 6], [6, 8]], [[0, 4], [4, 4], [8, 6]], [[2, 6], [8, 6]]],
+    slowCadence: [[[0, 14]], [[0, 8], [8, 6]], [[0, 4], [4, 10]], [[0, 6], [6, 8]]]
   };
 
   var TITLE_A = ['Neon', 'Paper', 'Velvet', 'Midnight', 'Golden', 'Crystal', 'Silent', 'Electric', 'Lunar', 'Amber',
@@ -1700,6 +1995,7 @@
     var parts = sectionParts('B');
 
     var bpm;
+    if (o.bpm !== undefined && o.bpm !== null && !isFinite(+o.bpm)) throw new Error('music-composition.js: bpm must be a number');
     if (o.bpm) bpm = clamp(Math.round(+o.bpm), 40, 240);
     else if (md) bpm = clamp(Math.round(st.bpm[0] + (st.bpm[1] - st.bpm[0]) * R('bpm').range(md.tempo[0], md.tempo[1])), 40, 240);
     else bpm = Math.round(R('bpm').range(st.bpm[0], st.bpm[1]));
@@ -1721,7 +2017,7 @@
     var barDur = stepDur * SPB;
     var bars;
     if (o.bars) bars = Math.round(+o.bars / 4) * 4;
-    else if (o.duration) bars = Math.round((+o.duration - (loop ? 0 : st.fx.tail)) / barDur / 4) * 4;
+    else if (o.duration) bars = Math.max(8, Math.round((+o.duration - (loop ? 0 : st.fx.tail)) / barDur / 4) * 4);
     // Blocks laid end to end make the song as long as they are (16 bars more for a last one without a length).
     else if (blocks.spans.some(function (b) { return b.bars; })) {
       bars = blocks.spans.reduce(function (a, b) { return a + (b.bars || 16); }, 0);
@@ -1785,6 +2081,7 @@
       useBridge ? ['C'] : [], useDrop ? ['D'] : [], useBridge || useDrop ? ['B'] : []);
     var again = ['A'].concat(usePre ? ['P'] : [], ['B']);
     // The outro of a longer song plays the hook once more before the closing cadence (8 bars).
+    // The outro of a longer song plays the hook once more before the closing cadence (8 bars).
     function buildForm(total) {
       var out = [];
       var remaining = total;
@@ -1804,6 +2101,17 @@
         var flen = ftype === 'C' && remaining < 16 ? 4 : Math.min(LEN[ftype], remaining);
         out.push({ type: ftype === 'D' ? 'B' : ftype, bars: flen, drop: ftype === 'D' });
         remaining -= flen;
+      }
+      // A song ends on its chorus, never on a verse: a last verse becomes the
+      // chorus once more, and a verse with half a chorus after it becomes a
+      // short bridge (4 bars) and a whole chorus. So the shortest pieces are a
+      // chorus (8 or 16 bars), then a verse and a chorus. (Only the last
+      // section or two differ from a longer version of the same song.)
+      var bi = out.length - 1, lastS = out[bi], prevS = out[bi - 1];
+      if (lastS.type === 'A') lastS.type = 'B';
+      else if (lastS.type === 'B' && lastS.bars === 4 && prevS && prevS.type === 'A' && prevS.bars === 8) {
+        if (out[bi - 2] && out[bi - 2].type === 'B') { prevS.type = 'C'; prevS.bars = 4; lastS.bars = 8; }
+        else { prevS.type = 'B'; }
       }
       if (io) out.push({ type: 'outro', bars: outroBars });
       // A loop goes from its last section back to its first: a verse there would
@@ -1965,6 +2273,26 @@
       var s = modeName === 'mixolydian' || modeName === 'lydian' ? MODES.major : modeName === 'minor' ? HARMONIC_MINOR : modeName === 'dorian' ? MELODIC_MINOR : scale;
       return makeChord(4, s, { tones: seventh ? [0, 2, 4, 6] : [0, 2, 4], kind: s === scale ? 'dia' : 'bor' });
     }
+    // Modal songs cadence in their mode: mixolydian's bVII (or IV) falls to I,
+    // and the dorian or natural minor of dance, lo-fi and ambient music comes
+    // home from bVII (or dorian's major IV), not through a borrowed major V.
+    var modal = modeName === 'mixolydian' || ((modeName === 'dorian' || modeName === 'minor') && /dance|lofi|ambient|chip/.test(st.idioms));
+    var modalPull = R('modal-cadence').next();
+    // The chord that leads home: the dominant, or the mode's own.
+    function pull(seventh) {
+      if (!modal || modalPull < 0.2 || isDim(6)) return dominant(seventh);
+      return dia(modeName !== 'minor' && modalPull > 0.8 ? 3 : 6);
+    }
+    // The two chords before the tonic at a close.
+    function cadencePair() {
+      var pd = dia(!isDim(1) && hr.chance(0.5) ? 1 : 3), p2 = pull(true);
+      if (isDominant(p2)) return [pd, p2];
+      if (p2.deg === 3) return [dia(6), p2];
+      return [dia(modeName === 'minor' && !isDim(5) && hr.chance(0.6) ? 5 : 3), p2];
+    }
+    var CADENCE = { pop: 0.6, jpop: 0.7, jazz: 0.8, bossa: 0.8, lofi: 0.3, dance: 0.15, chip: 0.6, ambient: 0 };
+    var cadP = CADENCE[st.idioms] === undefined ? 0.5 : CADENCE[st.idioms];
+    var cadB = R('cadence').chance(cadP), cadLast = R('cadence-last').chance(cadP ? Math.max(0.5, Math.min(0.95, cadP + 0.35)) : 0);
     function isDominant(c) { return c.kind === 'sec' || (c.deg === 4 && (c.scale[6] - c.scale[4] + 12) % 12 === 4); }
 
     // Roman-numeral token -> chord, e.g. 'IVmaj7', 'bVII', 'iv7', 'III7' (V7/vi), 'V/3'.
@@ -2051,9 +2379,6 @@
       usedIdioms.push(id);
       return parseIdiom(id.p);
     }
-    var pool = (PROGRESSIONS[modeName] || []).concat(bright ? PROGRESSIONS.bright : PROGRESSIONS.dark);
-    if (modeName === 'lydian') pool = PROGRESSIONS.lydian.concat(PROGRESSIONS.bright.filter(function (p) { return p.indexOf(3) < 0; }));
-    pool = pool.filter(function (p) { return !p.some(isDim); });
     var markov = MARKOV[modeName];
     // A progression for a section type: usually an idiom that suits the style and
     // the section; sometimes a walk through functional harmony. Returns bars of chords.
@@ -2223,7 +2548,7 @@
     var songScale = scale;
     function inColour(cl, fn) {
       if (!cl || !cl.hk) return fn();
-      var keep = [scale, modeName, bright, CANDIDATE_SCALES, idiomList, moodName, md, spice, st, pool, markov];
+      var keep = [scale, modeName, bright, CANDIDATE_SCALES, idiomList, moodName, md, spice, st, null, markov];
       modeName = cl.mode; scale = MODES[modeName];
       bright = modeName === 'major' || modeName === 'lydian' || modeName === 'mixolydian';
       CANDIDATE_SCALES = bright
@@ -2233,14 +2558,11 @@
       moodName = cl.mood; md = cl.md;
       st = md ? moodStyle(plainSt, md) : plainSt;
       spice = st.spice;
-      pool = (PROGRESSIONS[modeName] || []).concat(bright ? PROGRESSIONS.bright : PROGRESSIONS.dark);
-      if (modeName === 'lydian') pool = PROGRESSIONS.lydian.concat(PROGRESSIONS.bright.filter(function (p) { return p.indexOf(3) < 0; }));
-      pool = pool.filter(function (p) { return !p.some(isDim); });
       markov = MARKOV[modeName];
       var out;
       try { out = fn(); } finally {
         scale = keep[0]; modeName = keep[1]; bright = keep[2]; CANDIDATE_SCALES = keep[3]; idiomList = keep[4];
-        moodName = keep[5]; md = keep[6]; spice = keep[7]; st = keep[8]; pool = keep[9]; markov = keep[10];
+        moodName = keep[5]; md = keep[6]; spice = keep[7]; st = keep[8]; markov = keep[10];
       }
       if (Array.isArray(out)) out.forEach(function (b) { b.segs.forEach(function (sg) { if (sg.c.kind === 'dia' && sg.c.scale !== songScale) sg.c.kind = 'bor'; }); });
       return out;
@@ -2273,7 +2595,7 @@
       else if (bright && hr.chance(0.4)) cs = [dia(1), dominant(true), dia(0), dia(0)];                                    // ii - V7 - I
       else cs = degs.map(function (d) { return d === 4 ? dominant(false) : dia(d); });
       var last = makeChord(0, scale, {});
-      if (!bright && hr.chance(0.3) && !(md && md.dark)) last = makeChord(0, modeName === 'dorian' ? MODES.mixolydian : MODES.major, { kind: 'bor' }); // Picardy third
+      if (!bright && hr.chance(0.3) && !(md && md.dark)) last = makeChord(0, MODES.major, { kind: 'bor' }); // Picardy third (major, not a dominant seventh)
       cs[3] = last;
       var close = cs.map(function (c) { return { segs: [{ s: 0, c: c }], cont: false }; });
       // An 8-bar outro: the intro (the chorus's first half, with its hook) comes back, then the close.
@@ -2304,16 +2626,37 @@
     function leadIn(sec, si) {
       var next = sections[si + 1] || (loop ? sections[0] : null);
       var b = sec.plan[sec.plan.length - 1];
-      if (!next || sec.type === 'outro' || b.cont) return;
+      if (!next || sec.type === 'outro') return;
       var sh = function (c) { return withProps(c, { shift: sec.shift }); };
-      var last = b.segs[b.segs.length - 1].c, x = next.plan[0].segs[0].c;
+      var x = next.plan[0].segs[0].c;
+      // A chorus closes: its last two bars are a cadence onto the tonic (ii or
+      // IV, V7 | I; in a modal song the mode's own cadence), and only the last
+      // beat turns round to what follows. The refrain can then end on the
+      // keynote over the tonic chord, instead of hanging on the dominant. (How
+      // often is the style's; the song's last chorus nearly always closes.)
+      var np = sec.plan.length;
+      if (sec.type === 'B' && !sec.drop && !sec.colour && np >= 8 && next.shift === sec.shift &&
+          (cadB || (!sections.slice(si + 1).some(function (y) { return y.type === 'B' && !y.drop; }) && cadLast))) {
+        var cp = cadencePair(), pre = sec.plan[np - 2];
+        pre.cont = false; b.cont = false;
+        pre.segs = [{ s: 0, c: sh(cp[0]) }, { s: 8, c: sh(cp[1]) }];
+        b.segs = [{ s: 0, c: sh(dia(0)) }];
+        var turnAt = BEATS === 3 ? 8 : 12;
+        if (next.type !== 'outro') {
+          if (x.deg === 0) b.segs.push({ s: turnAt, c: sh(pull(true)) });
+          else if (!isDim(x.deg) && x.scale === scale && hr.chance(0.15 + 0.4 * spice)) b.segs.push({ s: turnAt, c: sh(secondaryDominant(scale, x.deg, true)) });
+        }
+        return;
+      }
+      if (b.cont) return;
+      var last = b.segs[b.segs.length - 1].c;
       if (next.shift !== sec.shift) {
         b.segs = [{ s: 0, c: b.segs[0].c }, { s: 8, c: withProps(dominant(true), { shift: next.shift }) }];
         return;
       }
       if (sec.type === 'P' && !isDominant(last)) {
-        var v = dominant(hr.chance(0.5));
-        b.segs = hr.chance(0.5) ? [{ s: 0, c: sh(withProps(v, { tones: [0, 3, 4] })) }, { s: 8, c: sh(v) }] : [{ s: 0, c: sh(v) }];
+        var v = pull(hr.chance(0.5));
+        b.segs = isDominant(v) && hr.chance(0.5) ? [{ s: 0, c: sh(withProps(v, { tones: [0, 3, 4] })) }, { s: 8, c: sh(v) }] : [{ s: 0, c: sh(v) }];
         return;
       }
       if (b.segs.length > 1 || isDominant(last)) return;
@@ -2322,9 +2665,9 @@
         if (last.deg === 0) {
           b.segs = bright && hr.chance(0.5)
             ? [{ s: 0, c: sh(dia(!isDim(3) && hr.chance(0.5) ? 3 : 1)) }, { s: 8, c: sh(dominant(true)) }]
-            : [{ s: 0, c: sh(dominant(hr.chance(0.5))) }];
+            : [{ s: 0, c: sh(pull(hr.chance(0.5))) }];
         } else if (hr.chance(0.35 + 0.5 * spice)) {
-          b.segs = [{ s: 0, c: last }, { s: 8, c: sh(dominant(hr.chance(0.6))) }];
+          b.segs = [{ s: 0, c: last }, { s: 8, c: sh(pull(hr.chance(0.6))) }];
         }
       // (Into a block of another mode, a degree names a different chord: no secondary dominant then.)
       } else if (x.deg !== last.deg && !isDim(x.deg) && !(next.colour !== sec.colour && x.scale !== scale) && hr.chance(0.15 + 0.4 * spice)) {
@@ -2396,7 +2739,7 @@
         // A drum fill (or a sudden stop) leads into the next section.
         if (j === sec.bars - 1 && next && kit && sec.type !== 'P' && sec.type !== 'intro' && !sec.drop && sec.bars >= 4) {
           var f = wpick(fl, FILLS[parts.groove] || { roll: 4, synco: 4, stop: 2, toms: 3, snaretom: 2 });
-          if (f === 'stop' && next.type !== 'B') f = 'roll';
+          if (f === 'stop' && next.type !== 'B') f = !FILLS[parts.groove] || FILLS[parts.groove].roll ? 'roll' : FILLS[parts.groove].toms ? 'toms' : 'none';
           if (f !== 'none') info.fill = f;
           if (f === 'stop') info.stopAt = SPB - 4;
         }
@@ -2488,13 +2831,15 @@
     }
     // A guitar voicing: the bass note low, then chord tones stacked like strings.
     function guitarVoicing(c) {
-      var root = 40 + ((keyPc + chordPitch(c, c.deg + c.bass)) % 12 + 12) % 12;
-      if (root > 47) root -= 12;
+      // (From the low E string, 40, up to D#, 51. A low root takes the fifth or
+      // more above it, not a third: close thirds down there are mud.)
+      var root = 36 + ((keyPc + chordPitch(c, c.deg + c.bass)) % 12 + 12) % 12;
+      if (root < 40) root += 12;
       var pcs = c.tones.slice(0, 4).map(function (t) { return ((keyPc + chordPitch(c, c.deg + t)) % 12 + 12) % 12; });
       var out = [root], m = root;
       for (var i = 0; out.length < 6 && i < 40; i++) {
         m++;
-        if (pcs.indexOf(m % 12) >= 0 && m - out[out.length - 1] >= 3) out.push(m);
+        if (pcs.indexOf(m % 12) >= 0 && m - out[out.length - 1] >= (out.length === 1 && root < 46 ? 6 : 3)) out.push(m);
       }
       return out;
     }
@@ -2515,6 +2860,63 @@
       while (m - to > 6) m -= 12;
       while (to - m > 6) m += 12;
       return m;
+    }
+    // A walking bass line, one bar of quarter notes, walked from the note
+    // before: the root when a chord arrives; into the next chord by a half step
+    // from below or above, a scale step, or its fifth; between them chord and
+    // scale tones by step (a passing tone now and then), mostly keeping their
+    // direction, turning at the ends of the range. The first verse may be played
+    // in two (half notes: root and fifth) before the band walks.
+    var walkPrev = null, twoFeel = R('two-feel').chance(0.5);
+    function walkBar(bar) {
+      var info = barInfo[bar], segs = info.segs, rng = R('walk-' + bar), out = [], LO = 28 + bassOct, HI = 50 + bassOct;
+      var near = function (m, to) { while (m - to > 6) m -= 12; while (to - m > 6) m += 12; while (m < LO) m += 12; while (m > HI) m -= 12; return m; };
+      var segAt = function (s) { var g = segs[0]; for (var i = 1; i < segs.length; i++) if (segs[i].s <= s) g = segs[i]; return g; };
+      var after = barInfo[bar + 1] && barInfo[bar + 1].parts.bass && !barInfo[bar + 1].cont ? barInfo[bar + 1].segs[0] : null;
+      var pcsOf = function (c, ds) { return ds.map(function (d) { return ((keyPc + chordPitch(c, d)) % 12 + 12) % 12; }); };
+      var two = twoFeel && BEATS === 4 && (info.sec.type === 'intro' || (info.sec.type === 'A' && info.sec.occ === 0));
+      var dir = walkPrev !== null && walkPrev > 40 + bassOct ? -1 : 1;
+      for (var b = 0; b < BEATS; b++) {
+        var s = b * 4, sg = segAt(s), c = sg.c, m;
+        var nsg = b + 1 < BEATS ? segAt(s + 4) : after, arrives = nsg && nsg !== sg && !sameChord(nsg.c, c);
+        var root = bassNote(c, 'r');
+        if (walkPrev !== null && root + 12 <= HI - 4 && Math.abs(root + 12 - walkPrev) + 3 < Math.abs(root - walkPrev)) root += 12;
+        if (two && b % 2 === 1) continue;
+        if (s === sg.s || (b === 0 && !info.cont) || walkPrev === null) {
+          m = root;
+        } else if (two) {
+          m = near(bassNote(c, '5'), walkPrev);
+        } else if (arrives) {
+          // Lead into the next chord's root.
+          var target = near(bassNote(nsg.c, 'r'), walkPrev), k = rng.next();
+          var sc = pcsOf(nsg.c, [0, 1, 2, 3, 4, 5, 6]), below = target - 1, above = target + 1;
+          while (sc.indexOf(((below % 12) + 12) % 12) < 0) below--;
+          while (sc.indexOf(((above % 12) + 12) % 12) < 0) above++;
+          m = k < 0.35 ? target - 1 : k < 0.6 ? target + 1 : k < 0.9 ? (walkPrev <= target ? below : above) : near(target + 7, walkPrev);
+          if (m === walkPrev) m = m < target ? target + 1 : target - 1;
+          if (m < LO) m = target + 1; else if (m > HI) m = target - 1;
+        } else {
+          var ct = pcsOf(c, c.tones.map(function (t) { return c.deg + t; })), sl = pcsOf(c, [0, 1, 2, 3, 4, 5, 6]);
+          if (walkPrev >= HI - 3) dir = -1; else if (walkPrev <= LO + 3) dir = 1; else if (rng.chance(0.3)) dir = -dir;
+          var cands = [], ws = [], tot = 0;
+          for (var d = -4; d <= 4; d++) {
+            if (!d || walkPrev + d < LO || walkPrev + d > HI) continue;
+            var pc = (((walkPrev + d) % 12) + 12) % 12;
+            var w = ct.indexOf(pc) >= 0 ? 3 : sl.indexOf(pc) >= 0 ? 2 : Math.abs(d) === 1 ? 0.35 * (0.5 + spice) : 0;
+            if (!w) continue;
+            w *= (d > 0 ? 1 : -1) === dir ? 2.3 : 1;
+            if (Math.abs(d) <= 2) w *= 1.6;
+            cands.push(walkPrev + d); ws.push(w); tot += w;
+          }
+          var x = rng.next() * tot, q = 0;
+          while (q < cands.length - 1 && (x -= ws[q]) >= 0) q++;
+          m = cands.length ? cands[q] : root;
+          dir = m > walkPrev ? 1 : -1;
+        }
+        out.push([s, two ? 8 : 4, m, b === 0 ? 1 : b === 2 && BEATS === 4 ? 0.86 : 0.78]);
+        walkPrev = m;
+      }
+      return out;
     }
     // How long a push into bar nb rings on: as long as the note it replaces on
     // that bar's downbeat (up to the first chord change), so the part does not
@@ -2544,6 +2946,8 @@
     // Patterns per section type, generated for this song, so repeats sound
     // like the same section.
     var pat = {};
+    var ARP_SHAPES = ['up', 'updown', 'down', 'skip', 'converge', 'pedal', 'thumb'];
+    var drummer = makeDrummer(R, st.expr.ghost);
     ['intro', 'A', 'P', 'B', 'C', 'outro', 'drop'].forEach(function (type) { makePatterns(type, gr); });
     // A block with instruments of its own gets its own patterns, from a stream
     // of their own (the rest of the song keeps its patterns).
@@ -2554,23 +2958,63 @@
       var level = { intro: 0, A: 1, P: 1, B: 2, C: 1, outro: 0, drop: 0 }[type];
       var fam = type === 'C' && parts.groove !== 'fourfloor' && parts.groove !== 'halftime' && gr.chance(0.6) ? 'halftime' : parts.groove;
       var three = BEATS === 3;
-      var groove = kit ? (three ? makeGroove3 : makeGroove)(gr, fam, level, st.expr.ghost) : null;
+      // (Drums from streams of their own, so that the other parts do not depend on them.)
+      var dr = R('drums-' + key);
+      var groove = kit ? (three ? makeGroove3 : makeGroove)(dr, fam, level, drummer, type === 'C' && fam === parts.groove, kit) : null;
       pat[key] = {
         drums: groove,
-        drumsVar: groove ? (three ? grooveVariation3 : grooveVariation)(gr, groove) : null,
+        drumsVar: groove ? grooveVariation(dr, groove) : null,
         // Oom-pah-pah: when the chords take beats 2 and 3, the bass keeps to the downbeat.
         bass: (three ? makeBassLine3 : makeBassLine)(gr, three && parts.comping === 'rhythm' && (parts.bassLine === 'drive' || parts.bassLine === 'offbeat') ? 'root' : parts.bassLine, groove, level, st.melody.sync),
         comp: three && level === 0 && parts.comping === 'rhythm' ? [[0, 12, 0.8]] : (three ? makeComp3 : makeComp)(gr, parts.comping, level, st.melody.sync),
         guitar: parts.guitar !== 'none' ? (three ? makeGuitar3 : makeGuitar)(gr, parts.guitar, level) : null,
-        arpShape: gr.pick(['up', 'updown', 'down', 'skip'])
+        arpShape: gr.pick(ARP_SHAPES)
       };
       var ap = R('arp-' + key);
       pat[key].arpFlip = ap.chance(0.5);
-      pat[key].arpShape2 = ap.pick(['up', 'updown', 'down', 'skip'].filter(function (x) { return x !== pat[key].arpShape; }));
+      pat[key].arpShape2 = ap.pick(ARP_SHAPES.filter(function (x) { return x !== pat[key].arpShape; }));
+      // The arpeggio's rhythm: straight, or with a gap or a pickup of its own.
+      var a16 = parts.arp === 'sixteenths' || parts.arp === 'digital', mask = [], ms;
+      var mk = a16 ? wpick(ap, { straight: 5, gallop: 2, dotted: 1.5 }) : wpick(ap, { straight: 5, pickup: 2, rest: 1.5 });
+      if (level === 0) mk = 'straight';
+      for (ms = 0; ms < SPB; ms += a16 ? 1 : 2) if (!(mk === 'gallop' && ms % 4 === 1) && !(mk === 'dotted' && ms % 3)) mask.push(ms);
+      if (mk === 'pickup') mask.push(ap.pick([7, SPB - 1]));
+      if (mk === 'rest') { var gone = ap.pick([6, SPB - 2]); mask = mask.filter(function (q) { return q !== gone; }); }
+      pat[key].arpMask = mask.sort(function (a, b) { return a - b; });
     }
     // A comping pattern played a little differently in one bar: a chord left
     // out (the one before rings on), or a long one answered on the offbeat.
-    function varyComp(rng, ev, amt) {
+    // Jazz comping is improvised bar by bar on the (swung) eighths: the
+    // section's own figure comes back often enough to be known; between, one to
+    // three chords where they fall well (the "and" of 2, the push on the "and"
+    // of 4), one of them held, the rest short; now and then the piano lays out.
+    var laidOut = false;
+    function jazzComp(rng, home, level) {
+      if (rng.chance(0.4)) { laidOut = false; return home; }
+      var ev = [];
+      ev.noHead = true;
+      if (!laidOut && rng.chance(0.12)) { laidOut = true; return ev; }
+      laidOut = false;
+      var W = { 0: 0.3, 2: 0.25, 4: 0.25, 6: level >= 2 ? 0.7 : 0.45, 8: 0.2, 10: 0.3, 12: 0.25, 14: level >= 2 ? 0.6 : 0.4 };
+      var n = +(level >= 2 ? wpick(rng, { 2: 4, 3: 5 }) : wpick(rng, { 1: 3, 2: 5, 3: 1.5 })), on = [];
+      for (var i = 0; i < n; i++) {
+        var free = Object.keys(W).map(Number).filter(function (x) { return on.every(function (y) { return Math.abs(x - y) >= 4; }); });
+        if (!free.length) break;
+        var w = {};
+        free.forEach(function (x) { w[x] = W[x]; });
+        on.push(+wpick(rng, w));
+      }
+      on.sort(function (a, b) { return a - b; });
+      var long = Math.floor(rng.next() * on.length);
+      on.forEach(function (x, k) {
+        var room = (k + 1 < on.length ? on[k + 1] : SPB) - x;
+        if (x === 14) ev.push([x, 2, 0.72, 'p']);
+        else ev.push([x, Math.min(room - 1, k === long ? rng.int(3, 5) : rng.int(1, 2)), x % 8 === 0 ? 0.78 : 0.68]);
+      });
+      return ev;
+    }
+    function varyComp(rng, ev, amt, level) {
+      if (parts.comping === 'jazz' && ev.noHead && BEATS !== 3) return jazzComp(rng, ev, level);
       if (parts.comping !== 'rhythm' || BEATS === 3 || ev.length < 2) return ev;
       var v = ev.map(function (e) { return e.slice(); });
       v.noHead = ev.noHead;
@@ -2603,6 +3047,7 @@
       if (tom !== undefined) n.tom = tom;
       notes.push(n);
     }
+    var buildShape = R('build').int(0, 3), buildKick = R('build-kick').chance(0.3);
     var bassPushed = false, compPushed = false;
     // (See Pad: a chorus lift for songs whose chorus adds no part of its own,
     // unless the pad was chosen as 'none' on purpose; not for jazz or chip sound.)
@@ -2650,7 +3095,7 @@
         G = varyGroove(dv, G, prt.drums === 0 ? 0 : 0.22 + (info.j >= 4 ? 0.1 : 0) + 0.1 * Math.min(2, info.sec.occ) + info.free, parts.groove);
         var fillEv = info.fill && info.fill !== 'stop'
           ? drumFill(dv, info.fill, SPB, snareKind, parts.groove === 'swing' || parts.groove === 'shuffle' || parts.groove === 'bossa', info.small) : null;
-        var buildBar = info.rush ? 1 : prt.build && parts.groove !== 'shuffle' && parts.groove !== 'bossa' ? info.j - (info.sec.bars - 2) : -1;
+        var buildBar = info.rush ? 1 : prt.build && parts.groove !== 'shuffle' && parts.groove !== 'bossa' && parts.groove !== 'swing' ? info.j - (info.sec.bars - 2) : -1;
         for (var s = 0; s < stopAt; s++) {
           if (fillEv && s >= fillEv.from) {
             (fillEv.at[s] || []).forEach(function (h) { drum(bar, s, h[0], h[1], h[0] === 'hat' ? -0.25 : 0.05); });
@@ -2662,9 +3107,10 @@
           if (buildBar >= 0) {
             // (Dance music leaves the last eighth before the drop empty.)
             if (buildBar === 1 && parts.groove === 'fourfloor' && s >= SPB - 2) continue;
-            var every = buildBar === 1 ? (s < SPB / 2 ? 2 : 1) : 4;
+            // (How the snare speeds up, and how long the kick stays, is the song's own.)
+            var every = buildBar === 1 ? (buildShape === 2 ? (s < SPB - 4 ? 2 : 1) : buildShape === 3 ? 1 : s < SPB / 2 ? 2 : 1) : buildShape === 1 && s >= SPB / 2 ? 2 : 4;
             if (s % every === 0) drum(bar, s, snareKind, 0.3 + 0.6 * (buildBar * SPB + s) / (2 * SPB), 0.05);
-            if (s % 4 === 0 && (buildBar === 0 || s < SPB / 2)) drum(bar, s, 'kick', 0.9);
+            if (s % 4 === 0 && (buildBar === 0 || s < (buildKick ? SPB : SPB / 2))) drum(bar, s, 'kick', 0.9);
             continue;
           }
           if (info.thin) {
@@ -2695,7 +3141,8 @@
       if (prt.bass && bassPatch && !info.cont) {
         var bp = prt.bass === 'long' || parts.bassLine === 'long'
           ? (type === 'outro' || span > 1 || parts.bassLine === 'long' ? [[0, SPB * span, 'r', 0.8]] : [[0, 8, 'r', 0.8], [8, SPB - 8, '5', 0.6]])
-          : varyBass(R('bassbar-' + bar), P.bass, 0.25 + 0.15 * Math.min(2, info.sec.occ) + 2 * info.free, parts.bassLine, info.j % 4 === 3 || (info.free > 0 && info.j % 2 === 1));
+          : parts.bassLine === 'walking' && P.bass.length >= 3 ? walkBar(bar)
+          : varyBass(R('bassbar-' + bar), P.bass.alt && info.j % 2 === 1 ? P.bass.alt : P.bass, 0.25 + 0.15 * Math.min(2, info.sec.occ) + 2 * info.free, parts.bassLine, info.j % 4 === 3 || (info.free > 0 && info.j % 2 === 1));
         segs.forEach(function (sg, k) {
           var end = segEnd(k);
           var evs = segEvents(bp, sg.s, end, ['r', 0.9]);
@@ -2704,10 +3151,15 @@
             if (e[0] >= stopAt) return;
             if (pushedIn && e[0] === 0) return; // tied over from the anticipation
             var len = Math.min(e[1], stopAt - e[0]);
-            if (lastOfSong) len = Math.max(len, SPB);
+            // (Only an ending holds its last bass note: a loop goes back to its first chord.)
+            if (lastOfSong && prt.end) len = Math.max(len, SPB);
             var tone = e[2], m, bPatch = bassPatch;
+            // A chord that comes in the middle of the bar is stated by its root.
+            if (k > 0 && e[0] === sg.s && typeof tone !== 'number' && tone !== 'p' && !sameChord(sg.c, segs[k - 1].c)) tone = 'r';
             var lastNote = ei === evs.length - 1 && k === segs.length - 1;
-            if (tone === 'p' && lastNote && nextC && !sameChord(nextC, sg.c) && e[0] >= SPB - 4 && stopAt === SPB) {
+            if (typeof tone === 'number') {
+              m = tone;
+            } else if (tone === 'p' && lastNote && nextC && !sameChord(nextC, sg.c) && e[0] >= SPB - 4 && stopAt === SPB) {
               m = bassNote(nextC, 'r');
               len += pushLength(bar + span, 'bass');
               bassPushed = true;
@@ -2738,14 +3190,15 @@
       compPushed = false;
       if (prt.chords && chordPatch && !info.cont) {
         var still = prt.chords === 'still' || type === 'outro' || info.thin;
-        var cp = still ? [[0, SPB, 0.85]] : varyComp(R('compbar-' + bar), P.comp, 0.25 + 0.15 * Math.min(2, info.sec.occ) + (info.j % 4 === 3 ? 0.2 : 0));
+        var cp = still ? [[0, SPB, 0.85]] : varyComp(R('compbar-' + bar), P.comp, 0.25 + 0.15 * Math.min(2, info.sec.occ) + (info.j % 4 === 3 ? 0.2 : 0), type === 'B' ? 2 : 1);
         var arpRate = parts.comping === 'arpeggio' && chordPatch === 'chipArp' && type !== 'C' && type !== 'intro' && type !== 'outro';
         var chordSpec = PATCHES[chordPatch];
         segs.forEach(function (sg, k) {
           var end = Math.min(segEnd(k), stopAt), vc = voicing(sg);
           if (sg.s >= stopAt) return;
           var evs = arpRate ? [] : segEvents(cp, sg.s, end, [0.85]);
-          if (arpRate) for (var cs = sg.s, ci = 0; cs < end; cs++, ci++) evs.push([cs, 1, cs % 4 === 0 ? 0.85 : 0.65, ci % Math.min(3, vc.length)]);
+          // (The fast arpeggio of a sound chip: the chord's notes in the order the song chose.)
+          if (arpRate) for (var cs = sg.s, ci = 0; cs < end; cs++, ci++) evs.push([cs, 1, cs % 4 === 0 ? 0.85 : 0.65, P.comp[ci % P.comp.length][3] % 4]);
           evs.forEach(function (e, ei) {
             if (compIn && e[0] === 0) return;
             var chord = vc, len = e[1], cPatch = chordPatch, spec = chordSpec;
@@ -2806,7 +3259,7 @@
         segs.forEach(function (sg, k) {
           var end = Math.min(segEnd(k), stopAt), gv = guitarVoicing(sg.c);
           if (sg.s >= stopAt) return;
-          segEvents(P.guitar, sg.s, end, [0.8, 'D']).forEach(function (e) {
+          segEvents(P.guitar.alt && info.j % 2 === 1 ? P.guitar.alt : P.guitar, sg.s, end, [0.8, 'D']).forEach(function (e) {
             var t0 = T(bar, e[0]), vel = V(Math.min(1, e[2] * E)), how = e[3];
             if (typeof how === 'number') {
               notes.push({ t: t0, d: e[1] * stepDur, midi: gv[how % gv.length], vel: vel, inst: 'guitar', patch: guitarPatch });
@@ -2835,6 +3288,14 @@
             notes.push({ t: T(bar, sg.s), d: (segEnd(k) - sg.s) * stepDur, midi: m, vel: 0.8 * E, inst: 'chords', patch: padPatch });
           });
         });
+      } else if (padPatch && !chordPatch && !(prt.guitar && P.guitar) && type === 'A' && !info.thin && !info.cont) {
+        // A style without a chord instrument (dance, ambient): its verse would
+        // have no harmony at all, so the pad plays there too, quietly.
+        segs.forEach(function (sg, k) {
+          voicing(sg).forEach(function (m) {
+            notes.push({ t: T(bar, sg.s), d: (segEnd(k) - sg.s) * stepDur, midi: m, vel: 0.5 * E, inst: 'chords', patch: padPatch });
+          });
+        });
       } else if (liftPatch && type === 'B' && !info.sec.drop && !info.cont) {
         // A chorus with nothing of its own to add (no pad, no arpeggio) gets a
         // soft pad under it, an octave up, so it still opens out from the verse.
@@ -2856,19 +3317,22 @@
           switch (info.j >= 4 && P.arpFlip ? P.arpShape2 : P.arpShape) {
             case 'down': return { at: at, seq: at.slice().reverse() };
             case 'updown': return { at: at, seq: at.concat(at.slice(1, -1).reverse()) };
+            case 'converge': return { at: at, seq: at.map(function (_, i) { return at[i % 2 ? at.length - 1 - (i >> 1) : i >> 1]; }) };
+            case 'pedal': return { at: at, seq: at.slice(0, -1).reduce(function (a, m) { return a.concat([m, at[at.length - 1]]); }, []) };
+            case 'thumb': return { at: at, seq: at.slice(1).reduce(function (a, m) { return a.concat([at[0], m]); }, []) };
             case 'skip': return { at: at, seq: at.filter(function (_, i) { return i % 2 === 0; }).concat(at.filter(function (_, i) { return i % 2 === 1; })) };
             default: return { at: at, seq: at };
           }
         };
         if (parts.arp === 'bells' || parts.arp === 'musicbox') {
           for (var as = 0; as < SPB; as += 2) {
-            if (gr.chance(0.4)) notes.push({ t: T(bar, as), d: stepDur * 4, midi: gr.pick(arpFor(as).at), vel: (0.5 + gr.next() * 0.4) * E, inst: 'arp', patch: arpPatch });
+            if (gr.chance(0.4)) notes.push({ t: T(bar, as), d: stepDur * 4, midi: gr.pick(arpFor(as).at), vel: Math.min(1, (0.5 + gr.next() * 0.4) * E), inst: 'arp', patch: arpPatch });
           }
         } else {
-          var astep = parts.arp === 'sixteenths' || parts.arp === 'digital' ? 1 : 2;
-          for (var ar = 0, ai = 0; ar < stopAt; ar += astep, ai++) {
-            var sq = arpFor(ar).seq;
-            notes.push({ t: T(bar, ar), d: stepDur * astep * 0.8, midi: sq[ai % sq.length], vel: (ar % 4 === 0 ? 0.95 * metric(ar) : 0.6) * E, inst: 'arp', patch: arpPatch });
+          var mask = P.arpMask;
+          for (var ai = 0; ai < mask.length && mask[ai] < stopAt; ai++) {
+            var ar = mask[ai], sq = arpFor(ar).seq;
+            notes.push({ t: T(bar, ar), d: stepDur * Math.min(2, (ai + 1 < mask.length ? mask[ai + 1] : SPB) - ar) * 0.8, midi: sq[ai % sq.length], vel: Math.min(1, (ar % 4 === 0 ? 0.95 * metric(ar) : 0.6) * E), inst: 'arp', patch: arpPatch });
           }
         }
       }
@@ -2882,10 +3346,16 @@
     // melody. Each section has one planned high point (late in the chorus,
     // higher still in the last one), and a chorus enters above where the
     // previous section left off.
-    var c0 = st.melody.center[0], c1 = st.melody.center[1];
+    // The tune's register does not depend on the key: the tonic lies anywhere
+    // from F# below middle C to the F above it, and the range moves the other
+    // way by as many scale steps (so the tune of a song in F lies around and
+    // below its tonic, that of a song in G above it).
+    var regShift = Math.round((60 + st.melody.octave - leadBase) * 7 / 12);
+    var c0 = st.melody.center[0] + regShift, c1 = st.melody.center[1] + regShift;
     var lo = c0 - 3, hi = c1 + 6;
-    var BASE = { A: c0, B: c1, P: c0 + 1, C: Math.round((c0 + c1) / 2) };
-    var REG = { A: [0, 1, 1, 0, 0, 2, 1, 0], B: [0, 1, 2, 1, 0, 2, 3, 1], C: [1, 2, 1, 0, 2, 3, 2, 0], P: [0, 1, 1, 2] };
+    // (A pre-chorus climbs, bar by bar, to its high point in its last bar.)
+    var BASE = { A: c0, B: c1, P: c0 + 2, C: Math.round((c0 + c1) / 2) };
+    var REG = { A: [0, 1, 1, 0, 0, 2, 1, 0], B: [0, 1, 2, 1, 0, 2, 3, 1], C: [1, 2, 1, 0, 2, 3, 2, 0], P: [0, 1, 2, 3] };
     var PEAK = { A: { bar: 5, above: 3 }, P: { bar: 2, above: 2 }, B: { bar: 6, above: 5 }, C: { bar: 5, above: 4 } };
     var themes = {};
     // The melody's timing and velocity are humanized from a stream of their own
@@ -2908,7 +3378,9 @@
       var th = themes[key];
       // A later verse or chorus is sung from a stream of its own: its
       // ornaments, pickups and answers move a little (its hook does not).
-      var mr = R('melody-' + key + (sec.occ && !hook ? '-' + sec.occ : ''));
+      // (A chorus is the song's refrain: every chorus is sung from the same
+      // stream, note for note; the last one varies its second half.)
+      var mr = R('melody-' + key + (sec.occ && !hook && key !== 'B' ? '-' + sec.occ : ''));
       // A block's mood moves its tune up or down and holds its notes longer or
       // shorter (the tune itself is the song's: the same melody in another colour).
       var cmd = sec.colour ? sec.colour.md : md;
@@ -2927,11 +3399,11 @@
       if (sec.type === 'B' && lastLead !== null && !sec.drop && !tag) {
         var lift = mr.int(2, 4);
         if (th.entry === undefined) th.entry = Math.min(hi - 3, Math.max(base, lastLead + lift));
-        entry = Math.min(hi - 3, Math.max(th.entry, lastLead + 1));
+        entry = th.entry;
       }
       var peakInfo = PEAK[key];
       // (Where the high point falls is the theme's: bar 5 or 6 of a chorus, 4 to 6 elsewhere.)
-      var peakBar = sec.bars >= 8 || tag ? clamp(peakInfo.bar + th.peakShift, key === 'B' ? 5 : 4, 6) - tag : Math.min(2, sec.bars - 1);
+      var peakBar = sec.bars >= 8 || tag ? clamp(peakInfo.bar + th.peakShift, key === 'B' ? 5 : 4, 6) - tag : key === 'P' ? sec.bars - 1 : Math.min(2, sec.bars - 1);
       var motifStart = null;
       // (The last chorus reaches a step higher than the others: the singer's
       // climax. Not when it has already gone up a key, which lifts it enough.)
@@ -2955,7 +3427,16 @@
           : j === 4 && key === 'A' && sec.occ && mr.chance(st.melody.slow ? 0.85 : 0.5) ? (th.motifVar ? 'vary' : 'invert') : 'same';
         var rh, degs = [];
         var cAt = function (n) { return chordAt(barIdx, n[0]); };
-        if (role === 'motif') {
+        // A period: the second phrase starts as the first did (a a'), when the
+        // theme is built that way and the chords come round again; it parts
+        // from it at its close. (A later verse may answer differently.)
+        var par = th.parallel && !hook && !tag && sec.bars >= 8 && (j === 4 || j === 5) && how === 'same' && (key === 'B' || !sec.occ) && barsData[j - 4];
+        if (par) {
+          // (Over other chords the line keeps its shape: its strong notes move to the nearest chord tones.)
+          rh = barsData[j - 4].rh;
+          degs = barsData[j - 4].degs.map(function (d0, q) { return isStrong(rh[q]) || q === rh.length - 1 ? nearestChordTone(d0, cAt(rh[q]), 0, lo, hi) : d0; });
+          if (role === 'motif') motifStart = degs[0];
+        } else if (role === 'motif') {
           var headLen = 0;
           if (how === 'fragment') {
             var hd = th.motif.filter(function (x) { return x[0] < 8; }).map(function (x) { return [x[0], Math.min(x[1], 8 - x[0])]; });
@@ -3160,7 +3641,7 @@
           notes.push(note);
           var entry = {
             n: note, phrase: sec.startBar + Math.floor(j / 4) * 4, last: b.role === 'cadence' && i === rh.length - 1,
-            deg: degs[i], bar: barIdx, step: n[0], strong: isStrong(n), top: sec.type === 'B' || key === 'P' ? pitch(barIdx, n[0], peak) : 999,
+            deg: degs[i], bar: barIdx, step: n[0], strong: isStrong(n), top: sec.type === 'B' || key === 'P' ? pitch(barIdx, n[0], top === undefined ? peak : top) : 999,
             fixed: b.peak === i || (b.role === 'cadence' && i === rh.length - 1) || (i === 0 && b.pickedUp)
           };
           leadNotes.push(entry);
@@ -3379,7 +3860,7 @@
       return hd;
     }
     function isStrong(n) {
-      if (BEATS === 3) return n[0] === 0 || n[1] >= 6;
+      if (BEATS === 3) return n[0] === 0 || n[1] >= 4;
       return n[0] % 8 === 0 || n[1] >= 4 || (n[0] % 4 === 0 && n[1] >= 3);
     }
     function nearestChordTone(d, c, dir, lo, hi) {
@@ -3816,9 +4297,20 @@
       return same(r, answers[k]) && others.length ? pick(others, an) : r;
     });
     if (same(motifVar, motif)) motifVar = null;
+    var parallel = rng.chance(0.65);
+    // Closing rhythms are composed too: a few notes (a quarter, two eighths, a
+    // dotted figure) leading to one long note on beat 2, the "and" of 2 or beat 3.
+    if (!three && !m.slow) cadences = cadences.map(function (stock, k) {
+      if (!rng.chance(0.6)) return stock;
+      var f = +wpick(rng, k === 1 && n <= 4 ? { 0: 1, 4: 2, 8: 1 } : { 4: 1.2, 6: m.eighths ? 1 : 0.5 + sync, 8: 1.2 });
+      var leads = { 0: [[]], 4: [[[0, 4]], [[0, 2], [2, 2]], [[0, 3], [3, 1]]], 6: [[[0, 2], [2, 2], [4, 2]], [[0, 4], [4, 2]], [[0, 3], [3, 3]], [[2, 2], [4, 2]]],
+        8: [[[0, 4], [4, 4]], [[0, 2], [2, 2], [4, 4]], [[0, 4], [4, 2], [6, 2]], [[0, 3], [3, 3], [6, 2]], [[0, 6], [6, 2]], [[0, 4], [6, 2]]] }[f];
+      if (m.eighths) leads = leads.filter(function (l) { return l.every(function (x) { return x[0] % 2 === 0 && x[1] % 2 === 0; }); });
+      return rng.pick(leads).map(function (x) { return x.slice(); }).concat([[f, f === 0 ? 12 : f === 4 ? rng.pick([8, 10]) : f === 6 ? rng.pick([6, 8]) : 6]]);
+    });
     return {
       motif: motif, motifVar: motifVar, answers: answers, cadences: cadences, contour: contour, devel: devel,
-      answersAlt: answersAlt, cadShape: cadShape, hookDevel: hookDevel, echo: echo, peakShift: peakShift
+      answersAlt: answersAlt, cadShape: cadShape, hookDevel: hookDevel, echo: echo, peakShift: peakShift, parallel: parallel
     };
   }
 
@@ -4064,9 +4556,9 @@
     var pan = n.pan || 0;
     var pl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, pr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
     var rnd = ctx.randSigned;
-    var lenSec = kind === 'swell' ? n.d : { kick: 0.5, snare: 0.4, clap: 0.4, hat: 0.12, open: 0.5, crash: 2.5, tom: 0.5 }[kind] || 0.3;
+    var lenSec = kind === 'swell' ? n.d : { kick: kit === 'elec' ? 0.9 : 0.5, snare: 0.4, clap: 0.4, hat: 0.12, open: 0.5, crash: 2.5, tom: 0.6 }[kind] || 0.3;
     var tomHz = TOM_HZ[n.tom || 0];
-    var total = Math.min(Math.ceil(lenSec * sr), ctx.len - start);
+    var total = Math.min(Math.ceil(lenSec * sr), ctx.len - start), fadeN = Math.round(sr * 0.005);
     var ph = 0, f1 = new Svf(), c = [0, 0, 0, 0], lp = 0, hold = 0, prev = 0;
     var revSend = 0;
     var dg = kit === 'std' ? 0.7 : kit === 'lofi' ? 0.85 : 1;
@@ -4134,6 +4626,8 @@
       // (two gentle poles), where white noise would keep on hissing.
       else if (air) { a1 += air * (s - a1); a2 += air * (a1 - a2); s = a2; }
       s *= vel * dg;
+      // (The last 5 ms fade out: a long decay cut off at the end would click.)
+      if (total - i < fadeN) s *= (total - i) / fadeN;
       j = start + i;
       L[j] += s * pl; R[j] += s * pr;
       if (revSend) rev[j] += s * revSend;
@@ -4313,7 +4807,7 @@
   function renderChannels(song, opts) {
     opts = opts || {};
     var sr = Math.round(opts.sampleRate || 44100);
-    if (sr < 8000 || sr > 96000) throw new Error('music-composition.js: sampleRate must be between 8000 and 96000');
+    if (!(sr >= 8000 && sr <= 96000)) throw new Error('music-composition.js: sampleRate must be between 8000 and 96000');
     var fx = song.fx || (STYLES[song.style] || STYLES.pop).fx;
     var body = song.loopEnd;
     var N = Math.ceil((body + Math.max(fx.tail, song.loop ? 4 : 0)) * sr) + 1;

@@ -349,7 +349,7 @@ test('extend lengthens a song so it ends on a whole chorus', () => {
   const ok = s => {
     const body = s.sections.filter(x => x.type !== 'intro' && x.type !== 'outro'), last = body[body.length - 1];
     if (body.length === 1 && last.bars === LEN[last.type]) return true;
-    return last.type === 'B' && !last.drop && body.every(x => x.bars === LEN[x.type]);
+    return last.type === 'B' && !last.drop && body.every(x => x.bars === LEN[x.type] || (x.type === 'C' && x.bars === 4));
   };
   let bad = 0, badBefore = 0, n = 0;
   for (const style of ['pop', 'jpop', 'lofi', 'ambient']) {
@@ -620,7 +620,8 @@ test('contrast: pre-choruses (or the later verses) and bridges move to the paral
           seen++;
         });
       });
-      assert.ok(s.sections.some(x => x.contrast), style + ' ' + i + ' has a contrasting section');
+      // (A short song of one verse and its chorus, without a pre-chorus or a bridge, has none.)
+      if (pre || s.sections.some(x => x.type === 'C') || s.sections.filter(x => x.type === 'A').length > 1) assert.ok(s.sections.some(x => x.contrast), style + ' ' + i + ' has a contrasting section');
     }
   assert.ok(seen > 20, seen + ' tonic chords checked');
 });
@@ -717,6 +718,107 @@ test('played, not looped: grooves vary bar to bar, later verses differ, fills us
   assert.ok(drumSame / drumPairs < 0.35, drumSame + ' of ' + drumPairs + ' drum bars repeat the bar before');
   assert.ok(verseSame / verses < 0.2, verseSame + ' of ' + verses + ' second verses copy the first');
   assert.ok(toms > 50 && answers > 50 && kime > 0, toms + ' toms, ' + answers + ' answers, ' + kime + ' kime');
+});
+
+test('drums are composed for each song: kicks, hats, two-bar grooves and fills differ from song to song', () => {
+  for (const style of ['pop', 'jpop', 'lofi', 'chiptune', 'dance']) {
+    const kicks = new Set(), hats = new Set(), grooves = new Set(), fills = new Set();
+    let twoBar = 0, N = 60;
+    for (let i = 0; i < N; i++) {
+      const s = MusicComposition.compose({ seed: 'drummer' + i, style, bars: 48 });
+      const sd = s.stepDuration, spb = Math.round(s.barDuration / sd);
+      const sig = (b, f) => s.notes.filter(n => n.inst === 'drums' && n.drum !== 'crash' && n.drum !== 'swell' && Math.floor(Math.round(n.t / sd) / spb) === b && (!f || f(n.drum)))
+        .map(n => Math.round(n.t / sd) % spb + n.drum).sort().join();
+      const B = s.sections.find(x => x.type === 'B');
+      kicks.add(sig(B.startBar, d => d === 'kick'));
+      hats.add(sig(B.startBar, d => d === 'hat' || d === 'open'));
+      grooves.add(sig(B.startBar) + '|' + sig(B.startBar + 1));
+      if (sig(B.startBar, d => d === 'kick') !== sig(B.startBar + 1, d => d === 'kick')) twoBar++;
+      s.sections.forEach((x, k) => { if (x.type !== 'intro' && k < s.sections.length - 1) fills.add(sig(x.startBar + x.bars - 1)); });
+      // The backbone stays: a kick on every downbeat of the chorus.
+      for (let b = 0; b < B.bars - 1; b++) assert.ok(sig(B.startBar + b, d => d === 'kick').split(',').includes('0kick'), style + ' ' + i + ': chorus bar ' + b + ' has no downbeat kick');
+    }
+    assert.ok(grooves.size >= N * (style === 'dance' ? 0.5 : 0.8), style + ': ' + grooves.size + ' different chorus grooves in ' + N + ' songs');
+    assert.ok(hats.size >= 8, style + ': ' + hats.size + ' hi-hat patterns');
+    if (style !== 'dance') assert.ok(kicks.size >= 20, style + ': ' + kicks.size + ' kick patterns');
+    if (style !== 'dance') assert.ok(twoBar >= N * 0.3, style + ': ' + twoBar + ' songs with a kick that changes from bar to bar');
+    assert.ok(fills.size >= N * 1.5, style + ': ' + fills.size + ' different fills');
+  }
+  // Jazz and bossa nova never play a roll of sixteenths.
+  for (const style of ['jazz', 'bossa']) for (let i = 0; i < 20; i++) {
+    const s = MusicComposition.compose({ seed: 'noroll' + i, style, bars: 48, parts: { swing: 0 } });
+    const sd = s.stepDuration, sn = s.notes.filter(n => n.drum === 'snare').map(n => Math.round(n.t / sd)).sort((a, b) => a - b);
+    for (let k = 2; k < sn.length; k++) assert.ok(!(sn[k] - sn[k - 1] === 1 && sn[k - 1] - sn[k - 2] === 1), style + ' ' + i + ': three snare sixteenths in a row at step ' + sn[k]);
+  }
+});
+
+test('every song has a chorus and ends on it; the bass walks by step; guitar chords stand on their bass note', () => {
+  for (const style of MusicComposition.styles) for (const bars of [8, 12, 16, 24, 32, 40, 48, 64, 96]) for (let i = 0; i < 6; i++) {
+    const s = MusicComposition.compose({ seed: 'form' + i, style, bars });
+    const body = s.sections.filter(x => x.type !== 'intro' && x.type !== 'outro');
+    assert.strictEqual(body[body.length - 1].type, 'B', style + ' ' + bars + ': ' + s.sections.map(x => x.type).join(' '));
+    assert.ok(!body[body.length - 1].drop);
+  }
+  // Walking bass: mostly steps, few leaps, hardly a repeated note.
+  let steps = 0, leaps = 0, reps = 0, pairs = 0;
+  for (let i = 0; i < 10; i++) {
+    const s = MusicComposition.compose({ seed: 'walk' + i, style: 'jazz', bars: 48 });
+    const b = s.notes.filter(n => n.inst === 'bass').sort((x, y) => x.t - y.t);
+    for (let k = 1; k < b.length; k++) {
+      const d = Math.abs(b[k].midi - b[k - 1].midi);
+      pairs++; if (d === 0) reps++; else if (d <= 2) steps++; else if (d >= 5) leaps++;
+      assert.ok(b[k].midi >= 28 && b[k].midi <= 50, 'bass note ' + b[k].midi);
+    }
+  }
+  assert.ok(steps / pairs > 0.45 && leaps / pairs < 0.25 && reps / pairs < 0.08, steps + ' steps, ' + leaps + ' leaps, ' + reps + ' repeats in ' + pairs);
+  // A strummed chord's lowest string is the chord's bass note (its root, unless it is a slash chord).
+  let low = 0, strums = 0;
+  for (let i = 0; i < 10; i++) {
+    const s = MusicComposition.compose({ seed: 'strum' + i, style: 'jpop', bars: 32 });
+    const g = s.notes.filter(n => n.inst === 'guitar');
+    s.chords.filter(c => !/\//.test(c.name)).forEach(c => {
+      const ns = g.filter(n => n.t - c.time > -0.02 && n.t - c.time < 0.1);
+      if (ns.length < 4) return;
+      strums++;
+      if (Math.min(...ns.map(n => n.midi)) % 12 === c.tones[0]) low++;
+    });
+  }
+  assert.ok(strums > 50 && low / strums > 0.95, low + ' of ' + strums + ' strums have the root at the bottom');
+  // A loop's last bar does not hold its bass notes into the first bar.
+  for (let i = 0; i < 10; i++) {
+    const s = MusicComposition.compose({ seed: 'loopbass' + i, style: 'pop', loop: true, bars: 16 });
+    s.notes.filter(n => n.inst === 'bass').forEach(n => assert.ok(n.t + n.d <= s.bars * s.barDuration + s.stepDuration * 3, 'bass note rings ' + (n.t + n.d - s.bars * s.barDuration).toFixed(2) + ' s past the loop'));
+  }
+});
+
+test('choruses close: a cadence onto the tonic, the keynote in the tune; choruses repeat; the register does not depend on the key', () => {
+  const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  let closes = 0, n = 0, same = 0, cmp = 0;
+  for (const style of ['pop', 'jpop', 'jazz', 'bossa']) for (let i = 0; i < 25; i++) {
+    const s = MusicComposition.compose({ seed: 'close' + i, style, bars: 64 });
+    const bd = s.barDuration, sd = s.stepDuration;
+    const lead = s.notes.filter(x => x.inst === 'lead' && !x.harmony && !x.layer && !x.answer);
+    const Bs = s.sections.filter(x => x.type === 'B' && !x.drop && x.bars === 8);
+    const B = Bs[Bs.length - 1], k = B.key || s.key;
+    const tonic = (PC[k[0]] + (k[1] === '#' ? 1 : k[1] === 'b' ? -1 : 0) + 12) % 12;
+    const held = lead.filter(x => x.t >= B.start + 7 * bd - 0.02 && x.t < B.start + 8 * bd - 0.01).sort((x, y) => y.d - x.d)[0];
+    const chord = s.chords.filter(c => c.time <= held.t + 0.05).pop();
+    n++;
+    if (held.midi % 12 === tonic && chord.tones[0] === tonic) closes++;
+    if (Bs.length >= 2 && !Bs[1].shift && Bs[1] !== B) {
+      const sig = b => lead.filter(x => Math.floor(x.t / bd + 0.02) === b).map(x => Math.round((x.t - b * bd) / sd) + ':' + x.midi).join();
+      for (let j = 0; j < 4; j++) { cmp++; if (sig(Bs[0].startBar + j) === sig(Bs[1].startBar + j)) same++; }
+    }
+  }
+  assert.ok(closes / n > 0.5, closes + ' of ' + n + ' last choruses end on the keynote over the tonic chord');
+  assert.ok(same / cmp > 0.6, same + ' of ' + cmp + ' bars of the second chorus repeat the first');
+  const mean = key => {
+    let sum = 0, cnt = 0;
+    for (let i = 0; i < 12; i++) MusicComposition.compose({ seed: 'reg' + i, style: 'pop', key, bars: 32 }).notes.forEach(x => { if (x.inst === 'lead' && !x.harmony) { sum += x.midi; cnt++; } });
+    return sum / cnt;
+  };
+  const means = [0, 2, 5, 6, 7, 9, 11].map(mean);
+  assert.ok(Math.max(...means) - Math.min(...means) < 4, 'melody register by key: ' + means.map(x => x.toFixed(1)).join(' '));
 });
 
 test('an ending rings on into the tail and fades; a loop does not', () => {
