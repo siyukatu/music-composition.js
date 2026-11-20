@@ -1,6 +1,6 @@
 /*
  * Music video export for the demo page: draws the song as it plays (a scrolling
- * piano roll, the chord strip, the section and the beat) and encodes it with the
+ * piano roll, the chord chart, the section and the beat) and encodes it with the
  * song's audio into an MP4. It looks like the site: its colours (light or dark,
  * as the page is shown), thin lines, square corners and one red-orange accent.
  *
@@ -41,9 +41,6 @@
   }
   var EASE = bezier(0.76, 0, 0.24, 1);     // --ease
   var EASE_WIPE = bezier(0.85, 0, 0.15, 1); // --ease-wipe
-  var EASE_OUT = bezier(0, 0, 0.58, 1);     // CSS ease-out: the chord strip's scroll, as on the site
-  var STRIP = 0.45; // seconds: the chord strip's fill and scroll, as on the site
-  var LEAD = 0.2;   // seconds: the fill sets off before its chord (it moves most at its middle), as on the site
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -82,7 +79,7 @@
     L.rollTop = portrait ? H * 0.25 : L.chipTop + L.chipH + U * 0.085;
     L.rollBottom = portrait ? H * 0.68 : H - pad - U * 0.2;
     L.stripTop = L.rollBottom + U * 0.035;
-    L.stripH = Math.round(U * 0.062);
+    L.stripH = Math.round(U * 0.082);
     L.bigChordY = portrait ? H * 0.86 : 0;
     L.barY = H - pad * 0.7;
     L.playX = W * (portrait ? 0.3 : 0.28);
@@ -96,30 +93,20 @@
       snares: drums.filter(function (n) { return n.drum === 'snare' || n.drum === 'clap'; }).map(function (n) { return [n.t, n.vel]; }),
       drums: drums,
       leads: byStart.filter(function (n) { return n.inst === 'lead'; }),
-      // One for each change of chord (a chord written again, the same, is not a change), as on the site.
-      chords: song.chords.filter(function (c, i, a) { return c.time < total - 0.01 && (!i || a[i - 1].name !== c.name); }),
+      chart: chart(song, total, portrait ? 2 : 4),
       // Seconds shown across the width: about three bars, fewer on narrow frames.
       span: song.barDuration * (portrait ? 2.2 : W / H > 1.2 ? 3.2 : 2.6),
       display: cssVar('--font-display', 'sans-serif'),
       mono: cssVar('--font-mono', 'monospace')
     };
-    P.stripFont = '400 ' + Math.round(U * 0.026) + 'px ' + P.mono;
     P.chipFont = '400 ' + Math.round(U * 0.021) + 'px ' + P.mono;
     return P;
   }
   // Widths that need a font (measured once, on the frame's own canvas).
   function measure(g, P) {
     if (P.strip) return;
-    var U = P.U, padX = U * 0.022, x = 0;
-    g.font = P.stripFont;
-    spacing(g, 0);
-    P.strip = P.chords.map(function (c) {
-      var w = Math.ceil(g.measureText(c.name).width + padX * 2);
-      var box = { x: x, w: w, name: c.name, time: c.time, start: Math.max(0, c.time - LEAD) };
-      x += w;
-      return box;
-    });
-    P.stripW = x;
+    var U = P.U;
+    P.strip = true;
     var song = P.song;
     P.chips = [song.styleLabel || STYLE[song.style] || song.style, song.key + ' ' + song.mode, song.bpm + ' BPM', song.meter || '4/4'];
     g.font = P.chipFont;
@@ -175,9 +162,9 @@
     // Where are we?
     var sec = song.sections[0], secIdx = 0;
     song.sections.forEach(function (s, i) { if (s.start <= t + 1e-6) { sec = s; secIdx = i; } });
-    // (The chord whose fill has set off: see LEAD.)
-    var ci = -1;
-    for (var i = 0; i < P.strip.length; i++) if (P.strip[i].start <= t + 1e-6) ci = i;
+    // (The chord that has begun; a frame early reads as on the beat, a late one does not.)
+    var ci = -1, cc = P.chart.chords;
+    for (var i = 0; i < cc.length; i++) if (cc[i].time <= t + 0.03) ci = i;
 
     // Header: an English eyebrow, the title (light weight, wiping in), the facts as chips.
     g.font = '500 ' + Math.round(U * 0.019) + 'px ' + P.mono;
@@ -320,34 +307,24 @@
     });
     spacing(g, 0);
 
-    // The chord strip, as on the site: the current chord fills in from the
-    // left while the previous one empties to the right, and the strip slides
-    // to keep it in the middle, all with the same easing.
-    drawStrip(g, P, t, ci);
+    // The chord chart, as on the site: the row of bars the song is in, the
+    // current bar tinted with the playhead across it, the chord that sounds
+    // in the accent colour. Nothing is tweened: it all turns on the beat.
+    drawChart(g, P, t, ci);
 
-    // A large chord name, where there is room for it (portrait).
-    // It changes with the strip's fill: the new line wipes in from the left, over the one before.
+    // A large chord name, where there is room for it (portrait), and what comes next.
     if (L.portrait && ci >= 0) {
-      var fresh = EASE((t - P.strip[ci].start) / STRIP);
-      var bigH = Math.round(U * 0.13), edge = L.pad + (W - L.pad) * fresh;
-      var bigLine = function (i, xa, xb) {
-        var chord = P.chords[i], next = P.chords[i + 1];
-        if (!chord || xb <= xa) return;
-        g.save();
-        g.beginPath(); g.rect(xa, L.bigChordY - bigH, xb - xa, bigH * 1.3); g.clip();
-        g.fillStyle = C.ink;
-        var cs = fitText(g, chord.name, P.display, bigH, W * 0.6, '300');
-        g.fillText(chord.name, L.pad, L.bigChordY);
-        if (next) {
-          var nx = L.pad + g.measureText(chord.name).width + U * 0.04;
-          g.font = '300 ' + Math.round(cs * 0.36) + 'px ' + P.display;
-          g.fillStyle = C.muted;
-          g.fillText('→ ' + next.name, nx, L.bigChordY);
-        }
-        g.restore();
-      };
-      bigLine(ci, 0, edge);
-      if (fresh < 1) bigLine(ci - 1, edge, W);
+      var bigH = Math.round(U * 0.13), chord = cc[ci], next = null;
+      for (var k = ci + 1; k < cc.length; k++) if (cc[k].name !== chord.name) { next = cc[k]; break; }
+      g.fillStyle = C.ink;
+      var cs = fitText(g, chord.name, P.display, bigH, W * 0.6, '300');
+      g.fillText(chord.name, L.pad, L.bigChordY);
+      if (next) {
+        var nx = L.pad + g.measureText(chord.name).width + U * 0.04;
+        g.font = '300 ' + Math.round(cs * 0.36) + 'px ' + P.display;
+        g.fillStyle = C.muted;
+        g.fillText('→ ' + next.name, nx, L.bigChordY);
+      }
     }
 
     // Progress, split into sections --------------------------------------
@@ -371,56 +348,94 @@
     g.fillText(location.host || 'mcj.siyukatu.me', L.pad, L.barY - U * 0.018);
   }
 
-  function drawStrip(g, P, t, ci) {
-    var L = P.L, U = P.U, C = P.C, boxes = P.strip;
-    if (!boxes.length) return;
-    var x0 = L.pad, vw = P.W - L.pad * 2, y = L.stripTop, h = L.stripH;
-    var max = Math.max(0, P.stripW - vw);
-    var target = function (i) { return i < 0 ? 0 : Math.max(0, Math.min(max, boxes[i].x + boxes[i].w / 2 - vw / 2)); };
-    // The scroll sets off from wherever it is (a chord may come before the last
-    // one's move is over): go back to a chord whose move was finished, and from there on.
-    var first = Math.max(0, ci);
-    while (first > 0 && boxes[first].start - boxes[first - 1].start < STRIP) first--;
-    var off = target(first - 1);
-    for (var k = first; k <= ci; k++) {
-      off += (target(k) - off) * EASE_OUT(((k < ci ? boxes[k + 1].start : t) - boxes[k].start) / STRIP);
-    }
-
-    g.save();
-    g.beginPath(); g.rect(x0, y - 1, vw, h + 2); g.clip();
-    g.font = P.stripFont;
-    g.textBaseline = 'middle';
-    var ty = y + h / 2 + 1, padX = U * 0.022;
-    boxes.forEach(function (bx, i) {
-      var x = x0 + bx.x - off;
-      if (x > x0 + vw || x + bx.w < x0) return;
-      // The fill: a chord's comes in from the left, and leaves to the right when the next one's comes
-      // (both at once, for a chord shorter than the fill).
-      var f0 = 0, f1 = 0;
-      if (i <= ci) {
-        f1 = EASE((t - bx.start) / STRIP);
-        f0 = i < ci ? EASE((t - boxes[i + 1].start) / STRIP) : 0;
+  // The chart's bars (as on the site): the chords of each bar where they fall,
+  // to the beat; a chord pushed ahead of the bar line at the head of its bar;
+  // a bar that holds the chord before it shows that name, faintly. Rows of
+  // `per` bars, a new row with each section. The last bars slow down, so
+  // there a bar begins where its first chord does.
+  function chart(song, total, per) {
+    var bd = song.barDuration, beats = song.beatsPerBar || 4;
+    var lastBar = song.loop ? Infinity : Math.round(total / bd) - 3, starts = {}, byBar = {};
+    var out = { bars: [], rows: [], chords: [], bd: bd };
+    song.chords.forEach(function (c) {
+      if (c.time >= total - 0.01) return;
+      var b = c.bar, f = (c.time - b * bd) / bd;
+      if (b >= lastBar && starts[b] === undefined && f < 0.5) starts[b] = c.time;
+      if (starts[b] !== undefined) f = (c.time - starts[b]) / bd;
+      f = Math.round(f * beats) / beats;
+      if (f >= 1) { b++; f = 0; }
+      (byBar[b] = byBar[b] || []).push({ name: c.name, time: c.time, f: Math.max(0, f) });
+    });
+    var last = null;
+    song.sections.forEach(function (sec) {
+      if (sec.start >= total - 0.01) return;
+      for (var b = sec.startBar; b < sec.startBar + sec.bars && b * bd < total - 0.01; b++) {
+        var list = [];
+        (byBar[b] || []).forEach(function (c) {
+          if (list.length && (list[list.length - 1].name === c.name || list[list.length - 1].f === c.f)) return;
+          list.push({ name: c.name, f: c.f, held: !c.f && last === c.name && b > sec.startBar, idx: out.chords.length });
+          out.chords.push({ name: c.name, time: c.time });
+        });
+        if ((!list.length || list[0].f > 0) && last) list.unshift({ name: last, f: 0, held: true, idx: -1 });
+        if (list.length) last = list[list.length - 1].name;
+        var k = b - sec.startBar;
+        if (k % per === 0) out.rows.push([]);
+        out.rows[out.rows.length - 1].push(out.bars.length);
+        out.bars.push({ n: b + 1, t: starts[b] !== undefined ? starts[b] : b * bd, row: out.rows.length - 1, chords: list });
       }
-      g.fillStyle = C.muted;
-      g.fillText(bx.name, x + padX, ty);
-      if (f1 > f0) {
-        var fx = x + bx.w * f0, fw = bx.w * (f1 - f0);
+    });
+    return out;
+  }
+
+  function drawChart(g, P, t, ci) {
+    var L = P.L, U = P.U, C = P.C, cv = P.chart;
+    if (!cv.bars.length) return;
+    var bi = Math.max(0, Math.min(cv.bars.length - 1, Math.floor(t / cv.bd + 1e-6)));
+    while (bi > 0 && cv.bars[bi].t > t + 1e-6) bi--;
+    var cur = cv.bars[bi], row = cv.rows[cur.row], per = L.portrait ? 2 : 4;
+    var x0 = L.pad, vw = P.W - L.pad * 2, y = L.stripTop, h = L.stripH, cw = vw / per;
+    var line = Math.max(1, Math.round(U * 0.0015)), padX = U * 0.014;
+    var small = '400 ' + Math.round(U * 0.016) + 'px ' + P.mono;
+    var size = Math.round(U * 0.03);
+    g.save();
+    row.forEach(function (idx, k) {
+      var bar = cv.bars[idx], x = x0 + k * cw, on = idx === bi;
+      if (on) {
         g.fillStyle = C.accent;
-        g.fillRect(fx, y, fw, h);
-        g.save();
-        g.beginPath(); g.rect(fx, y, fw, h); g.clip();
-        g.fillStyle = C.accentInk;
-        g.fillText(bx.name, x + padX, ty);
-        g.restore();
+        g.globalAlpha = 0.13;
+        g.fillRect(x, y, cw, h);
+        g.globalAlpha = 1;
       }
       g.fillStyle = C.line;
-      g.fillRect(Math.round(x), y, 1, h);
+      g.fillRect(Math.round(x), y, line, h);
+      g.font = small;
+      g.fillStyle = C.muted;
+      g.textBaseline = 'top';
+      g.fillText(String(bar.n), x + padX, y + U * 0.01);
+      g.textBaseline = 'alphabetic';
+      bar.chords.forEach(function (c, q) {
+        var cx = x + padX + c.f * cw, room = ((q + 1 < bar.chords.length ? bar.chords[q + 1].f : 1) - c.f) * cw - padX * 1.4;
+        var sounding = c.idx === ci && c.idx >= 0;
+        g.font = (sounding ? '600 ' : '400 ') + size + 'px ' + P.mono;
+        var w = g.measureText(c.name).width;
+        if (w > room) g.font = (sounding ? '600 ' : '400 ') + Math.max(8, Math.floor(size * room / w)) + 'px ' + P.mono;
+        g.globalAlpha = c.held && !on ? 0.45 : 1;
+        g.fillStyle = sounding ? C.accent : (idx < bi || c.held) && !on ? C.muted : C.ink;
+        g.fillText(c.name, cx, y + h - U * 0.02);
+        g.globalAlpha = 1;
+      });
     });
-    var end = x0 + P.stripW - off;
+    // The frame, and the playhead across the current bar.
+    var rw = row.length * cw;
     g.fillStyle = C.line;
-    g.fillRect(x0, y, Math.min(vw, end - x0), 1);
-    g.fillRect(x0, y + h - 1, Math.min(vw, end - x0), 1);
-    if (end < x0 + vw) g.fillRect(Math.round(end) - 1, y, 1, h);
+    g.fillRect(x0, y, rw, line);
+    g.fillRect(x0, y + h - line, rw, line);
+    g.fillRect(Math.round(x0 + rw) - line, y, line, h);
+    var len = cv.bars[bi + 1] ? cv.bars[bi + 1].t - cur.t : cv.bd;
+    var p = Math.max(0, Math.min(1, (t - cur.t) / len));
+    var pw = Math.max(2, Math.round(U * 0.003));
+    g.fillStyle = C.accent;
+    g.fillRect(Math.round(x0 + (row.indexOf(bi) + p) * cw - pw / 2), y, pw, h);
     g.restore();
     g.textBaseline = 'alphabetic';
   }
