@@ -24,7 +24,7 @@
   };
   var SECTION = { intro: 'INTRO', A: 'VERSE', P: 'PRE-CHORUS', B: 'CHORUS', C: 'BRIDGE', outro: 'OUTRO' };
   var SECTION_COLOR = { intro: 'muted', A: 'bass', P: 'arp', B: 'accent', C: 'chords', outro: 'muted' };
-  var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient', jazz: 'Jazz', bossa: 'Bossa Nova' };
+  var STYLE = { pop: 'Pop', jpop: 'J-POP', dance: 'Dance', lofi: 'Lo-fi', chiptune: 'Chiptune', ambient: 'Ambient', jazz: 'Jazz', bossa: 'Bossa Nova', wafu: '和風', citypop: 'City Pop', rock: 'Rock', orchestral: 'Orchestral', cafe: 'Cafe' };
   var ALPHA = { chords: 0.45, guitar: 0.55, arp: 0.7, bass: 0.95, lead: 0.95 };
   var DRUM_ROW = { kick: 2, snare: 1, clap: 1, tom: 1, hat: 0, pedal: 0, open: 0, crash: 0, swell: 0 };
 
@@ -41,7 +41,9 @@
   }
   var EASE = bezier(0.76, 0, 0.24, 1);     // --ease
   var EASE_WIPE = bezier(0.85, 0, 0.15, 1); // --ease-wipe
+  var EASE_OUT = bezier(0, 0, 0.58, 1);     // CSS ease-out: the chord strip's scroll, as on the site
   var STRIP = 0.45; // seconds: the chord strip's fill and scroll, as on the site
+  var LEAD = 0.2;   // seconds: the fill sets off before its chord (it moves most at its middle), as on the site
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -94,7 +96,8 @@
       snares: drums.filter(function (n) { return n.drum === 'snare' || n.drum === 'clap'; }).map(function (n) { return [n.t, n.vel]; }),
       drums: drums,
       leads: byStart.filter(function (n) { return n.inst === 'lead'; }),
-      chords: song.chords.filter(function (c) { return c.time < total - 0.01; }),
+      // One for each change of chord (a chord written again, the same, is not a change), as on the site.
+      chords: song.chords.filter(function (c, i, a) { return c.time < total - 0.01 && (!i || a[i - 1].name !== c.name); }),
       // Seconds shown across the width: about three bars, fewer on narrow frames.
       span: song.barDuration * (portrait ? 2.2 : W / H > 1.2 ? 3.2 : 2.6),
       display: cssVar('--font-display', 'sans-serif'),
@@ -112,7 +115,7 @@
     spacing(g, 0);
     P.strip = P.chords.map(function (c) {
       var w = Math.ceil(g.measureText(c.name).width + padX * 2);
-      var box = { x: x, w: w, name: c.name, time: c.time };
+      var box = { x: x, w: w, name: c.name, time: c.time, start: Math.max(0, c.time - LEAD) };
       x += w;
       return box;
     });
@@ -172,8 +175,9 @@
     // Where are we?
     var sec = song.sections[0], secIdx = 0;
     song.sections.forEach(function (s, i) { if (s.start <= t + 1e-6) { sec = s; secIdx = i; } });
+    // (The chord whose fill has set off: see LEAD.)
     var ci = -1;
-    for (var i = 0; i < P.chords.length; i++) if (P.chords[i].time <= t + 0.02) ci = i;
+    for (var i = 0; i < P.strip.length; i++) if (P.strip[i].start <= t + 1e-6) ci = i;
 
     // Header: an English eyebrow, the title (light weight, wiping in), the facts as chips.
     g.font = '500 ' + Math.round(U * 0.019) + 'px ' + P.mono;
@@ -322,18 +326,28 @@
     drawStrip(g, P, t, ci);
 
     // A large chord name, where there is room for it (portrait).
+    // It changes with the strip's fill: the new line wipes in from the left, over the one before.
     if (L.portrait && ci >= 0) {
-      var chord = P.chords[ci], next = P.chords[ci + 1];
-      var fresh = EASE((t - chord.time) / STRIP);
-      g.fillStyle = C.ink;
-      var cs = fitText(g, chord.name, P.display, Math.round(U * 0.13), W * 0.6, '300');
-      wiped(g, L.pad, L.bigChordY - cs, W, cs * 1.3, fresh, function () { g.fillText(chord.name, L.pad, L.bigChordY); });
-      if (next) {
-        var nx = L.pad + g.measureText(chord.name).width + U * 0.04;
-        g.font = '300 ' + Math.round(cs * 0.36) + 'px ' + P.display;
-        g.fillStyle = C.muted;
-        g.fillText('→ ' + next.name, nx, L.bigChordY);
-      }
+      var fresh = EASE((t - P.strip[ci].start) / STRIP);
+      var bigH = Math.round(U * 0.13), edge = L.pad + (W - L.pad) * fresh;
+      var bigLine = function (i, xa, xb) {
+        var chord = P.chords[i], next = P.chords[i + 1];
+        if (!chord || xb <= xa) return;
+        g.save();
+        g.beginPath(); g.rect(xa, L.bigChordY - bigH, xb - xa, bigH * 1.3); g.clip();
+        g.fillStyle = C.ink;
+        var cs = fitText(g, chord.name, P.display, bigH, W * 0.6, '300');
+        g.fillText(chord.name, L.pad, L.bigChordY);
+        if (next) {
+          var nx = L.pad + g.measureText(chord.name).width + U * 0.04;
+          g.font = '300 ' + Math.round(cs * 0.36) + 'px ' + P.display;
+          g.fillStyle = C.muted;
+          g.fillText('→ ' + next.name, nx, L.bigChordY);
+        }
+        g.restore();
+      };
+      bigLine(ci, 0, edge);
+      if (fresh < 1) bigLine(ci - 1, edge, W);
     }
 
     // Progress, split into sections --------------------------------------
@@ -363,8 +377,14 @@
     var x0 = L.pad, vw = P.W - L.pad * 2, y = L.stripTop, h = L.stripH;
     var max = Math.max(0, P.stripW - vw);
     var target = function (i) { return i < 0 ? 0 : Math.max(0, Math.min(max, boxes[i].x + boxes[i].w / 2 - vw / 2)); };
-    var p = ci >= 0 ? EASE((t - boxes[ci].time) / STRIP) : 1;
-    var off = ci >= 0 ? target(ci - 1) + (target(ci) - target(ci - 1)) * p : 0;
+    // The scroll sets off from wherever it is (a chord may come before the last
+    // one's move is over): go back to a chord whose move was finished, and from there on.
+    var first = Math.max(0, ci);
+    while (first > 0 && boxes[first].start - boxes[first - 1].start < STRIP) first--;
+    var off = target(first - 1);
+    for (var k = first; k <= ci; k++) {
+      off += (target(k) - off) * EASE_OUT(((k < ci ? boxes[k + 1].start : t) - boxes[k].start) / STRIP);
+    }
 
     g.save();
     g.beginPath(); g.rect(x0, y - 1, vw, h + 2); g.clip();
@@ -374,10 +394,13 @@
     boxes.forEach(function (bx, i) {
       var x = x0 + bx.x - off;
       if (x > x0 + vw || x + bx.w < x0) return;
-      // The fill: the current chord's from the left, the previous one's leaving to the right.
+      // The fill: a chord's comes in from the left, and leaves to the right when the next one's comes
+      // (both at once, for a chord shorter than the fill).
       var f0 = 0, f1 = 0;
-      if (i === ci) { f0 = 0; f1 = p; }
-      else if (i === ci - 1) { f0 = p; f1 = 1; }
+      if (i <= ci) {
+        f1 = EASE((t - bx.start) / STRIP);
+        f0 = i < ci ? EASE((t - boxes[i + 1].start) / STRIP) : 0;
+      }
       g.fillStyle = C.muted;
       g.fillText(bx.name, x + padX, ty);
       if (f1 > f0) {

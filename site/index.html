@@ -521,16 +521,18 @@
      uncovered the same way). */
   .progression .c::before {
     content: ""; position: absolute; inset: -1px 0 -1px -1px; z-index: -1; background: var(--accent);
-    transform: scaleX(0); transform-origin: right; transition: transform .45s var(--ease);
+    clip-path: inset(0 100% 0 0);
   }
   .progression .c::after {
     content: attr(data-name); position: absolute; inset: -1px 0 -1px -1px; padding: 7px 12px 7px 13px; color: var(--accent-ink);
     clip-path: inset(0 100% 0 0); pointer-events: none;
   }
   .progression .c:hover { background: var(--surface-2); color: var(--ink); }
-  .progression .c.on::before { transform: scaleX(1); transform-origin: left; }
-  .progression .c.on::after { clip-path: inset(0 0 0 0); transition: clip-path .45s var(--ease); }
-  .progression .c.out::after { clip-path: inset(0 0 0 100%); transition: clip-path .45s var(--ease); }
+  /* (The fill is clipped like the name, not scaled from one side and then the other:
+     a chord that is left before it has filled goes on from where it is.) */
+  .progression .c.on::before, .progression .c.on::after { clip-path: inset(0 0 0 0); transition: clip-path .45s var(--ease); }
+  .progression .c.out::before, .progression .c.out::after { clip-path: inset(0 0 0 100%); transition: clip-path .45s var(--ease); }
+  @media (prefers-reduced-motion: reduce) { .progression .c::before, .progression .c::after { transition: none !important; } }
 
   /* The song as a line of sections (like the shared video's): each one in its
      own colour, pale ahead of the playhead and full behind it. */
@@ -1106,7 +1108,7 @@
           <thead><tr><th>オプション</th><th>値</th><th>既定</th></tr></thead>
           <tbody>
             <tr><td><code>seed</code></td><td>文字列 / 数値</td><td>ランダム</td></tr>
-            <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>jazz</code> <code>bossa</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
+            <tr><td><code>style</code></td><td><code>pop</code> <code>jpop</code> <code>dance</code> <code>lofi</code> <code>chiptune</code> <code>ambient</code> <code>jazz</code> <code>bossa</code> <code>wafu</code> <code>citypop</code> <code>rock</code> <code>orchestral</code> <code>cafe</code> <code>auto</code>、ミックス <code>'jpop+lofi'</code>、カスタムスタイル（オブジェクト）</td><td><code>auto</code></td></tr>
             <tr><td><code>parts</code></td><td>楽器と演奏。配列なら 1 曲の中で使い分ける（<code>lead: ['flute', 'violin']</code>）。<code>together: ['lead']</code> は重ねて同時に鳴らし、<code>sometimes: ['guitar']</code> は曲によって抜く</td><td>スタイルどおり</td></tr>
             <tr><td><code>meter</code></td><td><code>'4/4'</code> / <code>'3/4'</code></td><td><code>'4/4'</code></td></tr>
             <tr><td><code>extend</code></td><td><code>true</code>（最大 30 秒）/ 秒数。サビを丸ごと終えるところまで延ばす</td><td><code>false</code></td></tr>
@@ -1342,9 +1344,9 @@
 </dialog>
 
 <audio id="audio" preload="auto"></audio>
-<script src="music-composition.js?h=d9f5c3"></script>
-<script src="video.js?h=69339c"></script>
-<script src="midi.js?h=e66bc6"></script>
+<script src="music-composition.js?h=64628c"></script>
+<script src="video.js?h=be2cc7"></script>
+<script src="midi.js?h=7d11f2"></script>
 <script>
 (function () {
   'use strict';
@@ -1360,6 +1362,11 @@
     ambient: ['Ambient', 'ドラムなし。ゆっくり広がるパッドとベルの音。'],
     jazz: ['Jazz', 'スウィングのライドとウォーキングベース、9th・13th のピアノ。ii–V–I や裏コード（♭II7）の上でサックスが歌います。'],
     bossa: ['Bossa Nova', 'ナイロンギターのバチーダ、リムのボサノバ・クラーベとシェイカー、1 拍目と 2 拍裏のベース。maj7・m9 のコードの上でフルートが歌います。'],
+    wafu: ['和風', '尺八のメロディ、箏のアルペジオ、太鼓。四七抜き（ヨナ抜き）音階で歌います。'],
+    citypop: ['City Pop', '16ビートにエレピとカッティングギター、maj7・9th のコード。サックスが歌います。'],
+    rock: ['Rock', '歪んだギターのパワーコードとブリッジミュート、8ビートのドラム、リードギター。'],
+    orchestral: ['Orchestral', '弦とピチカート、ハープ、コントラバスに太鼓。ゆったりした映画音楽ふう。'],
+    cafe: ['Cafe', 'ブラシのシャッフル、ウッドベース、ピアノとナイロンギターにアコーディオン。'],
     mix: ['ミックス', '選んだスタイルを混ぜます。スライダーで割合を決めます。'],
     add: ['＋ カスタム', '']
   };
@@ -1697,16 +1704,16 @@
 
   // Parts: instruments and playing, on top of the style ------------------------
   var PART_LABELS = {
-    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', brush: 'ブラシ', perc: 'パーカッション', jazz: 'ジャズ（スティック）', bossa: 'ボサノバ（リム・シェイカー）', none: 'なし' }],
+    drums: ['ドラム', { acoustic: '生ドラム', electronic: 'エレクトロ', lofi: 'ローファイ', chip: '8bit', brush: 'ブラシ', perc: 'パーカッション', jazz: 'ジャズ（スティック）', bossa: 'ボサノバ（リム・シェイカー）', taiko: '和太鼓', none: 'なし' }],
     groove: ['リズム', { eightbeat: '8ビート', sixteenbeat: '16ビート', fourfloor: '4つ打ち', halftime: 'ハーフタイム', shuffle: 'シャッフル', swing: 'スウィング', breakbeat: 'ブレイクビーツ', chip: 'チップチューン', bossa: 'ボサノバ' }],
-    bass: ['ベース', { synth: 'シンセ', finger: '指弾き', sine: 'サイン波', chip: '三角波', upright: 'ウッドベース', fm: 'FM ベース', tuba: 'チューバ', none: 'なし' }],
+    bass: ['ベース', { synth: 'シンセ', finger: '指弾き', sine: 'サイン波', chip: '三角波', upright: 'ウッドベース', contrabass: 'コントラバス（弓）', fm: 'FM ベース', tuba: 'チューバ', none: 'なし' }],
     bassLine: ['ベースの弾き方', { root: 'ルート', drive: '8分刻み', offbeat: '裏打ち', syncopated: 'キックに合わせる', walking: 'ウォーキング', long: '伸ばす', bossa: 'ボサノバ' }],
-    chords: ['コード楽器', { piano: 'ピアノ', cutpiano: 'リリースカットピアノ', epiano: 'エレピ', synth: 'シンセ', organ: 'オルガン', chip: '矩形波', harp: 'ハープ', marimba: 'マリンバ', vibes: 'ビブラフォン', accordion: 'アコーディオン', pizzicato: 'ピチカート', musicbox: 'オルゴール', none: 'なし' }],
+    chords: ['コード楽器', { piano: 'ピアノ', cutpiano: 'リリースカットピアノ', epiano: 'エレピ', synth: 'シンセ', organ: 'オルガン', chip: '矩形波', harp: 'ハープ', marimba: 'マリンバ', vibes: 'ビブラフォン', accordion: 'アコーディオン', pizzicato: 'ピチカート', musicbox: 'オルゴール', koto: '箏', none: 'なし' }],
     comping: ['コードの弾き方', { block: 'ブロック', rhythm: 'リズム', arpeggio: 'アルペジオ', sustain: '伸ばす', stab: '裏拍で短く', broken: '分散和音', jazz: 'ジャズ（チャールストン）', bossa: 'ボサノバ（裏拍）' }],
-    guitar: ['ギター', { strum: 'ストローク', cutting: 'カッティング', arpeggio: 'アルペジオ', fingerpick: 'ナイロン指弾き', bossa: 'ボサノバ（バチーダ）', none: 'なし' }],
+    guitar: ['ギター', { strum: 'ストローク', cutting: 'カッティング', arpeggio: 'アルペジオ', fingerpick: 'ナイロン指弾き', bossa: 'ボサノバ（バチーダ）', power: 'パワーコード（歪み）', none: 'なし' }],
     pad: ['パッド', { warm: 'ウォーム', wide: 'ワイド', strings: 'ストリングス', ambient: 'アンビエント', choir: 'クワイア', none: 'なし' }],
-    lead: ['メロディ楽器', { saw: 'ノコギリ波', pluck: 'プラック', soft: 'ソフト', square: '矩形波', pwm: 'PWM', fm: 'FM シンセ', robot: 'ロボット', flute: 'フルート', whistle: '口笛', sax: 'サックス', brass: 'ブラス', violin: 'バイオリン', voice: 'ボイス', bell: 'ベル', piano: 'ピアノ', vibes: 'ビブラフォン', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', accordion: 'アコーディオン' }],
-    arp: ['アルペジオ', { eighths: '8分', sixteenths: '16分', bells: 'ベル', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', digital: 'デジタル', none: 'なし' }],
+    lead: ['メロディ楽器', { saw: 'ノコギリ波', pluck: 'プラック', soft: 'ソフト', square: '矩形波', pwm: 'PWM', fm: 'FM シンセ', robot: 'ロボット', flute: 'フルート', whistle: '口笛', sax: 'サックス', brass: 'ブラス', violin: 'バイオリン', voice: 'ボイス', bell: 'ベル', piano: 'ピアノ', vibes: 'ビブラフォン', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', accordion: 'アコーディオン', koto: '箏', shamisen: '三味線', shakuhachi: '尺八', distguitar: 'ディストーションギター' }],
+    arp: ['アルペジオ', { eighths: '8分', sixteenths: '16分', bells: 'ベル', harp: 'ハープ', marimba: 'マリンバ', musicbox: 'オルゴール', koto: '箏', digital: 'デジタル', none: 'なし' }],
     swing: ['スウィング', { '0': 'なし', '0.15': '軽め', '0.3': '強め' }]
   };
   var PART_KEYS = Object.keys(PART_LABELS);
@@ -2770,7 +2777,7 @@
   }
 
   // Cover art: the song's piano roll on its style's colour (bar, lock screen).
-  var ART_BG = { pop: '#F2541B', jpop: '#E0457B', dance: '#5B4BFF', lofi: '#8C6A4A', chiptune: '#2EA043', ambient: '#2C7DA0', jazz: '#B7791F', bossa: '#1F9E89' };
+  var ART_BG = { pop: '#F2541B', jpop: '#E0457B', dance: '#5B4BFF', lofi: '#8C6A4A', chiptune: '#2EA043', ambient: '#2C7DA0', jazz: '#B7791F', bossa: '#1F9E89', wafu: '#B3322B', citypop: '#1E88B5', rock: '#3A3F4B', orchestral: '#6B4E9B', cafe: '#A0673A' };
   function drawArt(song, cv) {
     var g = cv.getContext('2d'), W = cv.width, H = cv.height;
     var base = ART_BG[Object.keys(song.mix || {})[0]] || '#F2541B';
@@ -2956,26 +2963,34 @@
     }
     $('#t-cur').textContent = fmt(t);
     updateSections(t);
-    // Highlight current chord
-    var idx = -1;
-    for (var i = 0; i < song.chords.length; i++) if (song.chords[i].time <= t + 0.01) idx = i;
+    // Highlight current chord. While playing, the fill sets off a little before the
+    // chord does (STRIP_LEAD), so that the name turns as the chord sounds and not
+    // after it; a loop's first chord, before the song comes round again.
+    // (No fill to wait for with reduced motion: the name turns on the chord.)
+    var idx = stripIndex(t + 0.01), ahead = t + (reduceMotion.matches ? 0.01 : STRIP_LEAD);
+    if (playing && audio.loop && ahead >= playLength()) ahead -= playLength();
+    ahead = stripIndex(ahead);
+    if (playing || ahead === state.chordIdx) idx = ahead; // (paused: what is lit stays lit)
     if (idx !== state.chordIdx) {
       // The name leaves to the right (.out), then goes back, unseen, to wait on the left.
       var prev = document.querySelector('.progression .c.on');
       if (prev) {
         prev.classList.remove('on');
         prev.classList.add('out');
-        setTimeout(function () { prev.classList.remove('out'); }, STRIP_MS + 50);
+        clearTimeout(prev.outTimer);
+        prev.outTimer = setTimeout(function () { prev.classList.remove('out'); }, STRIP_MS + 50);
       }
       var cur = document.querySelector('.progression .c[data-i="' + idx + '"]');
       if (cur) {
-        cur.classList.remove('out');
+        clearTimeout(cur.outTimer);
+        // (Still leaving? It is back on the left at once, to come in from there.)
+        if (cur.classList.contains('out')) { cur.classList.remove('out'); void cur.offsetWidth; }
         cur.classList.add('on');
-        // Keep the current chord in the middle of the strip (.progression is its offsetParent),
-        // moving with the same timing as the fill.
-        var box = cur.parentElement;
-        var left = Math.max(0, Math.min(box.scrollWidth - box.clientWidth, cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2));
-        scrollStrip(box, left, audio.paused || reduceMotion.matches);
+        // The strip follows, with the same timing as the fill (paused too; a strip just
+        // drawn is there at once, like its fill) — unless the listener has just scrolled
+        // it themselves (a seek, more than a chord away, takes it back).
+        var stepped = typeof state.chordIdx === 'number' && Math.abs(idx - state.chordIdx) <= 1;
+        if (!stepped || performance.now() - stripUserAt > 2500) centreChord(cur, state.chordIdx == null || reduceMotion.matches);
       }
       state.chordIdx = idx;
     }
@@ -2995,7 +3010,19 @@
   }
   var EASE_OUT = bezier(0, 0, 0.58, 1); // CSS ease-out: the strip sets off at once and settles
   var STRIP_MS = 450; // .progression .c::before's transition
-  var stripAnim = 0;
+  var STRIP_LEAD = 0.2; // seconds: the fill moves most at its middle, which is where the chord should sound
+  var stripAnim = 0, stripUserAt = 0;
+  // The strip's chords (state.strip, see renderProgression): the last one that has begun by t.
+  function stripIndex(t) {
+    var c = state.strip || [], idx = -1;
+    for (var i = 0; i < c.length; i++) if (c[i].time <= t) idx = i;
+    return idx;
+  }
+  // Keep the current chord in the middle of the strip (.progression is its offsetParent).
+  function centreChord(cur, now) {
+    var box = cur.parentElement;
+    scrollStrip(box, Math.max(0, Math.min(box.scrollWidth - box.clientWidth, cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2)), now);
+  }
   function scrollStrip(box, left, now) {
     cancelAnimationFrame(stripAnim);
     var from = box.scrollLeft;
@@ -3068,7 +3095,9 @@
   // longer: the chords of the added bars pop in; the strip stays where it is.
   function renderProgression(song, longer) {
     var box = $('#progression'), had = longer ? box.children.length : 0;
-    box.innerHTML = song.chords.map(function (c, i) {
+    // One cell for each change of chord: a chord written again (the same one, a bar or half a bar on) stays lit.
+    state.strip = song.chords.filter(function (c, i, a) { return !i || a[i - 1].name !== c.name; });
+    box.innerHTML = state.strip.map(function (c, i) {
       var enter = !reduceMotion.matches && (longer ? i >= had : i < 24);
       return '<button type="button" class="c' + (enter ? ' enter' : '') + '" style="--i:' + (longer ? Math.min(i - had, 24) : i) + '" data-i="' + i + '" data-name="' + escapeHtml(c.name) + '" title="' + fmt(c.time) + ' から再生">' + escapeHtml(c.name) + '</button>';
     }).join('');
@@ -3173,8 +3202,26 @@
   });
   $('#progression').addEventListener('click', function (e) {
     var b = e.target.closest('.c');
-    if (!b || !state.song) return;
-    seekTo(state.song.chords[+b.dataset.i].time);
+    if (!b || !state.song || !state.strip[+b.dataset.i]) return;
+    stripUserAt = 0;
+    seekTo(state.strip[+b.dataset.i].time);
+  });
+  // The listener scrolls the strip (sideways: the wheel, a finger, its scrollbar): it is theirs for a moment, as the roll is.
+  (function (box) {
+    var touch = null;
+    var mine = function () { stripUserAt = performance.now(); cancelAnimationFrame(stripAnim); };
+    box.addEventListener('wheel', function (e) { if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) mine(); }, { passive: true });
+    box.addEventListener('touchstart', function (e) { touch = e.touches[0] && [e.touches[0].clientX, e.touches[0].clientY]; }, { passive: true });
+    box.addEventListener('touchmove', function (e) {
+      var p = e.touches[0];
+      if (touch && p && Math.abs(p.clientX - touch[0]) > Math.max(4, Math.abs(p.clientY - touch[1]))) mine();
+    }, { passive: true });
+    box.addEventListener('pointerdown', function (e) { if (e.target === box) mine(); });
+  })($('#progression'));
+  // A resized strip: the current chord is in the middle again.
+  window.addEventListener('resize', function () {
+    var cur = document.querySelector('.progression .c.on');
+    if (cur) centreChord(cur, true);
   });
 
   if (window.ResizeObserver) new ResizeObserver(function () { drawStatic(true); drawFrame(); }).observe(rollScroll);

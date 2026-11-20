@@ -208,29 +208,30 @@
   // settings; compose({ parts }) overrides any of them.
   // ---------------------------------------------------------------------------
   var PART_OPTIONS = {
-    drums: ['acoustic', 'electronic', 'lofi', 'chip', 'brush', 'perc', 'jazz', 'bossa', 'none'],
+    drums: ['acoustic', 'electronic', 'lofi', 'chip', 'brush', 'perc', 'jazz', 'bossa', 'taiko', 'none'],
     groove: ['eightbeat', 'sixteenbeat', 'fourfloor', 'halftime', 'shuffle', 'swing', 'breakbeat', 'chip', 'bossa'],
-    bass: ['synth', 'finger', 'sine', 'chip', 'upright', 'fm', 'tuba', 'none'],
+    bass: ['synth', 'finger', 'sine', 'chip', 'upright', 'fm', 'tuba', 'contrabass', 'none'],
     bassLine: ['root', 'drive', 'offbeat', 'syncopated', 'walking', 'long', 'bossa'],
-    chords: ['piano', 'cutpiano', 'epiano', 'synth', 'organ', 'chip', 'harp', 'marimba', 'vibes', 'accordion', 'pizzicato', 'musicbox', 'none'],
+    chords: ['piano', 'cutpiano', 'epiano', 'synth', 'organ', 'chip', 'harp', 'marimba', 'vibes', 'accordion', 'pizzicato', 'musicbox', 'koto', 'none'],
     comping: ['block', 'rhythm', 'arpeggio', 'sustain', 'stab', 'broken', 'jazz', 'bossa'],
-    guitar: ['strum', 'cutting', 'arpeggio', 'fingerpick', 'bossa', 'none'],
+    guitar: ['strum', 'cutting', 'arpeggio', 'fingerpick', 'bossa', 'power', 'none'],
     pad: ['warm', 'wide', 'strings', 'ambient', 'choir', 'none'],
-    lead: ['saw', 'pluck', 'soft', 'square', 'pwm', 'fm', 'robot', 'flute', 'whistle', 'sax', 'brass', 'violin', 'voice', 'bell', 'piano', 'vibes', 'harp', 'marimba', 'musicbox', 'accordion'],
-    arp: ['eighths', 'sixteenths', 'bells', 'harp', 'marimba', 'musicbox', 'digital', 'none']
+    lead: ['saw', 'pluck', 'soft', 'square', 'pwm', 'fm', 'robot', 'flute', 'whistle', 'sax', 'brass', 'violin', 'voice', 'bell', 'piano', 'vibes', 'harp', 'marimba', 'musicbox', 'accordion', 'koto', 'shamisen', 'shakuhachi', 'distguitar'],
+    arp: ['eighths', 'sixteenths', 'bells', 'harp', 'marimba', 'musicbox', 'digital', 'koto', 'none']
   };
   var PART_KEYS = Object.keys(PART_OPTIONS).concat('swing');
   // Parts whose instruments can sound together (parts.together).
   var LAYERABLE = ['lead', 'bass', 'chords', 'pad', 'arp'];
   // Part value -> synth patch (or drum kit).
   var SOUND = {
-    drums: { acoustic: 'std', electronic: 'elec', lofi: 'lofi', chip: 'chip', brush: 'brush', perc: 'perc', jazz: 'jazz', bossa: 'bossa' },
-    bass: { synth: 'bassSaw', finger: 'bassFinger', sine: 'bassSine', chip: 'bassChip', upright: 'bassUpright', fm: 'bassFM', tuba: 'tuba' },
-    chords: { piano: 'piano', cutpiano: 'cutPiano', epiano: 'epiano', synth: 'keys', organ: 'organ', chip: 'chipArp', harp: 'harp', marimba: 'marimba', vibes: 'vibes', accordion: 'accordion', pizzicato: 'pizzicato', musicbox: 'musicbox' },
+    drums: { acoustic: 'std', electronic: 'elec', lofi: 'lofi', chip: 'chip', brush: 'brush', perc: 'perc', jazz: 'jazz', bossa: 'bossa', taiko: 'taiko' },
+    bass: { synth: 'bassSaw', finger: 'bassFinger', sine: 'bassSine', chip: 'bassChip', upright: 'bassUpright', fm: 'bassFM', tuba: 'tuba', contrabass: 'contrabass' },
+    chords: { piano: 'piano', cutpiano: 'cutPiano', epiano: 'epiano', synth: 'keys', organ: 'organ', chip: 'chipArp', harp: 'harp', marimba: 'marimba', vibes: 'vibes', accordion: 'accordion', pizzicato: 'pizzicato', musicbox: 'musicbox', koto: 'koto' },
     pad: { warm: 'pad', wide: 'padWide', strings: 'strings', ambient: 'padAmbient', choir: 'choir' },
     lead: { saw: 'leadSaw', pluck: 'leadPluck', soft: 'leadSoft', square: 'leadSquare', pwm: 'leadPWM', fm: 'leadFM', robot: 'leadRobot', flute: 'flute', whistle: 'whistle', sax: 'sax',
-      brass: 'brass', violin: 'violin', voice: 'voice', bell: 'bell', piano: 'pianoLead', vibes: 'vibesLead', harp: 'harpLead', marimba: 'marimbaLead', musicbox: 'musicboxLead', accordion: 'accordionLead' },
-    arp: { eighths: 'arp', sixteenths: 'arp', bells: 'bellSoft', harp: 'harpArp', marimba: 'marimbaArp', musicbox: 'musicboxArp', digital: 'digitalArp' }
+      brass: 'brass', violin: 'violin', voice: 'voice', bell: 'bell', piano: 'pianoLead', vibes: 'vibesLead', harp: 'harpLead', marimba: 'marimbaLead', musicbox: 'musicboxLead', accordion: 'accordionLead',
+      koto: 'kotoLead', shamisen: 'shamisen', shakuhachi: 'shakuhachi', distguitar: 'leadDrive' },
+    arp: { eighths: 'arp', sixteenths: 'arp', bells: 'bellSoft', harp: 'harpArp', marimba: 'marimbaArp', musicbox: 'musicboxArp', digital: 'digitalArp', koto: 'kotoArp' }
   };
 
   // spice: chromatic colour (secondary dominants, borrowed chords, appoggiaturas).
@@ -324,6 +325,63 @@
       expr: { bend: 0.1, ghost: 0.2, harmony: false },
       melody: { slow: false, notes: 4.5, legato: 0.85, center: [2, 5], octave: 0, sync: 0.75, gen: 0.8, eighths: true },
       fx: { room: 0.7, damp: 0.5, wet: 0.8, delay: 0.25, sidechain: 0, lofi: false, tail: 3 }
+    },
+    // Japanese style (和風): melodies on the yonanuki scales (the major or the
+    // minor scale without its 4th and 7th: do re mi so la / la ti do mi fa),
+    // a shakuhachi over koto arpeggios, taiko drums; minor-key progressions
+    // that come home from bVII, as the natural minor does.
+    wafu: {
+      label: '和風', bpm: [84, 132], modes: ['minor', 'minor', 'major'],
+      chordBars: 1, sevenths: 0.05, humanize: 0.4,
+      parts: { drums: 'taiko', groove: 'eightbeat', bass: 'finger', bassLine: 'root', chords: 'koto', comping: 'arpeggio', guitar: 'none', pad: 'none', lead: 'shakuhachi', arp: 'none', swing: 0 },
+      spice: 0.2, idioms: 'wafu', functional: 0.1, form: { pre: 0.5, bridge: 0.6, drop: 0.3, modulate: 0.3 },
+      expr: { bend: 0.5, ghost: 0, harmony: false },
+      melody: { slow: false, notes: 4.5, legato: 0.9, center: [3, 6], octave: 0, sync: 0.35, gen: 0.6, omit: [3, 6] },
+      fx: { room: 0.82, damp: 0.35, wet: 1.15, delay: 0.5, sidechain: 0, lofi: false, tail: 4 }
+    },
+    // City pop / funk: a sixteenth-note groove, a bass locked to the kick,
+    // electric piano chords with 7ths and 9ths, a cutting guitar, strings.
+    citypop: {
+      label: 'City Pop', bpm: [96, 122], modes: ['major', 'major', 'minor', 'dorian'],
+      chordBars: 1, sevenths: 0.9, humanize: 0.3, tensions: 0.45,
+      parts: { drums: 'acoustic', groove: 'sixteenbeat', bass: 'finger', bassLine: 'syncopated', chords: 'epiano', comping: 'rhythm', guitar: 'cutting', pad: 'strings', lead: 'sax', arp: 'none', swing: 0 },
+      spice: 0.7, idioms: 'citypop', functional: 0.15, form: { pre: 0.8, bridge: 0.7, drop: 0.4, modulate: 0.5 },
+      expr: { bend: 0.2, ghost: 0.5, harmony: true },
+      melody: { slow: false, notes: 5.5, legato: 0.88, center: [2, 6], octave: 0, sync: 0.7, gen: 0.8, halves: true },
+      fx: { room: 0.78, damp: 0.35, wet: 1, delay: 0.8, sidechain: 0, lofi: false, tail: 3 }
+    },
+    // Rock: overdriven power chords (palm-muted under the verse, ringing in
+    // the chorus), an eighth-note bass, a lead guitar that bends into its notes.
+    rock: {
+      label: 'Rock', bpm: [112, 168], modes: ['minor', 'major', 'mixolydian', 'minor'],
+      chordBars: 1, sevenths: 0.05, humanize: 0.3,
+      parts: { drums: 'acoustic', groove: 'eightbeat', bass: 'finger', bassLine: 'drive', chords: 'none', comping: 'block', guitar: 'power', pad: 'none', lead: 'distguitar', arp: 'none', swing: 0 },
+      spice: 0.3, idioms: 'rock', functional: 0.15, form: { pre: 0.5, bridge: 0.7, drop: 0.2, modulate: 0.3 },
+      expr: { bend: 0.45, ghost: 0.2, harmony: true },
+      melody: { slow: false, notes: 5, legato: 0.85, center: [3, 6], octave: 0, sync: 0.5, gen: 0.6 },
+      fx: { room: 0.75, damp: 0.4, wet: 0.9, delay: 0.6, sidechain: 0, lofi: false, tail: 3 }
+    },
+    // Orchestral: a violin melody over pizzicato strings and double basses,
+    // the string section and a harp opening out in the chorus, big drums.
+    orchestral: {
+      label: 'Orchestral', bpm: [70, 126], modes: ['minor', 'major', 'dorian', 'lydian'],
+      chordBars: 1, sevenths: 0.15, humanize: 0.5,
+      parts: { drums: 'taiko', groove: 'halftime', bass: 'contrabass', bassLine: 'root', chords: 'pizzicato', comping: 'rhythm', guitar: 'none', pad: 'strings', lead: 'violin', arp: 'harp', swing: 0 },
+      spice: 0.45, idioms: 'orch', functional: 0.35, form: { pre: 0.4, bridge: 0.7, drop: 0.4, modulate: 0.5 },
+      expr: { bend: 0, ghost: 0, harmony: true },
+      melody: { slow: false, notes: 4, legato: 0.95, center: [3, 6], octave: 0, sync: 0.2, gen: 0.5 },
+      fx: { room: 0.9, damp: 0.25, wet: 1.3, delay: 0.2, sidechain: 0, lofi: false, tail: 5 }
+    },
+    // Cafe (musette): an accordion tune, a nylon guitar, brushes and an
+    // upright bass, lightly swung; turnarounds through VI7 and ii-V.
+    cafe: {
+      label: 'Cafe', bpm: [96, 138], modes: ['major', 'major', 'minor'],
+      chordBars: 1, sevenths: 0.55, humanize: 0.5, tensions: 0.2,
+      parts: { drums: 'brush', groove: 'shuffle', bass: 'upright', bassLine: 'root', chords: 'piano', comping: 'stab', guitar: 'fingerpick', pad: 'none', lead: 'accordion', arp: 'none', swing: 0.22 },
+      spice: 0.6, idioms: 'cafe', functional: 0.3, form: { pre: 0.2, bridge: 0.7, drop: 0.1, modulate: 0.3 },
+      expr: { bend: 0.05, ghost: 0.3, harmony: false },
+      melody: { slow: false, notes: 5, legato: 0.85, center: [3, 6], octave: 0, sync: 0.45, gen: 0.7, eighths: true },
+      fx: { room: 0.68, damp: 0.5, wet: 0.8, delay: 0.15, sidechain: 0, lofi: false, tail: 3 }
     }
   };
   var STYLE_NAMES = Object.keys(STYLES);
@@ -551,7 +609,8 @@
         sync: r2(avg(function (s) { return s.melody.sync; })),
         gen: r2(avg(function (s) { return s.melody.gen; })),
         eighths: avg(function (s) { return s.melody.eighths ? 1 : 0; }) >= 0.5,
-        halves: avg(function (s) { return s.melody.halves ? 1 : 0; }) >= 0.3
+        halves: avg(function (s) { return s.melody.halves ? 1 : 0; }) >= 0.3,
+        omit: S[main].melody.omit
       },
       fx: {
         room: r2(avg(function (s) { return s.fx.room; })), damp: r2(avg(function (s) { return s.fx.damp; })),
@@ -645,7 +704,8 @@
   // wave 'ks': plucked string (Karplus-Strong); bright 0..1, ring = decay time (s).
   // Optional: pwm {rate, depth} (square), ifloor = FM index that never decays away,
   // ring {ratio, mix} ring modulation, crush {bits, hold} bit/sample-rate reduction,
-  // formants [[Hz, Q, gain]] band-pass bank, trem {rate, depth}, transpose (semitones).
+  // formants [[Hz, Q, gain]] band-pass bank, trem {rate, depth}, transpose (semitones),
+  // drive = overdrive (a soft clipper before the filter; 1 = hardly any).
   // In the arrangement: roll = seconds between chord notes, lh = add a left-hand
   // bass note, gate = cut notes after this many 16ths.
   var PATCHES = {
@@ -712,6 +772,20 @@
     harpArp:    { wave: 'ks', bright: 0.45, body: 2200, ring: 2.5, a: 0.001, d: 1, s: 1, r: 1, cutoff: 0, gain: 0.52, pan: -0.35, rev: 0.45, dly: 0.25, vib: 0 },
     pizzicato:  { wave: 'ks', roll: 0.006, bright: 0.3, body: 1800, ring: 0.45, a: 0.001, d: 1, s: 1, r: 0.05, cutoff: 0, gain: 0.76, pan: -0.1, rev: 0.4, dly: 0, vib: 0 },
     nylon:      { wave: 'ks', bright: 0.3, body: 1500, ring: 2.6, a: 0.001, d: 1, s: 1, r: 0.3, cutoff: 0, gain: 0.23, pan: 0.25, rev: 0.3, dly: 0.05, vib: 0 },
+    // Japanese instruments: the koto (long, bright plucked strings, chords
+    // rolled), the shamisen (a short, snapping pluck), the shakuhachi (a
+    // breathy bamboo flute).
+    koto:       { wave: 'ks', roll: 0.03, bright: 0.68, body: 2800, ring: 2.8, a: 0.001, d: 1, s: 1, r: 1.1, cutoff: 0, gain: 0.36, pan: -0.15, rev: 0.45, dly: 0.05, vib: 0 },
+    kotoLead:   { wave: 'ks', bright: 0.72, body: 3000, ring: 2.4, a: 0.001, d: 1, s: 1, r: 0.8, cutoff: 0, gain: 2.0, pan: 0.05, rev: 0.4, dly: 0.15, vib: 0 },
+    kotoArp:    { wave: 'ks', bright: 0.7, body: 3000, ring: 2.2, a: 0.001, d: 1, s: 1, r: 0.9, cutoff: 0, gain: 0.46, pan: -0.35, rev: 0.45, dly: 0.2, vib: 0 },
+    shamisen:   { wave: 'ks', bright: 0.85, body: 3600, ring: 0.9, a: 0.001, d: 1, s: 1, r: 0.12, cutoff: 0, gain: 1.9, pan: 0.05, rev: 0.3, dly: 0.1, vib: 0 },
+    shakuhachi: { wave: 'add', partials: [[1, 1, 0], [2, 0.34, 0], [3, 0.12, 0], [4, 0.05, 0]], breath: 0.14, a: 0.07, d: 0.3, s: 0.85, r: 0.16, cutoff: 0, gain: 0.24, pan: 0.06, rev: 0.45, dly: 0.2, vib: 0.3 },
+    // Rock: an overdriven guitar (sawtooths through a soft clipper, then the
+    // speaker's low-pass), palm-muted, and as a lead; the double basses of an orchestra.
+    guitarDrive: { wave: 'saw', unison: 2, detune: 8, drive: 5, a: 0.004, d: 0.6, s: 0.85, r: 0.1, cutoff: 2300, env: 900, fd: 0.2, res: 0.1, gain: 0.1, pan: 0.3, rev: 0.25, dly: 0.05, vib: 0 },
+    guitarDriveMute: { wave: 'saw', unison: 2, detune: 8, drive: 4, a: 0.002, d: 0.14, s: 0, r: 0.03, cutoff: 800, env: 1400, fd: 0.08, res: 0.1, gain: 0.45, pan: 0.3, rev: 0.12, dly: 0, vib: 0 },
+    leadDrive:  { wave: 'saw', unison: 2, detune: 6, drive: 6, a: 0.012, d: 0.4, s: 0.85, r: 0.15, cutoff: 2600, env: 1400, fd: 0.3, res: 0.18, gain: 0.26, pan: 0.05, rev: 0.3, dly: 0.25, vib: 0.3 },
+    contrabass: { wave: 'saw', unison: 2, detune: 6, a: 0.05, d: 0.5, s: 0.85, r: 0.2, cutoff: 420, env: 500, fd: 0.4, res: 0.05, gain: 0.4, pan: 0, rev: 0.25, dly: 0, vib: 0.05 },
     bassUpright: { wave: 'ks', bright: 0.12, body: 420, ring: 1.1, a: 0.001, d: 1, s: 1, r: 0.08, cutoff: 0, gain: 2.3, pan: 0, rev: 0.05, dly: 0, vib: 0 }
   };
 
@@ -724,40 +798,40 @@
   // mood: true = used only for those moods (so songs without a mood don't change).
   var IDIOMS = {
     major: [
-      { p: 'IVmaj7 | V7 | iii7 | vi', roles: 'BP', tags: 'jpop pop sad' },                  // 王道進行
+      { p: 'IVmaj7 | V7 | iii7 | vi', roles: 'BP', tags: 'jpop pop sad citypop wafu' },                  // 王道進行
       { p: 'IVmaj7 | V | iii7 | vi | ii7 | V7 | I | I', roles: 'B', tags: 'jpop sad' },      // 王道 + cadence
-      { p: 'vi | IV | V | I', roles: 'BA', tags: 'jpop pop dance sad energetic' },          // 小室進行
-      { p: 'I,V/3 | vi,iii | IV,I/3 | IV,V', roles: 'AB', tags: 'jpop pop calm' },          // カノン進行
-      { p: 'IVmaj7 | III7 | vi7 | v7,I7', roles: 'AB', tags: 'jpop lofi sad dreamy' },      // 丸サ進行
-      { p: 'I | V/3 | vi | I/5 | IV | I/3 | ii7 | V7', roles: 'AB', tags: 'jpop pop calm' }, // descending bass
+      { p: 'vi | IV | V | I', roles: 'BA', tags: 'jpop pop dance sad energetic wafu orch' },          // 小室進行
+      { p: 'I,V/3 | vi,iii | IV,I/3 | IV,V', roles: 'AB', tags: 'jpop pop calm orch cafe' },          // カノン進行
+      { p: 'IVmaj7 | III7 | vi7 | v7,I7', roles: 'AB', tags: 'jpop lofi sad dreamy citypop' },      // 丸サ進行
+      { p: 'I | V/3 | vi | I/5 | IV | I/3 | ii7 | V7', roles: 'AB', tags: 'jpop pop calm orch' }, // descending bass
       { p: 'IV | V | iii | vi | ii | iii | IVmaj7 | Vsus4,V', roles: 'B', tags: 'jpop sad' },
-      { p: 'I | vi | IV | V', roles: 'AB', tags: 'pop jpop chip bright calm' },            // 50s
-      { p: 'I | V | vi | IV', roles: 'BA', tags: 'pop dance chip bright energetic' },
-      { p: 'vi | IV | I | V', roles: 'B', tags: 'pop dance energetic' },
-      { p: 'IV | I | V | vi', roles: 'B', tags: 'pop jpop bright' },
-      { p: 'I | iii | IV | V', roles: 'A', tags: 'pop jpop bright' },
-      { p: 'I | IV | I | V', roles: 'A', tags: 'chip pop bright energetic' },
-      { p: 'I | IV | vi | V', roles: 'AB', tags: 'pop chip bright' },
+      { p: 'I | vi | IV | V', roles: 'AB', tags: 'pop jpop chip bright calm wafu cafe' },            // 50s
+      { p: 'I | V | vi | IV', roles: 'BA', tags: 'pop dance chip bright energetic rock' },
+      { p: 'vi | IV | I | V', roles: 'B', tags: 'pop dance energetic rock orch' },
+      { p: 'IV | I | V | vi', roles: 'B', tags: 'pop jpop bright orch wafu' },
+      { p: 'I | iii | IV | V', roles: 'A', tags: 'pop jpop bright cafe' },
+      { p: 'I | IV | I | V', roles: 'A', tags: 'chip pop bright energetic rock' },
+      { p: 'I | IV | vi | V', roles: 'AB', tags: 'pop chip bright rock' },
       // Mood: open, floating colours (add9, maj7) that never quite land; a bass climbing to the chorus.
       { p: 'Iadd9 | IVadd9 | Iadd9 | IVadd9', roles: 'AB', tags: 'dreamy calm', mood: true },
       { p: 'Imaj7 | iii7 | IVmaj7 | IVmaj7', roles: 'AC', tags: 'dreamy calm sad', mood: true },
       { p: 'I | V/3 | IV/3 | V', roles: 'AB', tags: 'bright energetic', mood: true },
-      { p: 'IV | V | vi | vi', roles: 'P', tags: 'jpop pop' },
-      { p: 'ii7 | iii7 | IVmaj7 | V', roles: 'P', tags: 'jpop pop' },
-      { p: 'vi | V | IV | V', roles: 'PC', tags: 'pop jpop dance' },
+      { p: 'IV | V | vi | vi', roles: 'P', tags: 'jpop pop rock wafu' },
+      { p: 'ii7 | iii7 | IVmaj7 | V', roles: 'P', tags: 'jpop pop citypop cafe' },
+      { p: 'vi | V | IV | V', roles: 'PC', tags: 'pop jpop dance rock' },
       { p: 'IV | V/3 | vi | V', roles: 'P', tags: 'jpop' },
-      { p: 'ii7 | V7 | Imaj7 | vi7', roles: 'A', tags: 'lofi jpop' },
-      { p: 'Imaj7 | I7 | IVmaj7 | iv7', roles: 'AC', tags: 'lofi jpop' },
-      { p: 'IVmaj7 | iii7 | ii7 | Imaj7', roles: 'A', tags: 'lofi' },
-      { p: 'IVmaj7 | III7 | vi7 | II7,V7', roles: 'AC', tags: 'lofi jpop' },
-      { p: 'bVI | bVII | I | I', roles: 'C', tags: 'pop jpop chip dance bright energetic' },
-      { p: 'IV | iv | I | vi', roles: 'C', tags: 'pop jpop lofi sad' },
-      { p: 'vi | iii | IV | I', roles: 'CA', tags: 'pop jpop sad' },
+      { p: 'ii7 | V7 | Imaj7 | vi7', roles: 'A', tags: 'lofi jpop citypop cafe' },
+      { p: 'Imaj7 | I7 | IVmaj7 | iv7', roles: 'AC', tags: 'lofi jpop citypop cafe' },
+      { p: 'IVmaj7 | iii7 | ii7 | Imaj7', roles: 'A', tags: 'lofi citypop' },
+      { p: 'IVmaj7 | III7 | vi7 | II7,V7', roles: 'AC', tags: 'lofi jpop citypop' },
+      { p: 'bVI | bVII | I | I', roles: 'C', tags: 'pop jpop chip dance bright energetic rock orch' },
+      { p: 'IV | iv | I | vi', roles: 'C', tags: 'pop jpop lofi sad citypop cafe' },
+      { p: 'vi | iii | IV | I', roles: 'CA', tags: 'pop jpop sad orch' },
       { p: 'Imaj7 | IVmaj7 | Imaj7 | IVmaj7', roles: 'ABC', tags: 'ambient dreamy calm' },
       // Jazz: ii-V-I, I-vi-ii-V (rhythm changes), the circle from iii, tritone substitutes (bII7 for V7).
       { p: 'ii7 | V7 | Imaj7 | Imaj7', roles: 'AB', tags: 'jazz bossa', only: true },
-      { p: 'Imaj7 | vi7 | ii7 | V7', roles: 'AB', tags: 'jazz bossa', only: true },
-      { p: 'iii7 | VI7 | ii7 | V7', roles: 'ACP', tags: 'jazz bossa', only: true },
+      { p: 'Imaj7 | vi7 | ii7 | V7', roles: 'AB', tags: 'jazz bossa cafe', only: true },
+      { p: 'iii7 | VI7 | ii7 | V7', roles: 'ACP', tags: 'jazz bossa cafe citypop', only: true },
       { p: 'Imaj7,vi7 | ii7,V7 | iii7,VI7 | ii7,V7', roles: 'AB', tags: 'jazz', only: true },
       { p: 'ii7 | bII7 | Imaj7 | VI7', roles: 'B', tags: 'jazz bossa', only: true },
       { p: 'Imaj7 | I7 | IVmaj7 | iv7', roles: 'BC', tags: 'jazz bossa', only: true },
@@ -770,20 +844,28 @@
       { p: 'Imaj7 | II7 | ii7,V7 | Imaj7', roles: 'AB', tags: 'bossa', only: true },
       { p: 'IVmaj7 | IVmaj7 | bVII7 | bVII7 | iii7 | VI7 | ii7 | V7', roles: 'C', tags: 'bossa', only: true },
       { p: 'IVmaj7 | iv7 | Imaj7 | VI7', roles: 'BP', tags: 'bossa', only: true },
-      { p: 'Iadd9 | vi7 | IVmaj7 | V', roles: 'AB', tags: 'ambient pop dreamy calm' }
+      { p: 'Iadd9 | vi7 | IVmaj7 | V', roles: 'AB', tags: 'ambient pop dreamy calm' },
+      { p: 'I | VI7 | ii7 | V7', roles: 'AB', tags: 'cafe', only: true },                    // the musette turnaround
+      { p: 'I | I7 | IV | iv | I | VI7 | ii7 | V7', roles: 'B', tags: 'cafe', only: true },
+      { p: 'ii7 | V7 | iii7 | vi7', roles: 'AB', tags: 'citypop', only: true },
+      { p: 'IVmaj7 | V7 | iii7 | vi7 | ii7 | V7 | Imaj7 | I7', roles: 'B', tags: 'citypop', only: true },
+      { p: 'I | V | bVII | IV', roles: 'AB', tags: 'rock', only: true },
+      { p: 'I | IV | V | IV', roles: 'A', tags: 'rock', only: true },
+      { p: 'IV | V | iii | vi', roles: 'AB', tags: 'wafu', only: true },                       // 王道進行, plain triads
+      { p: 'I | V/3 | vi | iii | IV | I/3 | IV | V', roles: 'AB', tags: 'orch', only: true }
     ],
     minor: [
-      { p: 'i | bVI | bIII | bVII', roles: 'BA', tags: 'dance pop jpop chip energetic sad' },
-      { p: 'i | bVII | bVI | V', roles: 'BC', tags: 'dance pop jpop chip dark tense' },   // Andalusian
-      { p: 'i | iv | bVII | bIII', roles: 'A', tags: 'pop dance jpop' },
-      { p: 'bVI | bVII | i | i', roles: 'BP', tags: 'dance pop jpop chip energetic' },
-      { p: 'i | bVI | iv | V', roles: 'AB', tags: 'pop jpop chip sad dark' },
-      { p: 'iv | V | i | i', roles: 'P', tags: 'pop jpop dark' },
-      { p: 'bVImaj7 | V7 | i7 | i7', roles: 'AB', tags: 'lofi jpop sad' },
-      { p: 'iv7 | bVII7 | bIIImaj7 | bVImaj7', roles: 'AC', tags: 'lofi jpop sad' },     // circle of fifths
-      { p: 'i7 | iv7 | i7 | V7', roles: 'A', tags: 'lofi' },
-      { p: 'bVI | bVII | V | i', roles: 'PC', tags: 'jpop pop dance tense' },
-      { p: 'i | bIII | bVII | iv', roles: 'AB', tags: 'pop dance' },
+      { p: 'i | bVI | bIII | bVII', roles: 'BA', tags: 'dance pop jpop chip energetic sad rock orch wafu' },
+      { p: 'i | bVII | bVI | V', roles: 'BC', tags: 'dance pop jpop chip dark tense rock orch wafu' },   // Andalusian
+      { p: 'i | iv | bVII | bIII', roles: 'A', tags: 'pop dance jpop rock wafu cafe' },
+      { p: 'bVI | bVII | i | i', roles: 'BP', tags: 'dance pop jpop chip energetic rock orch wafu' },
+      { p: 'i | bVI | iv | V', roles: 'AB', tags: 'pop jpop chip sad dark orch wafu cafe' },
+      { p: 'iv | V | i | i', roles: 'P', tags: 'pop jpop dark rock orch wafu cafe' },
+      { p: 'bVImaj7 | V7 | i7 | i7', roles: 'AB', tags: 'lofi jpop sad citypop cafe' },
+      { p: 'iv7 | bVII7 | bIIImaj7 | bVImaj7', roles: 'AC', tags: 'lofi jpop sad citypop' },     // circle of fifths
+      { p: 'i7 | iv7 | i7 | V7', roles: 'A', tags: 'lofi citypop cafe' },
+      { p: 'bVI | bVII | V | i', roles: 'PC', tags: 'jpop pop dance tense rock orch wafu' },
+      { p: 'i | bIII | bVII | iv', roles: 'AB', tags: 'pop dance rock' },
       { p: 'i7 | bVImaj7 | i7 | bVImaj7', roles: 'ABC', tags: 'ambient dreamy calm dark' },
       // Dark and tense: the Neapolitan bII (a half step above the tonic) on its way
       // to V, a phrygian vamp between i and bII, the tonic held under a rising line.
@@ -802,23 +884,29 @@
       { p: 'iiø7 | V7 | iiø7 | V7', roles: 'P', tags: 'jazz bossa', only: true },
       // Minor bossa: the tonic and the iv for two bars each, the relative major, a ii-V back.
       { p: 'i7 | i7 | iv7 | iv7 | iiø7 | V7 | i7 | V7', roles: 'A', tags: 'bossa', only: true },
-      { p: 'i7 | iv7 | bIIImaj7 | bVImaj7', roles: 'BC', tags: 'bossa', only: true }
+      { p: 'i7 | iv7 | bIIImaj7 | bVImaj7', roles: 'BC', tags: 'bossa', only: true },
+      { p: 'i | bVII | i | bVII', roles: 'A', tags: 'wafu rock', only: true },
+      { p: 'i | iv | i | V', roles: 'A', tags: 'wafu cafe', only: true },
+      { p: 'bVI | bVII | i | bVII', roles: 'BA', tags: 'wafu rock', only: true },
+      { p: 'i | bVII | bVI | bVII', roles: 'AB', tags: 'wafu rock orch', only: true },
+      { p: 'i | v | bVI | bIII | iv | i | iv | V', roles: 'B', tags: 'orch wafu', only: true },
+      { p: 'i | bVI | bVII | i', roles: 'AB', tags: 'rock orch', only: true }
     ],
     dorian: [
-      { p: 'i7 | IV7 | i7 | IV7', roles: 'AB', tags: 'lofi pop dance ambient jazz bossa calm dreamy' },
+      { p: 'i7 | IV7 | i7 | IV7', roles: 'AB', tags: 'lofi pop dance ambient jazz bossa calm dreamy citypop' },
       // Modal jazz: a dorian vamp, up a half step for the bridge feel; ii-V back home.
       { p: 'i7 | i7 | i7 | i7', roles: 'AC', tags: 'jazz', only: true },
       { p: 'ii7 | V7 | i7 | IV7', roles: 'BP', tags: 'jazz bossa', only: true },
-      { p: 'i | bVII | IV | i', roles: 'AB', tags: 'pop dance chip' },
-      { p: 'i7 | bIIImaj7 | IV7 | bVII', roles: 'BC', tags: 'lofi pop' }
+      { p: 'i | bVII | IV | i', roles: 'AB', tags: 'pop dance chip rock orch' },
+      { p: 'i7 | bIIImaj7 | IV7 | bVII', roles: 'BC', tags: 'lofi pop citypop' }
     ],
     mixolydian: [
-      { p: 'I | bVII | IV | I', roles: 'AB', tags: 'pop chip dance' },
-      { p: 'I | IV | bVII | IV', roles: 'AB', tags: 'pop chip' }
+      { p: 'I | bVII | IV | I', roles: 'AB', tags: 'pop chip dance rock' },
+      { p: 'I | IV | bVII | IV', roles: 'AB', tags: 'pop chip rock' }
     ],
     lydian: [
-      { p: 'I | II | I | II', roles: 'AB', tags: 'ambient pop dreamy calm' },
-      { p: 'Imaj7 | II | vi | V', roles: 'AB', tags: 'ambient pop chip dreamy bright' }
+      { p: 'I | II | I | II', roles: 'AB', tags: 'ambient pop dreamy calm orch' },
+      { p: 'Imaj7 | II | vi | V', roles: 'AB', tags: 'ambient pop chip dreamy bright orch' }
     ]
   };
 
@@ -1332,6 +1420,24 @@
       }
       return ev;
     }
+    if (style === 'power') {
+      // Overdriven power chords (root, fifth, octave): 'X' palm-muted eighths
+      // that chug under a verse, 'W' open strokes: on the chord and where the
+      // song's own rhythm puts them, ringing through a chorus.
+      if (level >= 2) {
+        var hits = [0].concat(pickSome(rng, [3, 4, 6, 6, 8, 10, 11, 12, 14], rng.int(2, 4))).sort(function (a, b) { return a - b; });
+        hits.forEach(function (x, i) { ev.push([x, (i + 1 < hits.length ? hits[i + 1] : 16) - x, x % 4 === 0 ? 0.9 : 0.78, 'W']); });
+        if (rng.chance(0.5)) { var w2 = ev.map(function (e) { return e.slice(); }), k2 = 1 + Math.floor(rng.next() * (w2.length - 1)); w2[k2 - 1][1] += w2[k2][1]; w2.splice(k2, 1); ev.alt = w2; }
+        return ev;
+      }
+      var open = level === 0 ? [0] : [0].concat(rng.chance(0.6) ? [rng.pick([6, 8, 12, 14])] : []);
+      for (s = 0; s < 16; s += 2) {
+        if (level === 0 && s) break;
+        ev.push(open.indexOf(s) >= 0 ? [s, 2, 0.9, 'W'] : [s, 2, s % 4 === 0 ? 0.72 : 0.6, 'X']);
+      }
+      if (level === 0) ev[0][1] = 16;
+      return ev;
+    }
     if (style === 'fingerpick') {
       // Thumb on the beats (alternating bass), fingers between; a pinch on one in a chorus.
       var thumb = rng.pick([[0, 2, 1, 2], [0, 1, 0, 2], [0, 2, 0, 1]]), fing = rng.pick([[3, 4, 5, 4], [4, 3, 5, 3], [5, 4, 3, 4]]);
@@ -1781,6 +1887,11 @@
       }
       return ev;
     }
+    if (style === 'power') {
+      if (level >= 2) return [[0, 4, 0.9, 'W'], [4, 4, 0.75, 'W'], [8, 2, 0.8, 'W'], [10, 2, 0.7, 'W']];
+      if (level === 0) return [[0, 12, 0.85, 'W']];
+      return [[0, 2, 0.9, 'W'], [2, 2, 0.6, 'X'], [4, 2, 0.7, 'X'], [6, 2, 0.6, 'X'], [8, 2, 0.7, 'X'], [10, 2, 0.6, 'X']];
+    }
     if (style === 'fingerpick' || style === 'bossa') {
       // Waltz fingerstyle: bass on one, the fingers pinch (or roll) beats 2 and 3.
       if (level < 2 && rng.chance(0.5)) return [[0, 12, 0.85, 0], [4, 4, 0.6, 'P'], [8, 4, 0.55, 'P']];
@@ -1964,7 +2075,7 @@
       for (var i = L.length - 1; i > 0; i--) { var j = Math.floor(pr.next() * (i + 1)), x = L[i]; L[i] = L[j]; L[j] = x; }
       // Drums build up: the lightest kit in the verse, the heaviest in the chorus.
       if (k === 'drums' && L.length > 1) {
-        var W = ['none', 'brush', 'bossa', 'perc', 'jazz', 'lofi', 'chip', 'acoustic', 'electronic'];
+        var W = ['none', 'brush', 'bossa', 'perc', 'jazz', 'lofi', 'chip', 'acoustic', 'taiko', 'electronic'];
         L.sort(function (a, b) { return W.indexOf(a) - W.indexOf(b); });
         L = [L[0], L[L.length - 1]].concat(L.slice(1, -1));
       }
@@ -2039,7 +2150,7 @@
         S = soundCache[key] = {
           parts: q, kit: SOUND.drums[q.drums] || null, bassPatch: SOUND.bass[q.bass] || null, bassOct: q.bass === 'chip' ? 12 : 0,
           chordPatch: SOUND.chords[q.chords] || null, padPatch: SOUND.pad[q.pad] || null, leadPatch: SOUND.lead[q.lead],
-          arpPatch: SOUND.arp[q.arp] || null, guitarPatch: q.guitar === 'fingerpick' || q.guitar === 'bossa' ? 'nylon' : 'guitar', swing: q.swing,
+          arpPatch: SOUND.arp[q.arp] || null, guitarPatch: q.guitar === 'fingerpick' || q.guitar === 'bossa' ? 'nylon' : q.guitar === 'power' ? 'guitarDrive' : 'guitar', swing: q.swing,
           snareKind: q.drums === 'electronic' || q.groove === 'fourfloor' ? 'clap' : 'snare'
         };
       }
@@ -2076,17 +2187,41 @@
     // (D) may come before the last one, and the last chorus may move up a step.
     var fr = R('form');
     var usePre = fr.chance(st.form.pre), useBridge = fr.chance(st.form.bridge), useDrop = fr.chance(st.form.drop);
-    var LEN = { A: 8, P: 4, B: 8, C: 8, D: 8 };
-    var first = ['A'].concat(usePre ? ['P'] : [], ['B', 'A'], usePre ? ['P'] : [], ['B'],
+    // The shape of a song is its own too (from a stream of its own): how it
+    // opens: the hook over the chorus's chords (4 bars), just two bars of it, a
+    // long opening (4 quiet bars, then the hook), straight into the first verse,
+    // or with the chorus itself (サビ頭); how it ends: a closing cadence, the
+    // hook once more and then the close, or two bars and out; a pre-chorus of 4
+    // or 8 bars; and whether the first verse is sung twice before the chorus.
+    var shape = R('form-shape');
+    var introKind = wpick(shape, { hook: 4, short: 1.5, long: 1.5, cold: 1.2, chorus: /jpop|citypop|wafu/.test(st.idioms) ? 1.8 : 0.9 });
+    var outroKind = wpick(shape, { close: 3, hook: 3.5, short: 1.5 });
+    var LEN = { A: 8, P: shape.chance(0.25) ? 8 : 4, B: 8, C: 8, D: 8 };
+    var doubleVerse = shape.chance(0.22);
+    var first = ['A'].concat(doubleVerse ? ['A'] : [], usePre ? ['P'] : [], ['B', 'A'], usePre ? ['P'] : [], ['B'],
       useBridge ? ['C'] : [], useDrop ? ['D'] : [], useBridge || useDrop ? ['B'] : []);
     var again = ['A'].concat(usePre ? ['P'] : [], ['B']);
-    // The outro of a longer song plays the hook once more before the closing cadence (8 bars).
     // The outro of a longer song plays the hook once more before the closing cadence (8 bars).
     function buildForm(total) {
       var out = [];
       var remaining = total;
-      var io = !loop && total >= 16, outroBars = total >= 48 ? 8 : 4;
-      if (io) { remaining -= 4 + outroBars; out.push({ type: 'intro', bars: 4 }); }
+      // (A short piece keeps to the plain 4 bars; the longer openings and
+      // endings need the room.)
+      var io = !loop && total >= 16;
+      var introBars = total < 24 ? 4 : introKind === 'short' ? 2 : introKind === 'long' && total >= 32 ? 8 : (introKind === 'cold' || introKind === 'chorus') && total >= 32 ? 0 : 4;
+      var outroBars = outroKind === 'short' && total >= 24 ? 2 : outroKind === 'hook' && total >= 40 ? 8 : 4;
+      // (The sections between are counted in fours.)
+      // A two-bar intro or outro leaves a half phrase over: the other end goes short with it
+      if ((total - introBars - outroBars) % 4 === 2) {
+        if (introBars === 2) outroBars = 2;
+        else if (outroBars === 2 && introBars === 4) introBars = 2;
+      }
+      if ((total - introBars - outroBars) % 4 === 2) { if (outroBars === 2) outroBars = 4; else introBars = 4; }
+      if (io) {
+        remaining -= introBars + outroBars;
+        if (introBars) out.push({ type: 'intro', bars: introBars, quiet: introBars === 8 ? 4 : 0 });
+        else if (introKind === 'chorus') { out.push({ type: 'B', bars: 8, drop: false }); remaining -= 8; }
+      }
       for (var fi = 0; remaining > 0; fi++) {
         var ftype = fi < first.length ? first[fi] : again[(fi - first.length) % again.length];
         // (No room for the quiet chorus: nor for the chorus after it, when that
@@ -2097,7 +2232,7 @@
         }
         // A pre-chorus or bridge needs a chorus after it; whatever is left becomes (part of) a chorus.
         // (A bridge short of room is a short one, 4 bars, rather than one chorus more.)
-        if ((ftype === 'P' && remaining < 12) || (ftype === 'C' && remaining < 12) || (ftype !== 'C' && LEN[ftype] > remaining)) ftype = 'B';
+        if ((ftype === 'P' && remaining < LEN.P + 8) || (ftype === 'C' && remaining < 12) || (ftype !== 'C' && LEN[ftype] > remaining)) ftype = 'B';
         var flen = ftype === 'C' && remaining < 16 ? 4 : Math.min(LEN[ftype], remaining);
         out.push({ type: ftype === 'D' ? 'B' : ftype, bars: flen, drop: ftype === 'D' });
         remaining -= flen;
@@ -2276,7 +2411,7 @@
     // Modal songs cadence in their mode: mixolydian's bVII (or IV) falls to I,
     // and the dorian or natural minor of dance, lo-fi and ambient music comes
     // home from bVII (or dorian's major IV), not through a borrowed major V.
-    var modal = modeName === 'mixolydian' || ((modeName === 'dorian' || modeName === 'minor') && /dance|lofi|ambient|chip/.test(st.idioms));
+    var modal = modeName === 'mixolydian' || ((modeName === 'dorian' || modeName === 'minor') && /dance|lofi|ambient|chip|wafu|rock/.test(st.idioms));
     var modalPull = R('modal-cadence').next();
     // The chord that leads home: the dominant, or the mode's own.
     function pull(seventh) {
@@ -2290,7 +2425,7 @@
       if (p2.deg === 3) return [dia(6), p2];
       return [dia(modeName === 'minor' && !isDim(5) && hr.chance(0.6) ? 5 : 3), p2];
     }
-    var CADENCE = { pop: 0.6, jpop: 0.7, jazz: 0.8, bossa: 0.8, lofi: 0.3, dance: 0.15, chip: 0.6, ambient: 0 };
+    var CADENCE = { pop: 0.6, jpop: 0.7, jazz: 0.8, bossa: 0.8, lofi: 0.3, dance: 0.15, chip: 0.6, ambient: 0, wafu: 0.5, citypop: 0.7, rock: 0.5, orch: 0.7, cafe: 0.8 };
     var cadP = CADENCE[st.idioms] === undefined ? 0.5 : CADENCE[st.idioms];
     var cadB = R('cadence').chance(cadP), cadLast = R('cadence-last').chance(cadP ? Math.max(0.5, Math.min(0.95, cadP + 0.35)) : 0);
     function isDominant(c) { return c.kind === 'sec' || (c.deg === 4 && (c.scale[6] - c.scale[4] + 12) % 12 === 4); }
@@ -2585,7 +2720,11 @@
     }
     // The intro is the first half of the chorus (its hook is played over it, see
     // Melody), so the song opens with what it is about.
-    function introPlan(cl) { return cl ? colourPlan('B', 4, cl) : planFor('B', 4); }
+    // (Two bars: its first two. Eight: twice, the first time without the tune.)
+    function introPlan(cl, L) {
+      var four = function () { return cl ? colourPlan('B', 4, cl) : planFor('B', 4); };
+      return L === 2 ? four().slice(0, 2) : L === 8 ? four().concat(four()) : four();
+    }
     function outroPlan(L, cl) {
       // IV-V-I / VI-VII-i, using the mode's own colour where that degree is diminished
       // (lydian's II instead of #iv, dorian's IV instead of vi).
@@ -2599,11 +2738,13 @@
       cs[3] = last;
       var close = cs.map(function (c) { return { segs: [{ s: 0, c: c }], cont: false }; });
       // An 8-bar outro: the intro (the chorus's first half, with its hook) comes back, then the close.
+      // (Two bars: the two chords before the tonic share the first.)
+      if (L === 2) return [{ segs: [{ s: 0, c: cs[0] }, { s: 8, c: cs[1] }], cont: false }, close[3]];
       return L > 4 ? introPlan(cl).concat(close) : close;
     }
     sections.forEach(function (sec) {
       var cl = sec.colour && sec.colour.hk ? sec.colour : null;
-      var pl = sec.type === 'intro' ? introPlan(cl)
+      var pl = sec.type === 'intro' ? introPlan(cl, sec.bars)
         : sec.type === 'outro' ? inColour(cl, function () { return outroPlan(sec.bars, cl); })
         : sec.contrast ? contrastPlan(sec.type, sec.bars)
         : cl ? colourPlan(sec.type, sec.bars, cl)
@@ -2708,6 +2849,16 @@
       drop: { chords: 'still', pad: true, lead: true },
       outro: { drums: 0, pad: true, chords: true, bass: 'long', lead: true, end: true }
     };
+    // How the song opens and how its bridge is played are the song's own: the
+    // intro by the whole band, by the chord instrument alone (with the hook), or
+    // as a groove (drums and bass as in the verse, no tune yet); the bridge
+    // with the band, or as a breakdown without drums.
+    var arr = R('arrange-shape'), introArr = wpick(arr, { full: 4, solo: 2, groove: 2 });
+    if (introArr === 'solo') PARTS.intro = { chords: true, guitar: true, lead: true };
+    else if (introArr === 'groove') PARTS.intro = { drums: 1, bass: true, chords: 'still', guitar: true, pad: true };
+    if (arr.chance(0.3)) PARTS.C = { bass: 'long', chords: true, pad: true, lead: true };
+    // (A band with no keyboard, pad or arpeggio lets the guitar hold the chords.)
+    var INTRO_QUIET = { pad: true, chords: 'still', arp: true, guitar: true };
     var OUTRO_PLAYING = { drums: 1, pad: true, chords: true, bass: true, lead: true, guitar: true, end: true };
     function partsOf(sec) { return sec.drop ? PARTS.drop : PARTS[sec.type]; }
     var ENERGY = { intro: 0.78, A: 0.84, P: 0.86, B: 1, C: 0.8, outro: 0.8 };
@@ -2766,6 +2917,10 @@
         // backbeat, held chords, no guitar; the band comes in at its second
         // phrase. Most songs thin out the second verse, so it is not a copy of the first.
         if (sec.type === 'A' && sec.occ === thinVerse && j < 4 && sec.bars >= 8) info.thin = true;
+        // A long intro: its first four bars are the chords alone, before the hook comes in.
+        if (sec.type === 'intro' && sec.quiet && j < sec.quiet) info.parts = INTRO_QUIET;
+        // (A groove intro is played as the verse will be.)
+        else if (sec.type === 'intro' && introArr === 'groove' && kit && sec.patKey === 'intro') info.windDown = 'A';
         // An ending winds down: through the first half of a long outro the band
         // plays on (as in a verse), and only then leaves the chords to ring.
         if (sec.type === 'outro' && sec.bars >= 8 && j < sec.bars / 2 && sec.patKey === 'outro' && kit) {
@@ -3250,16 +3405,16 @@
           if (kit) { drum(bar, s, 'kick', 0.95); drum(bar, s, ki === 0 ? 'crash' : snareKind, ki === 0 ? 0.65 : 0.85, ki === 0 ? 0.3 : 0.05); }
           if (prt.bass && bassPatch) notes.push({ t: T(bar, s), d: stepDur * 1.6, midi: bassNote(kc.c, 'r'), vel: V(Math.min(1, 0.95 * E)), inst: 'bass', patch: bassPatch });
           if (prt.chords && chordPatch) voicing(kc).forEach(function (m) { notes.push({ t: T(bar, s), d: stepDur * 1.5, midi: m, vel: V(Math.min(1, 0.9 * E)), inst: 'chords', patch: chordPatch }); });
-          if (prt.guitar && P.guitar) guitarVoicing(kc.c).forEach(function (m, gi) { notes.push({ t: T(bar, s) + gi * 0.008, d: stepDur * 1.4, midi: m, vel: V(0.85 * E), inst: 'guitar', patch: guitarPatch === 'nylon' ? 'nylon' : 'guitar' }); });
+          if (prt.guitar && P.guitar) guitarVoicing(kc.c).forEach(function (m, gi) { notes.push({ t: T(bar, s) + gi * 0.008, d: stepDur * 1.4, midi: m, vel: V(0.85 * E), inst: 'guitar', patch: guitarPatch === 'guitarDrive' ? 'guitarDrive' : guitarPatch === 'nylon' ? 'nylon' : 'guitar' }); });
         });
       }
 
       // Guitar -------------------------------------------------------------
-      if (prt.guitar && P.guitar && !info.cont && !info.thin) {
+      if (prt.guitar && P.guitar && !info.cont && !info.thin && !(prt === INTRO_QUIET && (chordPatch || padPatch || arpPatch))) {
         segs.forEach(function (sg, k) {
           var end = Math.min(segEnd(k), stopAt), gv = guitarVoicing(sg.c);
           if (sg.s >= stopAt) return;
-          segEvents(P.guitar.alt && info.j % 2 === 1 ? P.guitar.alt : P.guitar, sg.s, end, [0.8, 'D']).forEach(function (e) {
+          segEvents(P.guitar.alt && info.j % 2 === 1 ? P.guitar.alt : P.guitar, sg.s, end, [0.8, guitarPatch === 'guitarDrive' ? 'W' : 'D']).forEach(function (e) {
             var t0 = T(bar, e[0]), vel = V(Math.min(1, e[2] * E)), how = e[3];
             if (typeof how === 'number') {
               notes.push({ t: t0, d: e[1] * stepDur, midi: gv[how % gv.length], vel: vel, inst: 'guitar', patch: guitarPatch });
@@ -3269,6 +3424,16 @@
             } else if (how === 'C') {
               // Bossa: four fingers pluck the chord at once, lightly, a little short.
               gv.slice(-4).forEach(function (m, i) { notes.push({ t: t0 + i * 0.002, d: e[1] * stepDur * 0.85, midi: m, vel: vel * 0.75, inst: 'guitar', patch: guitarPatch }); });
+            } else if (how === 'W' || how === 'X') {
+              // Power chords: root and fifth (and the octave when it rings), overdriven.
+              // (On the chord's own root, whatever the bass plays under it;
+              // a diminished chord keeps its flat fifth.)
+              var pr0 = 36 + ((keyPc + chordPitch(sg.c, sg.c.deg)) % 12 + 12) % 12, fifth = ((chordPitch(sg.c, sg.c.deg + 4) - chordPitch(sg.c, sg.c.deg)) % 12 + 12) % 12;
+              if (pr0 < 40) pr0 += 12;
+              if (fifth < 6 || fifth > 8) fifth = 7;
+              (how === 'W' ? [0, fifth, 12] : [0, fifth]).forEach(function (iv, i) {
+                notes.push({ t: t0 + i * 0.004, d: how === 'W' ? e[1] * stepDur * 0.95 : stepDur * 1.1, midi: pr0 + iv, vel: vel, inst: 'guitar', patch: how === 'W' ? 'guitarDrive' : 'guitarDriveMute' });
+              });
             } else if (how === 'M') {
               gv.slice(1, 4).forEach(function (m, i) { notes.push({ t: t0 + i * 0.004, d: stepDur * 0.6, midi: m + 12, vel: vel, inst: 'guitar', patch: 'guitarMute' }); });
             } else {
@@ -3387,7 +3552,7 @@
       var regShift = (cmd && cmd.register || 0) - (md && md.register || 0);
       var legato = clamp(st.melody.legato + (cmd && cmd.legato || 0) - (md && md.legato || 0), 0.5, 1);
       var base = BASE[key] + regShift;
-      var plan = hook ? [0, 1, 1, 0] : sec.bars >= 8 || sec.tag ? REG[key] : key === 'P' ? REG.P : [0, 1, 1, 0];
+      var plan = hook ? [0, 1, 1, 0] : key === 'P' ? (sec.bars >= 8 ? [0, 0, 1, 1, 2, 2, 3, 3] : REG.P) : sec.bars >= 8 || sec.tag ? REG[key] : [0, 1, 1, 0];
       var nextSec = sections[si + 1];
       var harmonize = st.expr.harmony && sec.type === 'B' && !sec.drop && (si === lastChorus || sec.tag || sec.shift);
       // (A tag sings the chorus's second half: its bars count from the fifth.)
@@ -3396,14 +3561,15 @@
       var entry = null;
       // Enter the chorus above the previous line: a 3rd to a 5th higher.
       // (The first chorus sets the height; later ones keep it so the hook repeats.)
-      if (sec.type === 'B' && lastLead !== null && !sec.drop && !tag) {
+      // (A song that opens on its chorus has no line before it: it enters where a verse would have left it.)
+      if (sec.type === 'B' && (lastLead !== null || si === 0) && !sec.drop && !tag) {
         var lift = mr.int(2, 4);
-        if (th.entry === undefined) th.entry = Math.min(hi - 3, Math.max(base, lastLead + lift));
+        if (th.entry === undefined) th.entry = Math.min(hi - 3, Math.max(base, (lastLead !== null ? lastLead : base) + lift));
         entry = th.entry;
       }
       var peakInfo = PEAK[key];
       // (Where the high point falls is the theme's: bar 5 or 6 of a chorus, 4 to 6 elsewhere.)
-      var peakBar = sec.bars >= 8 || tag ? clamp(peakInfo.bar + th.peakShift, key === 'B' ? 5 : 4, 6) - tag : key === 'P' ? sec.bars - 1 : Math.min(2, sec.bars - 1);
+      var peakBar = key === 'P' ? sec.bars - 1 : sec.bars >= 8 || tag ? clamp(peakInfo.bar + th.peakShift, key === 'B' ? 5 : 4, 6) - tag : Math.min(2, sec.bars - 1);
       var motifStart = null;
       // (The last chorus reaches a step higher than the others: the singer's
       // climax. Not when it has already gone up a key, which lifts it enough.)
@@ -3415,7 +3581,7 @@
         var jv = j + tag;
         var target = base + plan[jv % plan.length];
         if (j === 0 && entry !== null) target = entry;
-        var role = j % 2 === 0 ? 'motif' : j % 4 === 1 ? 'answer' : 'cadence';
+        var role = sec.type === 'outro' && j === sec.bars - 1 ? 'cadence' : j % 2 === 0 ? 'motif' : j % 4 === 1 ? 'answer' : 'cadence';
         var half = Math.floor(jv / 4) % 2;
         // How the motif is stated: as it is, or developed in the last phrase:
         // the theme's way in a verse or bridge, its hook development in a chorus
@@ -3538,6 +3704,18 @@
         prev = degs[degs.length - 1];
       }
 
+      // A scale with degrees left out (the yonanuki scales of Japanese music have
+      // no 4th and no 7th): a note on one of them moves to the nearest degree
+      // the scale has, a chord tone if one is next to it.
+      var omit = st.melody.omit;
+      var inScale = function (d) { return !omit || omit.indexOf(((d % 7) + 7) % 7) < 0; };
+      var toScale = function (d, ch) {
+        if (inScale(d)) return d;
+        var c2 = [d - 1, d + 1, d - 2, d + 2].filter(function (x) { return inScale(x) && x >= lo && x <= hi + 1; });
+        for (var q2 = 0; q2 < c2.length; q2++) if (isChordDeg(ch, c2[q2])) return c2[q2];
+        return c2.length ? c2[0] : d;
+      };
+      if (omit) barsData.forEach(function (b) { b.degs = b.degs.map(function (d, i) { return toScale(d, chordAt(b.barIdx, b.rh[i][0])); }); });
       // The high point: one note, on a strong beat of the peak bar, reached from
       // below; nothing else in the section goes as high.
       var pb = barsData[peakBar];
@@ -3583,6 +3761,7 @@
 
       // Write the notes (and pickups between phrases).
       barsData.forEach(function (b, j) {
+        if (sec.quiet && j < sec.quiet) return; // (a long intro: the tune waits)
         var rh = b.rh, degs = b.degs, barIdx = b.barIdx;
         if (pending.length) {
           b.pickedUp = true;
@@ -4076,7 +4255,7 @@
               if (cost < bestCost) { bestCost = cost; best = m; }
             }
           });
-          if (best === null) return;
+          if (best === null || info.parts === INTRO_QUIET) return;
           prevM = best;
           extra.push({ t: (b * SPB + sg.s) * stepDur, d: (end - sg.s) * stepDur * 0.95, midi: best, vel: 0.5 * info.energy, inst: inst || 'lead', patch: p, counter: true });
         });
@@ -4090,6 +4269,36 @@
       if (PATCHES[to].gate) c.d = Math.min(c.d, PATCHES[to].gate * stepDur);
       c.layer = true;
       extra.push(c);
+    }
+    // (A scale with degrees left out: whatever the later passes put on one of
+    // them - a pickup, an ornament, a repair - moves to the nearest note of the scale.)
+    // (Long notes look for a note of the chord first, and none of them is
+    // moved into an awkward leap from the note before.)
+    if (st.melody.omit) {
+      var before = null;
+      notes.filter(function (n) { return n.inst === 'lead'; }).sort(function (a, b) { return a.t - b.t; }).forEach(function (n) {
+        var main = !n.counter && !n.harmony && !n.layer;
+        var bar = clamp(Math.floor(Math.round(n.t / stepDur) / SPB), 0, barInfo.length - 1);
+        var sec = sections[0];
+        for (var q = 1; q < sections.length; q++) if (sections[q].startBar <= bar) sec = sections[q];
+        var sc = MODES[sec.mode] || scale, base = keyPc + (sec.shift || 0), ok = [];
+        for (var d = 0; d < 7; d++) if (st.melody.omit.indexOf(d) < 0) ok.push(((base + sc[d]) % 12 + 12) % 12);
+        var has = function (m) { return ok.indexOf(((m % 12) + 12) % 12) >= 0; };
+        if (!has(n.midi)) {
+          var c = chordAt(bar, clamp(Math.round(n.t / stepDur) - bar * SPB, 0, SPB - 1));
+          var cpcs = c.tones.map(function (t) { return ((keyPc + chordPitch(c, c.deg + t)) % 12 + 12) % 12; });
+          var long = n.d >= stepDur * 3.5, best = null, cost = 1e9;
+          for (var k = -3; k <= 3; k++) {
+            var m = n.midi + k;
+            if (!k || !has(m)) continue;
+            var leap = main && before !== null ? Math.abs(m - before) : 0;
+            var w = Math.abs(k) + (k > 0 ? 0.1 : 0) + (long && cpcs.indexOf(((m % 12) + 12) % 12) < 0 ? 2 : 0) + (leap === 6 || leap === 10 || leap === 11 || leap > 12 ? 3 : 0);
+            if (w < cost) { cost = w; best = m; }
+          }
+          if (best !== null) n.midi = best;
+        }
+        if (main) before = n.midi;
+      });
     }
     // Feel: a band sits around the beat, not on a grid. The snare lays back a
     // little, the bass a little less, the chords sit just behind; the whole
@@ -4401,6 +4610,7 @@
     // Extras (only the patches that ask for them).
     var ifloor = P.ifloor || 0;
     var pwm = P.pwm, ring = P.ring, rph = 0, crush = P.crush, trem = P.trem, tremG = 1;
+    var drive = P.drive || 0, driveG = drive ? 1 / Math.tanh(drive) : 1;
     var hold = 0, heldL = 0, heldR = 0, qStep = crush ? 2 / Math.pow(2, crush.bits) : 0;
     var holdN = crush ? Math.max(1, Math.round(crush.hold * sr / 44100)) : 0;
     var FB = P.formants, fbank = null;
@@ -4476,6 +4686,7 @@
           sL += B.L.run(xL, B.c, 1) * B.g * B.c[3]; sR += B.R.run(xR, B.c, 1) * B.g * B.c[3];
         }
       }
+      if (drive) { sL = Math.tanh(sL * drive) * driveG * 0.5; sR = Math.tanh(sR * drive) * driveG * 0.5; }
       if (useFilter) { sL = fL.run(sL, coef, 0); sR = fR.run(sR, coef, 0); }
       if (crush) {
         if (hold-- <= 0) { hold = holdN - 1; heldL = Math.round(sL / qStep) * qStep; heldR = Math.round(sR / qStep) * qStep; }
@@ -4547,6 +4758,7 @@
     var start = Math.round(n.t * sr);
     if (start >= ctx.len) return;
     var kit = n.kit, kind = n.drum, vel = n.vel;
+    if (kit === 'taiko') return renderTaiko(ctx, n);
     if (kit === 'brush' || kit === 'perc' || kit === 'jazz' || kit === 'bossa') return renderHandDrum(ctx, n);
     // The hi-hat pedal: a soft, short closed hat.
     if (kind === 'pedal') { kind = 'hat'; vel *= 0.55; }
@@ -4640,6 +4852,53 @@
     // (A console's noise channel came out through its own soft filter.)
     if (kit === 'chip') fc = fc > 10000 ? 12000 : 9000;
     return 1 - Math.exp(-TAU * Math.min(fc, sr * 0.45) / sr);
+  }
+
+  // Taiko: the big drum (o-daiko, "don") for the kick, the small high drum
+  // (shime-daiko, "ten") for the snare, a stick on the rim ("ka") where the
+  // hi-hat would be, hand cymbals (chappa), and the barrel drums (nagado-daiko)
+  // at three pitches for the toms.
+  var TAIKO_LENS = { kick: 1.3, snare: 0.4, clap: 0.4, hat: 0.07, pedal: 0.07, open: 0.5, crash: 1.8, tom: 0.9 };
+  function renderTaiko(ctx, n) {
+    var sr = ctx.sr, start = Math.round(n.t * sr), kind = n.drum, vel = n.vel;
+    if (start >= ctx.len) return;
+    var pan = n.pan || 0;
+    var pl = Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, pr = Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
+    var total = Math.min(Math.ceil((TAIKO_LENS[kind] || 0.3) * sr), ctx.len - start), fadeN = Math.round(sr * 0.005);
+    var L = ctx.drums.L, R = ctx.drums.R, rev = ctx.rev, rnd = ctx.randSigned;
+    var f1 = new Svf(), c = [0, 0, 0, 0], ph = 0, ph2 = 0, revSend = 0.2, hz;
+    svfCoefs(kind === 'kick' ? 900 : kind === 'tom' ? 1400 : kind === 'snare' || kind === 'clap' ? 2600 : kind === 'open' || kind === 'crash' ? 6500 : 3200,
+      kind === 'open' || kind === 'crash' ? 0.8 : 1.2, sr, c);
+    for (var i = 0; i < total; i++) {
+      var t = i / sr, s;
+      if (kind === 'kick') {
+        // A wide skin: a low tone that falls as it is struck, its second mode (1.59x), the stick.
+        hz = 46 + 38 * Math.exp(-t / 0.05);
+        ph += hz / sr; ph2 += hz * 1.59 / sr;
+        s = Math.sin(TAU * ph) * Math.exp(-t / 0.4) * 0.95 + Math.sin(TAU * ph2) * Math.exp(-t / 0.14) * 0.3 + f1.run(rnd(), c, 0) * Math.exp(-t / 0.012) * 0.5;
+        revSend = 0.3;
+      } else if (kind === 'tom') {
+        hz = [150, 112, 84][n.tom || 0] * (1 + 0.3 * Math.exp(-t / 0.03));
+        ph += hz / sr; ph2 += hz * 1.59 / sr;
+        s = Math.sin(TAU * ph) * Math.exp(-t / 0.3) * 0.8 + Math.sin(TAU * ph2) * Math.exp(-t / 0.1) * 0.25 + f1.run(rnd(), c, 0) * Math.exp(-t / 0.01) * 0.4;
+        revSend = 0.25;
+      } else if (kind === 'snare' || kind === 'clap') {
+        hz = 300 + 70 * Math.exp(-t / 0.01);
+        ph += hz / sr; ph2 += hz * 1.59 / sr;
+        s = Math.sin(TAU * ph) * Math.exp(-t / 0.09) * 0.6 + Math.sin(TAU * ph2) * Math.exp(-t / 0.045) * 0.25 + f1.run(rnd(), c, 1) * Math.exp(-t / 0.02) * 0.4;
+      } else if (kind === 'open' || kind === 'crash') {
+        s = f1.run(rnd(), c, 2) * Math.exp(-t / (kind === 'open' ? 0.16 : 0.6)) * (0.7 + 0.3 * Math.sin(TAU * 31 * t)) * 0.24;
+      } else {
+        // The stick on the rim: wood, short and dry.
+        s = (Math.sin(TAU * 1150 * t) * Math.exp(-t / 0.012) * 0.3 + f1.run(rnd(), c, 1) * Math.exp(-t / 0.006) * 0.35) * (kind === 'pedal' ? 0.6 : 0.75);
+        revSend = 0.12;
+      }
+      s *= vel * 0.72;
+      if (total - i < fadeN) s *= (total - i) / fadeN;
+      var j = start + i;
+      L[j] += s * pl; R[j] += s * pr;
+      rev[j] += s * revSend;
+    }
   }
 
   // Brushes (soft kick, swished snare, ride cymbal) and hand percussion

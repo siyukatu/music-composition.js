@@ -153,6 +153,8 @@ test('choruses enter above the line before them and peak once, late', () => {
       const inChorus = lead.filter(x => x.t >= chorus.start && x.t < chorus.start + chorus.bars * song.barDuration);
       const top = Math.max(...inChorus.map(x => x.midi));
       const peak = inChorus.find(x => x.midi === top);
+      // (A song that opens with its chorus has no line before it.)
+      if (!before) continue;
       n++;
       if (first.midi - before.midi >= 3) rises++;
       if (inChorus.filter(x => x.midi === top).length === 1) single++;
@@ -349,7 +351,7 @@ test('extend lengthens a song so it ends on a whole chorus', () => {
   const ok = s => {
     const body = s.sections.filter(x => x.type !== 'intro' && x.type !== 'outro'), last = body[body.length - 1];
     if (body.length === 1 && last.bars === LEN[last.type]) return true;
-    return last.type === 'B' && !last.drop && body.every(x => x.bars === LEN[x.type] || (x.type === 'C' && x.bars === 4));
+    return last.type === 'B' && !last.drop && body.every(x => x.bars === LEN[x.type] || (x.type === 'C' && x.bars === 4) || (x.type === 'P' && x.bars === 8));
   };
   let bad = 0, badBefore = 0, n = 0;
   for (const style of ['pop', 'jpop', 'lofi', 'ambient']) {
@@ -631,9 +633,10 @@ test('contrast: a longer version of the song keeps its beginning', () => {
     for (const seed of ['p', 'q', 'r']) {
       const a = MusicComposition.compose({ seed, style, contrast: true, bars: 32 });
       const b = MusicComposition.compose({ seed, style, contrast: true, bars: 48 });
-      // Up to the start of the second-to-last body section of the shorter one
-      // (the one before it leads into it, and that may differ).
-      const cut = a.sections.filter(x => x.type !== 'outro').slice(-2)[0].start - 0.01;
+      // Up to the start of the third-to-last body section of the shorter one
+      // (an ending may be a short bridge and two choruses, and the section
+      // before it leads into it).
+      const cut = a.sections.filter(x => x.type !== 'outro').slice(-3)[0].start - 0.01;
       const sig = s => JSON.stringify(s.chords.filter(c => c.time < cut).map(c => c.name));
       assert.strictEqual(sig(a), sig(b), style + ' ' + seed);
     }
@@ -670,8 +673,9 @@ test('blocks: stretches of the song in their own mood, mode and instruments', ()
   // A longer version keeps the blocks it had.
   const a = MusicComposition.compose({ seed: 'grow', style: 'jpop', blocks: [{ bars: 24, mood: 'calm' }, { bars: 24, mood: 'tense' }] });
   const b = MusicComposition.compose({ seed: 'grow', style: 'jpop', blocks: [{ bars: 24, mood: 'calm' }, { bars: 40, mood: 'tense' }] });
-  // (Up to the last bar before the shorter one's last two body sections: that bar leads into what follows.)
-  const cut = a.sections.filter(x => x.type !== 'outro').slice(-2)[0].start - a.barDuration - 0.01;
+  // (Up to the last bar before the shorter one's last three body sections: that bar leads into what follows,
+  // and a song's ending - a short bridge, the last chorus, the chorus once more in a new key - is its own.)
+  const cut = a.sections.filter(x => x.type !== 'outro').slice(-3)[0].start - a.barDuration - 0.01;
   const sig = s => JSON.stringify(s.chords.filter(c => c.time < cut).map(c => c.name));
   assert.strictEqual(sig(a), sig(b));
   // Without blocks nothing says block.
@@ -819,6 +823,58 @@ test('choruses close: a cadence onto the tonic, the keynote in the tune; choruse
   };
   const means = [0, 2, 5, 6, 7, 9, 11].map(mean);
   assert.ok(Math.max(...means) - Math.min(...means) < 4, 'melody register by key: ' + means.map(x => x.toFixed(1)).join(' '));
+});
+
+test('new styles: wafu sings a pentatonic scale over taiko, rock plays power chords; all of them compose and render in both metres', () => {
+  const NEW = ['wafu', 'citypop', 'rock', 'orchestral', 'cafe'];
+  for (const style of NEW) {
+    assert.ok(MusicComposition.styles.indexOf(style) >= 0, style + ' is listed');
+    for (const meter of ['4/4', '3/4']) {
+      const s = MusicComposition.compose({ seed: 'new-' + style, style, bars: 24, meter });
+      assert.ok(s.notes.length > 100 && s.notes.every(n => n.t >= 0 && n.d > 0 && n.vel > 0 && n.vel <= 1 && n.midi > 11 && n.midi < 116), style + ' ' + meter + ': sane notes');
+      const w = readWav(MusicComposition.render(s, { sampleRate: 8000 }));
+      let peak = 0, sum = 0;
+      for (let i = 0; i < w.samples.length; i++) { const v = Math.abs(w.samples[i]); if (v > peak) peak = v; sum += v; }
+      assert.ok(peak > 8000 && peak <= 32767 && sum / w.samples.length > 300, style + ' ' + meter + ': audible, not clipped (' + peak + ')');
+    }
+  }
+  const PCS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const FLAT = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
+  let on = 0, all = 0;
+  for (let i = 0; i < 12; i++) {
+    const s = MusicComposition.compose({ seed: 'wafu' + i, style: 'wafu', bars: 40, mode: i % 2 ? 'minor' : 'major' });
+    assert.ok(s.notes.some(n => n.inst === 'drums' && n.kit === 'taiko'), 'taiko');
+    const key = PCS.indexOf(FLAT[s.key] || s.key);
+    for (const n of s.notes) {
+      if (n.inst !== 'lead') continue;
+      const sec = s.sections.filter(x => x.start <= n.t + 1e-6).pop();
+      const set = sec.mode === 'minor' ? [0, 2, 3, 7, 8] : sec.mode === 'major' ? [0, 2, 4, 7, 9] : null;
+      if (!set) continue;
+      all++;
+      if (set.indexOf(((n.midi - key - (sec.shift || 0)) % 12 + 12) % 12) >= 0) on++;
+    }
+  }
+  assert.ok(all > 1000 && on / all > 0.98, 'the wafu melody stays on the yonanuki scale (' + on + '/' + all + ')');
+  const r = MusicComposition.compose({ seed: 'rock', style: 'rock', bars: 32 });
+  assert.ok(r.notes.some(n => n.inst === 'guitar' && n.patch === 'guitarDrive') && r.notes.some(n => n.inst === 'lead' && n.patch === 'leadDrive'), 'driven guitars');
+  assert.ok(r.notes.every(n => n.inst !== 'chords' || n.patch === 'strings' || n.patch === 'pad'), 'no keyboard in rock');
+});
+
+test('intros and outros differ from song to song, and every form still ends on its chorus', () => {
+  const intro = {}, outro = {}, pre = {};
+  for (let i = 0; i < 120; i++) {
+    const s = MusicComposition.compose({ seed: 'shape' + i, style: i % 2 ? 'jpop' : 'pop', bars: 64 });
+    const a = s.sections[0], z = s.sections[s.sections.length - 1];
+    intro[a.type === 'intro' ? a.bars : a.type] = 1;
+    assert.strictEqual(z.type, 'outro');
+    outro[z.bars] = 1;
+    s.sections.forEach(x => { if (x.type === 'P') pre[x.bars] = 1; });
+    assert.strictEqual(s.sections[s.sections.length - 2].type, 'B', 'ends on a chorus');
+    assert.strictEqual(s.sections.reduce((t, x) => t + x.bars, 0) % 4, 0, 'whole phrases');
+  }
+  assert.deepStrictEqual(Object.keys(intro).sort(), ['2', '4', '8', 'A', 'B'], 'intro shapes: ' + Object.keys(intro));
+  assert.deepStrictEqual(Object.keys(outro).sort(), ['2', '4', '8'], 'outro lengths: ' + Object.keys(outro));
+  assert.deepStrictEqual(Object.keys(pre).sort(), ['4', '8'], 'pre-chorus lengths');
 });
 
 test('an ending rings on into the tail and fades; a loop does not', () => {

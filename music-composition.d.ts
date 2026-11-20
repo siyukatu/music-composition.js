@@ -2,7 +2,7 @@
 // https://github.com/siyukatu/music-composition.js
 
 declare namespace MusicComposition {
-  type Style = 'pop' | 'jpop' | 'dance' | 'lofi' | 'chiptune' | 'ambient' | 'jazz' | 'bossa';
+  type Style = 'pop' | 'jpop' | 'dance' | 'lofi' | 'chiptune' | 'ambient' | 'jazz' | 'bossa' | 'wafu' | 'citypop' | 'rock' | 'orchestral' | 'cafe';
   type Mode = 'major' | 'minor' | 'dorian' | 'mixolydian' | 'lydian';
   /** How a song feels, on top of its style: its mode, tempo, harmony, melody, drums and space. */
   type Mood = 'bright' | 'dark' | 'sad' | 'calm' | 'energetic' | 'dreamy' | 'tense';
@@ -21,22 +21,22 @@ declare namespace MusicComposition {
   interface Parts {
     /** Drum kit. */
     /** 'bossa' = soft bass drum, rim click, shaker and ride. */
-    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'brush' | 'perc' | 'jazz' | 'bossa' | 'none';
+    drums?: 'acoustic' | 'electronic' | 'lofi' | 'chip' | 'brush' | 'perc' | 'jazz' | 'bossa' | 'taiko' | 'none';
     /** Drum pattern family (each song generates its own pattern within it). 'bossa' plays the bossa clave over two bars. */
     groove?: 'eightbeat' | 'sixteenbeat' | 'fourfloor' | 'halftime' | 'shuffle' | 'swing' | 'breakbeat' | 'chip' | 'bossa';
-    bass?: 'synth' | 'finger' | 'sine' | 'chip' | 'upright' | 'fm' | 'tuba' | 'none';
+    bass?: 'synth' | 'finger' | 'sine' | 'chip' | 'upright' | 'fm' | 'tuba' | 'contrabass' | 'none';
     /** How the bass plays: 'syncopated' locks to the kick drum, 'walking' in quarter notes, 'bossa' on 1, the "and" of 2, 3 and the "and" of 4. */
     bassLine?: 'root' | 'drive' | 'offbeat' | 'syncopated' | 'walking' | 'long' | 'bossa';
     /** Chord instrument. 'cutpiano' = a piano whose notes are cut short (release cut). */
-    chords?: 'piano' | 'cutpiano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'harp' | 'marimba' | 'vibes' | 'accordion' | 'pizzicato' | 'musicbox' | 'none';
+    chords?: 'piano' | 'cutpiano' | 'epiano' | 'synth' | 'organ' | 'chip' | 'harp' | 'marimba' | 'vibes' | 'accordion' | 'pizzicato' | 'musicbox' | 'koto' | 'none';
     /** How the chords play. 'rhythm' is a generated syncopated pattern, 'stab' short offbeat chords, 'broken' broken chords (Alberti), 'jazz' swing comping figures (Charleston, pushes), 'bossa' soft offbeat chords. */
     comping?: 'block' | 'rhythm' | 'arpeggio' | 'sustain' | 'stab' | 'broken' | 'jazz' | 'bossa';
     /** Guitar (plucked string synthesis): strumming, 16th-note cutting, arpeggios, nylon-string fingerpicking, or the bossa nova batida on nylon strings. */
-    guitar?: 'strum' | 'cutting' | 'arpeggio' | 'fingerpick' | 'bossa' | 'none';
+    guitar?: 'strum' | 'cutting' | 'arpeggio' | 'fingerpick' | 'bossa' | 'power' | 'none';
     pad?: 'warm' | 'wide' | 'strings' | 'ambient' | 'choir' | 'none';
     /** Melody instrument. 'pwm', 'fm' and 'robot' (ring modulation, bit-crushed) are machine sounds. */
-    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'pwm' | 'fm' | 'robot' | 'flute' | 'whistle' | 'sax' | 'brass' | 'violin' | 'voice' | 'bell' | 'piano' | 'vibes' | 'harp' | 'marimba' | 'musicbox' | 'accordion';
-    arp?: 'eighths' | 'sixteenths' | 'bells' | 'harp' | 'marimba' | 'musicbox' | 'digital' | 'none';
+    lead?: 'saw' | 'pluck' | 'soft' | 'square' | 'pwm' | 'fm' | 'robot' | 'flute' | 'whistle' | 'sax' | 'brass' | 'violin' | 'voice' | 'bell' | 'piano' | 'vibes' | 'harp' | 'marimba' | 'musicbox' | 'accordion' | 'koto' | 'shamisen' | 'shakuhachi' | 'distguitar';
+    arp?: 'eighths' | 'sixteenths' | 'bells' | 'harp' | 'marimba' | 'musicbox' | 'digital' | 'koto' | 'none';
     /** 0 (straight) – 0.5. */
     swing?: number;
   }

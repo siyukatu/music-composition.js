@@ -24,7 +24,10 @@
     pad: 89, padWide: 90, strings: 48, padAmbient: 88, choir: 52,
     arp: 81, bellSoft: 14, harpArp: 46, marimbaArp: 12, musicboxArp: 10, digitalArp: 98,
     bassSaw: 38, bassFinger: 33, bassSine: 39, bassChip: 38, bassUpright: 32, bassFM: 39, tuba: 58,
-    guitar: 25, guitarMute: 28, nylon: 24
+    guitar: 25, guitarMute: 28, nylon: 24,
+    // Koto, shamisen, shakuhachi; overdriven guitar (and muted, and as a lead); contrabass section.
+    koto: 107, kotoLead: 107, kotoArp: 107, shamisen: 106, shakuhachi: 77,
+    guitarDrive: 29, guitarDriveMute: 28, leadDrive: 30, contrabass: 43
   };
   // Patches that sound an octave above the written note (the music box).
   var TRANSPOSE = { musicbox: 12, musicboxLead: 12, musicboxArp: 12 };
@@ -35,7 +38,9 @@
     jazz: { kick: 36, snare: 38, clap: 37, hat: 51, pedal: 44, open: 59, crash: 49 },
     perc: { kick: 64, snare: 37, clap: 37, hat: 70, pedal: 69, open: 54, crash: 54 },
     // Bossa: bass drum, side stick, maracas / cabasa, ride.
-    bossa: { kick: 35, snare: 37, clap: 37, hat: 70, pedal: 69, open: 54, crash: 51 }
+    bossa: { kick: 35, snare: 37, clap: 37, hat: 70, pedal: 69, open: 54, crash: 51 },
+    // Taiko: low floor tom, high tom, side stick, splash and Chinese cymbal.
+    taiko: { kick: 41, snare: 50, clap: 50, hat: 37, pedal: 37, open: 55, crash: 52 }
   };
   var INST_NAME = { lead: 'Melody', bass: 'Bass', chords: 'Chords', guitar: 'Guitar', arp: 'Arpeggio' };
   var PADS = { pad: 1, padWide: 1, strings: 1, padAmbient: 1, choir: 1 };
